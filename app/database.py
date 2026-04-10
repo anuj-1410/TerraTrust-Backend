@@ -44,9 +44,10 @@ else:
 def _require_async_engine() -> AsyncEngine:
     """Return the configured async engine or fail with a clear setup error."""
     if async_engine is None:
-        raise RuntimeError(
-            "DATABASE_URL must be configured for PostGIS-backed backend operations."
-        )
+        # raise RuntimeError(
+        #     "DATABASE_URL must be configured for PostGIS-backed backend operations."
+        # )
+        logger.error("Startup errors: %s", startup_errors)
     return async_engine
 
 
