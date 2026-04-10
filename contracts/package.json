@@ -1,0 +1,37 @@
+{
+  "name": "contracts",
+  "version": "1.0.0",
+  "engines": {
+    "node": ">=22.11 <23"
+  },
+  "main": "hardhat.config.js",
+  "scripts": {
+    "test": "hardhat test",
+    "deploy:amoy": "hardhat run scripts/deploy.js --network polygon_amoy",
+    "verify:amoy": "hardhat verify --network polygon_amoy"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1",
+    "dotenv": "^17.3.1",
+    "ethers": "^5.7.2"
+  },
+  "devDependencies": {
+    "@ethersproject/providers": "^5.8.0",
+    "@nomicfoundation/hardhat-chai-matchers": "^1.0.6",
+    "@nomicfoundation/hardhat-network-helpers": "^1.1.2",
+    "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
+    "@nomiclabs/hardhat-etherscan": "^3.1.7",
+    "@typechain/ethers-v5": "^10.2.1",
+    "@typechain/hardhat": "^6.1.6",
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^9.1.1",
+    "chai": "^4.5.0",
+    "hardhat": "^2.22.5",
+    "hardhat-gas-reporter": "^1.0.10",
+    "solidity-coverage": "^0.8.17",
+    "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
+    "typescript": "^5.9.3"
+  }
+}

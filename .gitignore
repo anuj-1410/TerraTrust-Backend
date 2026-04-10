@@ -1,0 +1,29 @@
+# Env & secrets
+.env
+backend-google-service-account.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+
+# Node / Hardhat
+node_modules/
+contracts/artifacts/
+contracts/cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
