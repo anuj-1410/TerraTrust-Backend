@@ -22,11 +22,18 @@ supabase_client: Client = create_client(
 async_engine: Optional[AsyncEngine] = None
 
 if settings.DATABASE_URL:
+    import ssl
+
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
     async_engine = create_async_engine(
         settings.DATABASE_URL,
         echo=settings.ENVIRONMENT == "development",
         pool_size=5,
         max_overflow=10,
+        connect_args={"ssl": ssl_context},
     )
 else:
     logger.warning(
