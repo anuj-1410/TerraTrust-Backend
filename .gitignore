@@ -15,7 +15,6 @@ build/
 
 # Node / Hardhat
 node_modules/
-contracts/artifacts/
 contracts/cache/
 
 # IDE
