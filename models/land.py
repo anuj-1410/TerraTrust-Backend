@@ -1,8 +1,10 @@
 """Pydantic schemas for land verification and parcel listing APIs."""
 
+from datetime import datetime
 from typing import Any, Dict, Literal, Optional
+from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class DocumentUploadResponse(BaseModel):
@@ -71,6 +73,22 @@ class LandListItem(BaseModel):
     current_audit_id: str | None = None
     current_audit_status: str | None = None
     thumbnail_url: str | None = None
+
+    @field_validator("id", "current_audit_id", mode="before")
+    @classmethod
+    def _coerce_uuid_to_str(cls, value: Any) -> Any:
+        """Preserve string API output when SQLAlchemy returns native UUID objects."""
+        if isinstance(value, UUID):
+            return str(value)
+        return value
+
+    @field_validator("registered_at", mode="before")
+    @classmethod
+    def _coerce_datetime_to_iso(cls, value: Any) -> Any:
+        """Serialise native datetimes from direct SQL helpers to ISO-8601 strings."""
+        if isinstance(value, datetime):
+            return value.isoformat()
+        return value
 
 
 class LandListResponse(BaseModel):

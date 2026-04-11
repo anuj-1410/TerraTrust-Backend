@@ -1,205 +1,151 @@
-(venv) PS C:\anujDrive\TerraTrust\backend> python demo/scripts/seed_demo_accounts.py
-============================================================
-Seeding demo accounts...
-(Skips any account that already exists)
-============================================================
-2026-04-11 08:21:48,774 INFO sqlalchemy.engine.Engine select pg_catalog.version()
-2026-04-11 08:21:48,775 INFO sqlalchemy.engine.Engine [raw sql] ()
-2026-04-11 08:21:49,077 INFO sqlalchemy.engine.Engine ROLLBACK
-Traceback (most recent call last):
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 526, in _prepare_and_execute
-    prepared_stmt, attributes = await adapt_connection._prepare(
-                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 773, in _prepare
-    prepared_stmt = await self._connection.prepare(
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\asyncpg\connection.py", line 638, in prepare
-    return await self._prepare(
-           ^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\asyncpg\connection.py", line 657, in _prepare
-    stmt = await self._get_statement(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\asyncpg\connection.py", line 443, in _get_statement
-    statement = await self._protocol.prepare(
-                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "asyncpg/protocol/protocol.pyx", line 165, in prepare
-    return await waiter
-asyncpg.exceptions.DuplicatePreparedStatementError: prepared statement "__asyncpg_stmt_1__" already exists
-HINT:  
-NOTE: pgbouncer with pool_mode set to "transaction" or
-"statement" does not support prepared statements properly.
-You have two options:
-
-* if you are using pgbouncer for connection pooling to a
-  single server, switch to the connection pool functionality
-  provided by asyncpg, it is a much better option for this
-  purpose;
-
-* if you have no option of avoiding the use of pgbouncer,
-  then you can set statement_cache_size to 0 when creating
-  the asyncpg connection object.
-
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
-    cursor.execute(statement, parameters)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 585, in execute
-    self._adapt_connection.await_(
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
-    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
-    value = await result
-            ^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 563, in _prepare_and_execute
-    self._handle_exception(error)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 513, in _handle_exception
-    self._adapt_connection._handle_exception(error)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 797, in _handle_exception
-    raise translated_error from error
-sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.ProgrammingError: <class 'asyncpg.exceptions.DuplicatePreparedStatementError'>: prepared statement "__asyncpg_stmt_1__" already exists
-HINT:  
-NOTE: pgbouncer with pool_mode set to "transaction" or
-"statement" does not support prepared statements properly.
-You have two options:
-
-* if you are using pgbouncer for connection pooling to a
-  single server, switch to the connection pool functionality
-  provided by asyncpg, it is a much better option for this
-  purpose;
-
-* if you have no option of avoiding the use of pgbouncer,
-  then you can set statement_cache_size to 0 when creating
-  the asyncpg connection object.
-
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "C:\anujDrive\TerraTrust\backend\demo\scripts\seed_demo_accounts.py", line 287, in <module>
-    asyncio.run(main())
-  File "C:\Users\crite\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 195, in run
-    return runner.run(main)
-           ^^^^^^^^^^^^^^^^
-  File "C:\Users\crite\AppData\Local\Programs\Python\Python312\Lib\asyncio\runners.py", line 118, in run
-    return self._loop.run_until_complete(task)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\crite\AppData\Local\Programs\Python\Python312\Lib\asyncio\base_events.py", line 691, in run_until_complete
-    return future.result()
-           ^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\demo\scripts\seed_demo_accounts.py", line 273, in main
-    await seed_account_from_checkpoint("+919000000001", "FRESH")
-  File "C:\anujDrive\TerraTrust\backend\demo\scripts\seed_demo_accounts.py", line 42, in seed_account_from_checkpoint
-    if await user_exists(firebase_uid):
-       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\demo\scripts\seed_demo_accounts.py", line 27, in user_exists
-    async with engine.connect() as conn:
-               ^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\base.py", line 121, in __aenter__
-    return await self.start(is_ctxmanager=True)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\ext\asyncio\engine.py", line 275, in start
-    await greenlet_spawn(self.sync_engine.connect)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
-    result = context.switch(value)
-             ^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3293, in connect
-    return self._connection_cls(self)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 143, in __init__
-    self._dbapi_connection = engine.raw_connection()
-                             ^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3317, in raw_connection
-    return self.pool.connect()
-           ^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
-    return _ConnectionFairy._checkout(self)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1272, in _checkout
-    fairy = _ConnectionRecord.checkout(pool)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 712, in checkout
-    rec = pool._do_get()
-          ^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 177, in _do_get
-    with util.safe_reraise():
-         ^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 121, in __exit__
-    raise exc_value.with_traceback(exc_tb)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 175, in _do_get
-    return self._create_connection()
-           ^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 389, in _create_connection
-    return _ConnectionRecord(self)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 674, in __init__
-    self.__connect()
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\pool\base.py", line 914, in __connect
-    )._exec_w_sync_on_first_run(self.dbapi_connection, self)
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\event\attr.py", line 501, in _exec_w_sync_on_first_run
-    self(*args, **kw)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\event\attr.py", line 515, in __call__
-    fn(*args, **kw)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 1897, in go
-    return once_fn(*arg, **kw)
-           ^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\create.py", line 773, in first_connect
-    dialect.initialize(c)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\base.py", line 3340, in initialize
-    super().initialize(connection)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 528, in initialize
-    self.server_version_info = self._get_server_version_info(
-                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\base.py", line 3610, in _get_server_version_info
-    v = connection.exec_driver_sql("select pg_catalog.version()").scalar()
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1779, in exec_driver_sql
-    ret = self._execute_context(
-          ^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1846, in _execute_context
-    return self._exec_single_context(
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1986, in _exec_single_context
-    self._handle_dbapi_exception(
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2363, in _handle_dbapi_exception
-    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\base.py", line 1967, in _exec_single_context
-    self.dialect.do_execute(
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\engine\default.py", line 952, in do_execute
-    cursor.execute(statement, parameters)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 585, in execute
-    self._adapt_connection.await_(
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 132, in await_only
-    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 196, in greenlet_spawn
-    value = await result
-            ^^^^^^^^^^^^
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 563, in _prepare_and_execute
-    self._handle_exception(error)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 513, in _handle_exception
-    self._adapt_connection._handle_exception(error)
-  File "C:\anujDrive\TerraTrust\backend\venv\Lib\site-packages\sqlalchemy\dialects\postgresql\asyncpg.py", line 797, in _handle_exception
-    raise translated_error from error
-sqlalchemy.exc.ProgrammingError: (sqlalchemy.dialects.postgresql.asyncpg.ProgrammingError) <class 'asyncpg.exceptions.DuplicatePreparedStatementError'>: prepared statement "__asyncpg_stmt_1__" already exists
-HINT:  
-NOTE: pgbouncer with pool_mode set to "transaction" or
-"statement" does not support prepared statements properly.
-You have two options:
-
-* if you are using pgbouncer for connection pooling to a
-  single server, switch to the connection pool functionality
-  provided by asyncpg, it is a much better option for this
-  purpose;
-
-* if you have no option of avoiding the use of pgbouncer,
-  then you can set statement_cache_size to 0 when creating
-  the asyncpg connection object.
-
-[SQL: select pg_catalog.version()]
-(Background on this error at: https://sqlalche.me/e/20/f405)
+03:38:17 web.1    |         
+03:38:17 web.1    | 2026-04-11 03:38:17,626 | INFO     | sqlalchemy.engine.Engine | 
+03:38:17 web.1    |         SELECT
+03:38:17 web.1    |             id,
+Menu
+03:38:17 web.1    |             farm_name,
+03:38:17 web.1    |             survey_number,
+03:38:17 web.1    |             district,
+03:38:17 web.1    |             taluka,
+03:38:17 web.1    |             village,
+03:38:17 web.1    |             state,
+03:38:17 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+03:38:17 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+03:38:17 web.1    |             boundary_source,
+03:38:17 web.1    |             created_at AS registered_at,
+03:38:17 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+03:38:17 web.1    |         FROM land_parcels
+03:38:17 web.1    |         WHERE user_id = $1
+03:38:17 web.1    |         ORDER BY registered_at DESC
+03:38:17 web.1    |         
+03:38:17 web.1    | 2026-04-11 03:38:17,626 INFO sqlalchemy.engine.Engine [cached since 8.927s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
+03:38:17 web.1    | 2026-04-11 03:38:17,626 | INFO     | sqlalchemy.engine.Engine | [cached since 8.927s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
+03:38:17 web.1    | 2026-04-11 03:38:17,631 INFO sqlalchemy.engine.Engine ROLLBACK
+03:38:17 web.1    | 2026-04-11 03:38:17,631 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
+03:38:17 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/land/list?page=2&limit=10 HTTP/1.1" 200 OK
+03:38:17 web.1    | 2026-04-11 03:38:17,808 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+03:38:17 web.1    | 2026-04-11 03:38:17,808 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
+03:38:17 web.1    | 2026-04-11 03:38:17,808 INFO sqlalchemy.engine.Engine 
+03:38:17 web.1    |         SELECT
+03:38:17 web.1    |             id,
+03:38:17 web.1    |             farm_name,
+03:38:17 web.1    |             survey_number,
+03:38:17 web.1    |             district,
+03:38:17 web.1    |             taluka,
+03:38:17 web.1    |             village,
+03:38:17 web.1    |             state,
+03:38:17 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+03:38:17 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+03:38:17 web.1    |             boundary_source,
+03:38:17 web.1    |             created_at AS registered_at,
+03:38:17 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+03:38:17 web.1    |         FROM land_parcels
+03:38:17 web.1    |         WHERE user_id = $1
+03:38:17 web.1    |         ORDER BY registered_at DESC
+03:38:17 web.1    |         
+03:38:17 web.1    | 2026-04-11 03:38:17,808 | INFO     | sqlalchemy.engine.Engine | 
+03:38:17 web.1    |         SELECT
+03:38:17 web.1    |             id,
+03:38:17 web.1    |             farm_name,
+03:38:17 web.1    |             survey_number,
+03:38:17 web.1    |             district,
+03:38:17 web.1    |             taluka,
+03:38:17 web.1    |             village,
+03:38:17 web.1    |             state,
+03:38:17 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+03:38:17 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+03:38:17 web.1    |             boundary_source,
+03:38:17 web.1    |             created_at AS registered_at,
+03:38:17 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+03:38:17 web.1    |         FROM land_parcels
+03:38:17 web.1    |         WHERE user_id = $1
+03:38:17 web.1    |         ORDER BY registered_at DESC
+03:38:17 web.1    |         
+03:38:17 web.1    | 2026-04-11 03:38:17,808 INFO sqlalchemy.engine.Engine [cached since 9.109s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
+03:38:17 web.1    | 2026-04-11 03:38:17,808 | INFO     | sqlalchemy.engine.Engine | [cached since 9.109s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
+03:38:17 web.1    | 2026-04-11 03:38:17,951 INFO sqlalchemy.engine.Engine ROLLBACK
+03:38:17 web.1    | 2026-04-11 03:38:17,951 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
+03:38:17 web.1    | 2026-04-11 03:38:17,998 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at&land_id=eq.359a9c8d-8c67-4941-9f29-bf7d3995ca68&order=audit_year.desc "HTTP/2 200 OK"
+03:38:20 web.1    | 2026-04-11 03:38:20,693 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/ce014e5ecd534c9a0e065a96f149aa89-396474d0645f76808d26d67c13b8fb2f:getPixels "HTTP/1.1 200 OK"
+03:38:20 web.1    | 2026-04-11 03:38:20,757 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 400 Bad Request"
+03:38:20 web.1    | 2026-04-11 03:38:20,822 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 200 OK"
+03:38:20 web.1    | 2026-04-11 03:38:20,823 | ERROR    | terratrust.land | Failed to list lands for user 9631eb0d-7699-45c4-ac75-282ecb3def35: 2 validation errors for LandListItem
+03:38:20 web.1    | id
+03:38:20 web.1    |   Input should be a valid string [type=string_type, input_value=UUID('359a9c8d-8c67-4941-9f29-bf7d3995ca68'), input_type=UUID]
+03:38:20 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
+03:38:20 web.1    | registered_at
+03:38:20 web.1    |   Input should be a valid string [type=string_type, input_value=datetime.datetime(2026, 4...o=datetime.timezone.utc), input_type=datetime]
+03:38:20 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
+03:38:20 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/land/list?page=1&limit=10 HTTP/1.1" 500 Internal Server Error
+03:38:28 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
+03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
+03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
+03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
+03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
+03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
+03:39:12 web.1    | 2026-04-11 03:39:12,070 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+03:39:12 web.1    | 2026-04-11 03:39:12,119 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+03:39:12 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+03:39:13 web.1    | 2026-04-11 03:39:13,238 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+03:39:13 web.1    | 2026-04-11 03:39:13,258 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+03:39:13 web.1    | 2026-04-11 03:39:13,317 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+03:39:13 web.1    | 2026-04-11 03:39:13,318 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+03:39:13 web.1    | 2026-04-11 03:39:13,319 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+03:39:13 web.1    | 2026-04-11 03:39:13,319 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
+03:39:13 web.1    | 2026-04-11 03:39:13,319 INFO sqlalchemy.engine.Engine 
+03:39:13 web.1    |         SELECT
+03:39:13 web.1    |             id,
+03:39:13 web.1    |             farm_name,
+03:39:13 web.1    |             survey_number,
+03:39:13 web.1    |             district,
+03:39:13 web.1    |             taluka,
+03:39:13 web.1    |             village,
+03:39:13 web.1    |             state,
+03:39:13 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+03:39:13 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+03:39:13 web.1    |             boundary_source,
+03:39:13 web.1    |             created_at AS registered_at,
+03:39:13 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+03:39:13 web.1    |         FROM land_parcels
+03:39:13 web.1    |         WHERE user_id = $1
+03:39:13 web.1    |         ORDER BY registered_at DESC
+03:39:13 web.1    |         
+03:39:13 web.1    | 2026-04-11 03:39:13,319 | INFO     | sqlalchemy.engine.Engine | 
+03:39:13 web.1    |         SELECT
+03:39:13 web.1    |             id,
+03:39:13 web.1    |             farm_name,
+03:39:13 web.1    |             survey_number,
+03:39:13 web.1    |             district,
+03:39:13 web.1    |             taluka,
+03:39:13 web.1    |             village,
+03:39:13 web.1    |             state,
+03:39:13 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+03:39:13 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+03:39:13 web.1    |             boundary_source,
+03:39:13 web.1    |             created_at AS registered_at,
+03:39:13 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+03:39:13 web.1    |         FROM land_parcels
+03:39:13 web.1    |         WHERE user_id = $1
+03:39:13 web.1    |         ORDER BY registered_at DESC
+03:39:13 web.1    |         
+03:39:13 web.1    | 2026-04-11 03:39:13,320 INFO sqlalchemy.engine.Engine [cached since 64.62s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
+03:39:13 web.1    | 2026-04-11 03:39:13,320 | INFO     | sqlalchemy.engine.Engine | [cached since 64.62s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
+03:39:13 web.1    | 2026-04-11 03:39:13,326 INFO sqlalchemy.engine.Engine ROLLBACK
+03:39:13 web.1    | 2026-04-11 03:39:13,326 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
+03:39:13 web.1    | 2026-04-11 03:39:13,393 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=audit_year%2Cstatus%2Ccredits_issued%2Cland_id%2Ctx_hash%2Cipfs_metadata_cid%2Cipfs_url%2Cminted_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=audit_year.desc "HTTP/2 200 OK"
+03:39:13 web.1    | 2026-04-11 03:39:13,393 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at&land_id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d&order=audit_year.desc "HTTP/2 200 OK"
+03:39:13 web.1    | 2026-04-11 03:39:13,468 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/land_parcels?select=farm_name&id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d "HTTP/2 200 OK"
+03:39:14 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/credits/balance?page=1&limit=2 HTTP/1.1" 200 OK
+03:39:21 web.1    | 2026-04-11 03:39:21,557 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/546ee511b30da3b090b28fe15628e871-706fb543b62b23c8ee028fe61115fef2:getPixels "HTTP/1.1 200 OK"
+03:39:21 web.1    | 2026-04-11 03:39:21,689 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 200 OK"
+03:39:21 web.1    | 2026-04-11 03:39:21,747 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 200 OK"
+03:39:21 web.1    | 2026-04-11 03:39:21,748 | ERROR    | terratrust.land | Failed to list lands for user 7220e9f4-0776-41d8-9cb6-663ba2f0786a: 2 validation errors for LandListItem
+03:39:21 web.1    | id
+03:39:21 web.1    |   Input should be a valid string [type=string_type, input_value=UUID('47be6017-f030-487e-b36f-7242f0cc2b2d'), input_type=UUID]
+03:39:21 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
+03:39:21 web.1    | registered_at
+03:39:21 web.1    |   Input should be a valid string [type=string_type, input_value=datetime.datetime(2026, 4...o=datetime.timezone.utc), input_type=datetime]
+03:39:21 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
+03:39:21 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/land/list?page=1&limit=3 HTTP/1.1" 500 Internal Server Error
+03:39:21 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
+03:39:30 web.1    | INFO:     117.99.246.247:0 - "GET / HTTP/1.1" 404 Not Found
