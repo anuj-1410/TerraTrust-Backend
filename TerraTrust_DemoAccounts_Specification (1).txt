@@ -1,0 +1,1367 @@
+================================================================================
+     TERRATRUST-AR: DEMO ACCOUNTS SPECIFICATION & IMPLEMENTATION GUIDE
+     Aligned to: SRS v3.1 (April 2026) | BSDD v3.1 | FDD v3.1 | Flow v3.1
+================================================================================
+Document Type : Addendum — Demo Account System
+Date          : April 2026
+Controlled by : ENABLE_DEMO_ACCOUNTS env variable (backend only)
+Key principle : ALL demo code lives in dedicated demo/ folders.
+                Zero changes to main project files except 3 minimal additions.
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 0 — HOW THE RESET WORKS (READ THIS FIRST)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The updated FDD and Frontend Flow documents show that logout in TerraTrust
+calls Firebase auth().signOut() directly from the app — there is no separate
+backend logout endpoint in the project design. The app just signs out of
+Firebase locally without telling the backend.
+
+This means the reset for demo accounts 1-3 cannot be triggered by a logout
+signal. Instead, the reset is triggered at the START OF THE NEXT LOGIN,
+by intercepting the GET /api/v1/auth/me endpoint that every device already
+calls on startup and after OTP verification.
+
+Reset flow (accounts 1, 2, 3):
+  1. Developer logs out of the app (Firebase signOut runs locally).
+  2. Developer logs in again with the demo phone number.
+  3. App calls GET /api/v1/auth/me as normal (existing, unchanged code).
+  4. DemoResetMiddleware intercepts this request BEFORE the route handler runs.
+     It detects this is a resettable demo UID, wipes the DB, and restores
+     the checkpoint state.
+  5. The normal /auth/me route handler then runs and reads the clean
+     checkpoint state. The app receives the clean state as the response.
+
+Important: The reset runs ONCE per login session. DemoResetMiddleware tracks
+which UIDs have been reset in the current server process. Subsequent /auth/me
+calls (e.g. from background token refresh) do not re-trigger the reset.
+
+Account 4 (persistent): The middleware checks the UID and does nothing for it.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 1 — THE 4 DEMO ACCOUNTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Register all 4 in Firebase Console:
+  Authentication > Sign-in method > Phone > "Phone numbers for testing"
+
+  Phone Number      |  OTP  | Reset?        | Checkpoint State
+  ------------------|-------|---------------|------------------------------------------
+  +91 9000000001    | 111111| On next login | FRESH: no KYC, no wallet, no land
+  +91 9000000002    | 222222| On next login | KYC_DONE: KYC + wallet saved, no land
+  +91 9000000003    | 333333| On next login | LAND_VERIFIED: KYC + wallet + 1 fake parcel
+  +91 9000000004    | 444444| NEVER         | FULL PERSISTENT: KYC + wallet + land + 2024 audit
+
+What each account lets you test:
+
+  Account 1: Full auth flow from scratch.
+    Logs in to KYCScreen. Enter real name and Aadhaar. Wallet generates silently.
+    Arrive at empty HomeScreen. Can add land and go through full land flow.
+    On next login: everything wiped, back to KYCScreen.
+
+  Account 2: Land registration flow.
+    Logs in to HomeScreen (KYC already done, empty land list).
+    Upload real 7/12 document. Cloud Vision OCR runs. BhuNaksha WMS called.
+    Boundary confirmed and saved in Supabase.
+    On next login: land wiped, KYC + wallet restored, empty HomeScreen again.
+
+  Account 3: Full audit flow.
+    Logs in to HomeScreen with "Demo North Field" (0.49 ha, Pune) ready.
+    Start Audit immediately. Real GEE zones generated. Real ARCore scanning.
+    Real Celery satellite fusion. Real Amoy testnet token mint.
+    On next login: audit + scans wiped, land parcel restored. Run it again.
+
+  Account 4: Full feature demo and ongoing testing.
+    Logs in to HomeScreen showing "Main Demo Farm" + 21.38 CTT balance.
+    CreditHistoryScreen shows 2024 audit entry with bar chart.
+    All tabs visible: Home, My Lands, History, Profile.
+    Run new audits, test notifications, wallet recovery flow, settings.
+    Data accumulates permanently. Use this for stakeholder demos.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 2 — CHECKPOINT STATE DEFINITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These are the exact database states that accounts 1-3 are restored to.
+
+CHECKPOINT: FRESH (Account 1)
+  users row:
+    full_name:      NULL
+    aadhaar_hash:   NULL
+    wallet_address: NULL
+    kyc_completed:  false
+    role:           FARMER
+  All other tables: empty for this user
+
+CHECKPOINT: KYC_DONE (Account 2)
+  users row:
+    full_name:      "Demo Farmer Two"
+    aadhaar_hash:   sha256("999900000002")
+    wallet_address: "0xDemo0000000000000000000000000000000002"
+    kyc_completed:  true
+    role:           FARMER
+  All other tables: empty for this user
+
+CHECKPOINT: LAND_VERIFIED (Account 3)
+  users row:
+    full_name:      "Ramesh Shankar Patil"
+    aadhaar_hash:   sha256("999900000003")
+    wallet_address: "0xDemo0000000000000000000000000000000003"
+    kyc_completed:  true
+    role:           FARMER
+  land_parcels: 1 row
+    farm_name:       "Demo North Field"
+    survey_number:   "DEMO-003-47"
+    district:        "Pune" / taluka: "Haveli" / village: "Kharadi"
+    geom:            Fake polygon near 18.520 N 73.857 E (0.49 ha)
+    is_verified:     true
+    boundary_source: WMS_AUTO
+    ocr_owner_name:  "Ramesh Shankar Patil"
+  carbon_audits:   empty
+  ar_tree_scans:   empty
+  sampling_zones:  empty (generated fresh by GEE on each audit start)
+  wallet_recovery_requests: empty
+
+WHAT RESETS vs WHAT DOES NOT (accounts 1, 2, 3 on each login):
+
+  WIPED AND RESTORED:
+    users row (all columns back to checkpoint values)
+    All land_parcels rows for this user
+    All carbon_audits rows for this user
+    All ar_tree_scans rows for this user
+    All sampling_zones rows linked to this user's audits
+    All wallet_recovery_requests rows for this user
+    All Supabase Storage files (land-documents + evidence-photos buckets)
+
+  NOT WIPED (Firebase owns these, backend cannot change them):
+    The phone number registration in Firebase Authentication
+    The Firebase UID (permanent — it is the join key between Firebase and
+      the TerraTrust users table and never changes)
+    The OTP code (set in Firebase Console, not in the database)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 3 — SEPARATE DEMO FOLDER STRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+All demo code lives in dedicated folders. Main project files are never modified
+except for 3 minimal additions documented in Part 6.
+
+BACKEND DEMO FOLDER:
+  backend/demo/
+  |-- __init__.py
+  |-- config.py              Firebase UID registry + checkpoint names + env flag
+  |-- checkpoints.py         Checkpoint data builders for each account
+  |-- restore.py             Core restore_to_checkpoint() function
+  |-- middleware.py          FastAPI ASGI middleware that hooks into /auth/me
+  |-- router.py              /demo/* endpoints (manual reset, status check)
+  `-- scripts/
+      |-- seed_demo_accounts.py   One-time initial DB seeding
+      `-- get_demo_uids.py        Prints Firebase UIDs to copy into config.py
+
+MOBILE DEMO FOLDER:
+  src/demo/
+  |-- demoState.ts           Complete fake Redux preloaded state (account 4)
+  |-- mockApiResponses.ts    Optional fake API responses for offline UI testing
+  `-- README.md              Quick reference for developers
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 4 — BACKEND DEMO FOLDER: COMPLETE CODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/__init__.py
+--------------------------------------------------------------------------------
+  # Empty — makes backend/demo/ a Python package.
+
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/config.py
+--------------------------------------------------------------------------------
+
+  import os
+
+  ENABLE_DEMO_ACCOUNTS = os.getenv('ENABLE_DEMO_ACCOUNTS', 'false').lower() == 'true'
+
+  # -------------------------------------------------------------------------
+  # STEP REQUIRED ONCE BEFORE FIRST USE:
+  #   1. Add the 4 phone numbers to Firebase Console (phone numbers for testing)
+  #   2. Log in once with each number in the app to trigger Firebase user creation
+  #   3. Run: python demo/scripts/get_demo_uids.py
+  #   4. Paste the 4 printed UIDs into this dict below
+  # -------------------------------------------------------------------------
+  DEMO_FIREBASE_UIDS: dict[str, str] = {
+      "+919000000001": "PASTE_UID_HERE",
+      "+919000000002": "PASTE_UID_HERE",
+      "+919000000003": "PASTE_UID_HERE",
+      "+919000000004": "PASTE_UID_HERE",
+  }
+
+  # Reverse lookup: firebase_uid -> phone number string
+  DEMO_UID_TO_PHONE: dict[str, str] = {
+      v: k for k, v in DEMO_FIREBASE_UIDS.items()
+  }
+
+  DEMO_ACCOUNT_CONFIG: dict[str, dict] = {
+      DEMO_FIREBASE_UIDS["+919000000001"]: {
+          "checkpoint":  "FRESH",
+          "persistent":  False,
+          "phone":       "+919000000001",
+          "description": "Fresh user — no KYC, no wallet, no land",
+      },
+      DEMO_FIREBASE_UIDS["+919000000002"]: {
+          "checkpoint":  "KYC_DONE",
+          "persistent":  False,
+          "phone":       "+919000000002",
+          "description": "KYC + wallet done, no land",
+      },
+      DEMO_FIREBASE_UIDS["+919000000003"]: {
+          "checkpoint":  "LAND_VERIFIED",
+          "persistent":  False,
+          "phone":       "+919000000003",
+          "description": "KYC + wallet + 1 verified land parcel",
+      },
+      DEMO_FIREBASE_UIDS["+919000000004"]: {
+          "checkpoint":  "FULL",
+          "persistent":  True,
+          "phone":       "+919000000004",
+          "description": "Full persistent account with 2024 audit history",
+      },
+  }
+
+  def is_demo_uid(firebase_uid: str) -> bool:
+      return ENABLE_DEMO_ACCOUNTS and firebase_uid in DEMO_ACCOUNT_CONFIG
+
+  def is_resettable_demo(firebase_uid: str) -> bool:
+      config = DEMO_ACCOUNT_CONFIG.get(firebase_uid, {})
+      return ENABLE_DEMO_ACCOUNTS and not config.get("persistent", True)
+
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/checkpoints.py
+--------------------------------------------------------------------------------
+
+  import json
+  import hashlib
+  from demo.config import DEMO_UID_TO_PHONE
+
+  # Pre-seeded fake polygon — small area near Pune, Maharashtra (~0.49 ha)
+  DEMO_POLYGON_ACCOUNT3 = {
+      "type": "Polygon",
+      "coordinates": [
+          [[73.856, 18.520], [73.858, 18.520],
+           [73.858, 18.522], [73.856, 18.522],
+           [73.856, 18.520]]
+      ]
+  }
+
+  # Different polygon for account 4 so survey numbers never conflict
+  DEMO_POLYGON_ACCOUNT4 = {
+      "type": "Polygon",
+      "coordinates": [
+          [[73.859, 18.523], [73.861, 18.523],
+           [73.861, 18.525], [73.859, 18.525],
+           [73.859, 18.523]]
+      ]
+  }
+
+  def _h(value: str) -> str:
+      """SHA-256 hash — matches the backend KYC hashing in POST /api/v1/auth/kyc."""
+      return hashlib.sha256(value.encode()).hexdigest()
+
+
+  def checkpoint_fresh(firebase_uid: str) -> dict:
+      phone = DEMO_UID_TO_PHONE[firebase_uid]
+      return {
+          "user": {
+              "firebase_uid":   firebase_uid,
+              "phone_number":   phone,
+              "full_name":      None,
+              "aadhaar_hash":   None,
+              "wallet_address": None,
+              "kyc_completed":  False,
+              "role":           "FARMER",
+          },
+          "land_parcels": [],
+      }
+
+
+  def checkpoint_kyc_done(firebase_uid: str) -> dict:
+      phone = DEMO_UID_TO_PHONE[firebase_uid]
+      return {
+          "user": {
+              "firebase_uid":   firebase_uid,
+              "phone_number":   phone,
+              "full_name":      "Demo Farmer Two",
+              "aadhaar_hash":   _h("999900000002"),
+              "wallet_address": "0xDemo0000000000000000000000000000000002",
+              "kyc_completed":  True,
+              "role":           "FARMER",
+          },
+          "land_parcels": [],
+      }
+
+
+  def checkpoint_land_verified(firebase_uid: str) -> dict:
+      phone = DEMO_UID_TO_PHONE[firebase_uid]
+      return {
+          "user": {
+              "firebase_uid":   firebase_uid,
+              "phone_number":   phone,
+              "full_name":      "Ramesh Shankar Patil",
+              "aadhaar_hash":   _h("999900000003"),
+              "wallet_address": "0xDemo0000000000000000000000000000000003",
+              "kyc_completed":  True,
+              "role":           "FARMER",
+          },
+          "land_parcels": [
+              {
+                  "farm_name":       "Demo North Field",
+                  "survey_number":   "DEMO-003-47",
+                  "district":        "Pune",
+                  "taluka":          "Haveli",
+                  "village":         "Kharadi",
+                  "state":           "Maharashtra",
+                  "geom_geojson":    json.dumps(DEMO_POLYGON_ACCOUNT3),
+                  "is_verified":     True,
+                  "boundary_source": "WMS_AUTO",
+                  "ocr_owner_name":  "Ramesh Shankar Patil",
+              }
+          ],
+      }
+
+
+  # Mapping from checkpoint name string to builder function
+  CHECKPOINT_BUILDERS: dict = {
+      "FRESH":          checkpoint_fresh,
+      "KYC_DONE":       checkpoint_kyc_done,
+      "LAND_VERIFIED":  checkpoint_land_verified,
+  }
+
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/restore.py
+--------------------------------------------------------------------------------
+
+  import json
+  from demo.config import DEMO_ACCOUNT_CONFIG, is_resettable_demo
+  from demo.checkpoints import CHECKPOINT_BUILDERS
+
+
+  async def restore_to_checkpoint(firebase_uid: str, db) -> None:
+      """
+      Wipes all TerraTrust database rows for a resettable demo account and
+      re-creates them at the account's original checkpoint state.
+
+      Called by DemoResetMiddleware on the first GET /api/v1/auth/me call
+      of each new login session for accounts 1, 2, and 3.
+
+      Runs in a single transaction. Any failure rolls back all changes and
+      leaves the account in its current (non-reset) state. Errors are logged
+      but NEVER raised — a restore failure must not break the /auth/me response.
+
+      Args:
+          firebase_uid : The Firebase UID of the demo user logging in
+          db           : SQLAlchemy async database session
+      """
+      if not is_resettable_demo(firebase_uid):
+          return
+
+      config     = DEMO_ACCOUNT_CONFIG[firebase_uid]
+      builder    = CHECKPOINT_BUILDERS[config["checkpoint"]]
+      checkpoint = builder(firebase_uid)
+
+      try:
+          # -- 1. GET CURRENT SUPABASE USER ID --------------------------------
+          result = await db.execute(
+              "SELECT id FROM users WHERE firebase_uid = :uid",
+              {"uid": firebase_uid}
+          )
+          row = result.fetchone()
+
+          if row:
+              user_id = str(row.id)
+
+              # -- 2. DELETE IN FOREIGN-KEY-SAFE ORDER ------------------------
+              # Child tables first, then parent tables.
+              # Order: ar_tree_scans -> sampling_zones -> carbon_audits
+              #        -> wallet_recovery_requests -> land_parcels -> users
+
+              await db.execute("""
+                  DELETE FROM ar_tree_scans
+                  WHERE land_id IN (
+                      SELECT id FROM land_parcels WHERE user_id = :uid
+                  )
+              """, {"uid": user_id})
+
+              await db.execute("""
+                  DELETE FROM sampling_zones
+                  WHERE land_id IN (
+                      SELECT id FROM land_parcels WHERE user_id = :uid
+                  )
+              """, {"uid": user_id})
+
+              await db.execute(
+                  "DELETE FROM carbon_audits WHERE user_id = :uid",
+                  {"uid": user_id}
+              )
+
+              await db.execute(
+                  "DELETE FROM wallet_recovery_requests WHERE user_id = :uid",
+                  {"uid": user_id}
+              )
+
+              await db.execute(
+                  "DELETE FROM land_parcels WHERE user_id = :uid",
+                  {"uid": user_id}
+              )
+
+              await db.execute(
+                  "DELETE FROM users WHERE id = :uid",
+                  {"uid": user_id}
+              )
+
+              # -- 3. CLEAN SUPABASE STORAGE ----------------------------------
+              # Non-blocking. A storage failure must NOT roll back the DB reset.
+              _cleanup_storage(user_id)
+
+          # -- 4. RE-INSERT USER ROW AT CHECKPOINT STATE ----------------------
+          await db.execute("""
+              INSERT INTO users (
+                  firebase_uid, phone_number, full_name, aadhaar_hash,
+                  wallet_address, kyc_completed, role
+              ) VALUES (
+                  :firebase_uid, :phone_number, :full_name, :aadhaar_hash,
+                  :wallet_address, :kyc_completed, :role
+              )
+          """, checkpoint["user"])
+
+          # -- 5. RE-INSERT LAND PARCELS IF CHECKPOINT INCLUDES THEM ---------
+          if checkpoint.get("land_parcels"):
+              new_result = await db.execute(
+                  "SELECT id FROM users WHERE firebase_uid = :uid",
+                  {"uid": firebase_uid}
+              )
+              new_user_id = str(new_result.fetchone().id)
+
+              for land in checkpoint["land_parcels"]:
+                  await db.execute("""
+                      INSERT INTO land_parcels (
+                          user_id, farm_name, survey_number, district,
+                          taluka, village, state, geom,
+                          is_verified, boundary_source, ocr_owner_name
+                      ) VALUES (
+                          :user_id, :farm_name, :survey_number, :district,
+                          :taluka, :village, :state,
+                          ST_GeomFromGeoJSON(:geom_geojson),
+                          :is_verified, :boundary_source, :ocr_owner_name
+                      )
+                  """, {**land, "user_id": new_user_id})
+
+          # -- 6. COMMIT ------------------------------------------------------
+          await db.commit()
+          print(f"[DEMO] Restored {config['phone']} to '{config['checkpoint']}'")
+
+      except Exception as exc:
+          await db.rollback()
+          # Log but do NOT raise. A failed restore must never crash /auth/me.
+          print(f"[DEMO] Restore error for {firebase_uid}: {exc}")
+
+
+  def _cleanup_storage(user_id: str) -> None:
+      """
+      Deletes all Supabase Storage files for this user.
+      Called after the DB rows are deleted. Failures are caught and logged.
+      Uses the supabase_client already imported by app/database.py.
+      """
+      try:
+          from app.database import supabase_client as supabase
+          for bucket in ["land-documents", "evidence-photos"]:
+              try:
+                  files = supabase.storage.from_(bucket).list(path=user_id)
+                  if files:
+                      paths = [f"{user_id}/{f['name']}" for f in files]
+                      supabase.storage.from_(bucket).remove(paths)
+              except Exception as e:
+                  print(f"[DEMO] Storage cleanup warning ({bucket}): {e}")
+      except Exception as e:
+          print(f"[DEMO] Storage import error: {e}")
+
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/middleware.py
+--------------------------------------------------------------------------------
+
+  """
+  DemoResetMiddleware
+
+  An ASGI middleware that intercepts every GET /api/v1/auth/me request.
+  If the authenticated Firebase user is a resettable demo account AND this
+  is the first /auth/me call in the current server session, it runs
+  restore_to_checkpoint() BEFORE the actual route handler executes.
+
+  The auth router (routers/auth.py) is NOT modified at all.
+  This middleware uses Starlette's BaseHTTPMiddleware pattern.
+  """
+
+  from starlette.middleware.base import BaseHTTPMiddleware
+  from starlette.requests import Request
+  from starlette.responses import Response
+  from demo.config import is_resettable_demo, ENABLE_DEMO_ACCOUNTS
+  from demo.restore import restore_to_checkpoint
+
+  # In-memory set tracking which UIDs have already been reset in this server
+  # process lifecycle. Only 3 UIDs can ever enter this set (accounts 1-3).
+  # Cleared on server restart, which is correct — each deploy gets fresh resets.
+  _reset_done_this_session: set[str] = set()
+
+
+  class DemoResetMiddleware(BaseHTTPMiddleware):
+      """
+      Resets resettable demo accounts before GET /api/v1/auth/me responds.
+      Only active when ENABLE_DEMO_ACCOUNTS=true.
+      All other routes pass through with zero overhead added.
+      """
+
+      async def dispatch(self, request: Request, call_next) -> Response:
+          # Fast path: skip everything if not the relevant route
+          if not ENABLE_DEMO_ACCOUNTS:
+              return await call_next(request)
+
+          if request.url.path != "/api/v1/auth/me" or request.method != "GET":
+              return await call_next(request)
+
+          # Extract the Firebase UID from the Authorization token
+          firebase_uid = await _extract_firebase_uid(request)
+          if not firebase_uid:
+              return await call_next(request)
+
+          # Only reset resettable demo accounts
+          if not is_resettable_demo(firebase_uid):
+              return await call_next(request)
+
+          # Only reset once per server session per UID
+          if firebase_uid in _reset_done_this_session:
+              return await call_next(request)
+
+          # Mark as reset immediately (before running, to prevent re-entry
+          # on concurrent requests from the same user)
+          _reset_done_this_session.add(firebase_uid)
+
+          # Run the checkpoint restore. The route handler will then read
+          # the clean checkpoint state from the database.
+          try:
+              from app.database import get_db_session
+              async with get_db_session() as db:
+                  await restore_to_checkpoint(firebase_uid, db)
+          except Exception as e:
+              print(f"[DEMO] Middleware restore error: {e}")
+              # Never block the request on restore failure
+
+          return await call_next(request)
+
+
+  async def _extract_firebase_uid(request: Request) -> str | None:
+      """
+      Verifies the Firebase ID token from the Authorization header and returns
+      the uid. Returns None on any error. Must never crash a request.
+      Reuses the Firebase Admin SDK already imported by the main app.
+      """
+      try:
+          auth_header = request.headers.get("Authorization", "")
+          if not auth_header.startswith("Bearer "):
+              return None
+          token = auth_header.split(" ", 1)[1]
+          from firebase_admin import auth as firebase_auth
+          decoded = firebase_auth.verify_id_token(token)
+          return decoded.get("uid")
+      except Exception:
+          return None
+
+
+  def invalidate_demo_session(firebase_uid: str) -> None:
+      """
+      Removes a UID from the already-reset set so the next /auth/me call
+      for this account will trigger a fresh restore.
+      Called by the manual reset endpoint in demo/router.py.
+      """
+      _reset_done_this_session.discard(firebase_uid)
+
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/router.py
+--------------------------------------------------------------------------------
+
+  """
+  Demo-only API endpoints mounted at /demo/* prefix.
+  Registered in main.py ONLY when ENABLE_DEMO_ACCOUNTS=true.
+  Never reachable in production.
+  """
+
+  from fastapi import APIRouter, Depends
+  from app.dependencies import get_db
+  from demo.config import (
+      DEMO_FIREBASE_UIDS, DEMO_ACCOUNT_CONFIG,
+      is_resettable_demo, ENABLE_DEMO_ACCOUNTS
+  )
+  from demo.restore import restore_to_checkpoint
+  from demo.middleware import invalidate_demo_session
+
+  router = APIRouter(tags=["Demo — Development Only"])
+
+
+  @router.post("/reset/{phone_suffix}")
+  async def manually_reset_demo_account(
+      phone_suffix: str,
+      db = Depends(get_db)
+  ):
+      """
+      Manually resets a resettable demo account to its checkpoint state.
+      Useful when you want a clean reset without logging out and back in.
+
+      Usage:
+        POST /demo/reset/9000000001  -> resets account 1 to FRESH
+        POST /demo/reset/9000000002  -> resets account 2 to KYC_DONE
+        POST /demo/reset/9000000003  -> resets account 3 to LAND_VERIFIED
+      Account 4 is persistent and cannot be reset this way.
+      """
+      phone        = f"+91{phone_suffix}" if not phone_suffix.startswith("+") else phone_suffix
+      firebase_uid = DEMO_FIREBASE_UIDS.get(phone)
+
+      if not firebase_uid or firebase_uid == "PASTE_UID_HERE":
+          return {"error": f"{phone} is not a registered demo account or UIDs not yet configured"}
+
+      if not is_resettable_demo(firebase_uid):
+          return {"error": "Account 4 is persistent and cannot be reset"}
+
+      # Clear the in-memory session flag so middleware can reset again on login
+      invalidate_demo_session(firebase_uid)
+
+      # Run restore immediately
+      await restore_to_checkpoint(firebase_uid, db)
+
+      config = DEMO_ACCOUNT_CONFIG[firebase_uid]
+      return {
+          "status":     "reset_complete",
+          "phone":      phone,
+          "checkpoint": config["checkpoint"],
+      }
+
+
+  @router.get("/status")
+  async def demo_status():
+      """
+      Returns current demo account configuration.
+      Shows whether UIDs have been filled in and which accounts are persistent.
+      Useful for confirming setup is correct before running the seed script.
+      """
+      return {
+          "enabled": ENABLE_DEMO_ACCOUNTS,
+          "accounts": [
+              {
+                  "phone":          cfg["phone"],
+                  "checkpoint":     cfg["checkpoint"],
+                  "persistent":     cfg["persistent"],
+                  "uid_configured": DEMO_FIREBASE_UIDS.get(cfg["phone"], "") != "PASTE_UID_HERE",
+              }
+              for cfg in DEMO_ACCOUNT_CONFIG.values()
+          ],
+      }
+
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/scripts/seed_demo_accounts.py
+--------------------------------------------------------------------------------
+
+  """
+  One-time seeding of all 4 demo accounts in the Supabase database.
+  Run ONCE after completing the one-time setup checklist (Part 8 of this doc).
+  Safe to re-run — skips accounts that already exist.
+  """
+
+  import os
+  import sys
+  import json
+
+  # Allow imports from backend/ root
+  sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+  from app.database import get_sync_db
+  from demo.config import DEMO_FIREBASE_UIDS
+  from demo.checkpoints import CHECKPOINT_BUILDERS, DEMO_POLYGON_ACCOUNT4, _h
+
+
+  def user_exists(db, firebase_uid: str) -> bool:
+      return db.execute(
+          "SELECT id FROM users WHERE firebase_uid = :uid",
+          {"uid": firebase_uid}
+      ).fetchone() is not None
+
+
+  def seed_account_from_checkpoint(db, phone: str, checkpoint_name: str):
+      uid = DEMO_FIREBASE_UIDS[phone]
+      if uid == "PASTE_UID_HERE":
+          print(f"  SKIP  {phone} -- UID not configured. Run get_demo_uids.py first.")
+          return
+      if user_exists(db, uid):
+          print(f"  EXISTS {phone} -- skipping (already in database)")
+          return
+
+      data = CHECKPOINT_BUILDERS[checkpoint_name](uid)
+
+      db.execute("""
+          INSERT INTO users (firebase_uid, phone_number, full_name, aadhaar_hash,
+                             wallet_address, kyc_completed, role)
+          VALUES (:firebase_uid, :phone_number, :full_name, :aadhaar_hash,
+                  :wallet_address, :kyc_completed, :role)
+      """, data["user"])
+
+      if data.get("land_parcels"):
+          user_id = db.execute(
+              "SELECT id FROM users WHERE firebase_uid = :uid",
+              {"uid": uid}
+          ).fetchone().id
+          for land in data["land_parcels"]:
+              db.execute("""
+                  INSERT INTO land_parcels (user_id, farm_name, survey_number,
+                      district, taluka, village, state, geom,
+                      is_verified, boundary_source, ocr_owner_name)
+                  VALUES (:user_id, :farm_name, :survey_number, :district,
+                      :taluka, :village, :state,
+                      ST_GeomFromGeoJSON(:geom_geojson),
+                      :is_verified, :boundary_source, :ocr_owner_name)
+              """, {**land, "user_id": str(user_id)})
+
+      db.commit()
+      print(f"  CREATED {phone} [{checkpoint_name}]")
+
+
+  def seed_account4(db):
+      uid = DEMO_FIREBASE_UIDS["+919000000004"]
+      if uid == "PASTE_UID_HERE":
+          print("  SKIP  +919000000004 -- UID not configured. Run get_demo_uids.py first.")
+          return
+      if user_exists(db, uid):
+          print("  EXISTS +919000000004 -- skipping (already in database)")
+          return
+
+      db.execute("""
+          INSERT INTO users (firebase_uid, phone_number, full_name, aadhaar_hash,
+                             wallet_address, kyc_completed, role)
+          VALUES (:firebase_uid, :phone_number, :full_name, :aadhaar_hash,
+                  :wallet_address, :kyc_completed, :role)
+      """, {
+          "firebase_uid":   uid,
+          "phone_number":   "+919000000004",
+          "full_name":      "Suresh Kumar Demo",
+          "aadhaar_hash":   _h("999900000004"),
+          "wallet_address": "0xDemo0000000000000000000000000000000004",
+          "kyc_completed":  True,
+          "role":           "FARMER",
+      })
+
+      user_id = db.execute(
+          "SELECT id FROM users WHERE firebase_uid = :uid",
+          {"uid": uid}
+      ).fetchone().id
+
+      db.execute("""
+          INSERT INTO land_parcels (user_id, farm_name, survey_number, district,
+              taluka, village, state, geom, is_verified, boundary_source,
+              ocr_owner_name)
+          VALUES (:user_id, 'Main Demo Farm', 'DEMO-004-47', 'Pune', 'Haveli',
+              'Kharadi', 'Maharashtra',
+              ST_GeomFromGeoJSON(:geom), true, 'WMS_AUTO', 'Suresh Kumar Demo')
+      """, {
+          "user_id": str(user_id),
+          "geom":    json.dumps(DEMO_POLYGON_ACCOUNT4),
+      })
+
+      land_id = db.execute(
+          "SELECT id FROM land_parcels WHERE user_id = :uid "
+          "AND survey_number = 'DEMO-004-47'",
+          {"uid": str(user_id)}
+      ).fetchone().id
+
+      # 2024 completed baseline audit
+      # Biomass 12.4 t, delta 12.4 t, carbon 5.828 t, CO2e 21.38 CTT
+      # credits_issued = 21.38 (human-readable float, per SRS Section 11.6)
+      # on-chain raw units = int(21.38 * 10) = 213 (handled by minting_service)
+      db.execute("""
+          INSERT INTO carbon_audits (
+              land_id, user_id, audit_year, status,
+              s1_vh_mean_db, s1_vv_mean_db, s2_ndvi_mean, s2_evi_mean,
+              gedi_height_mean, srtm_elevation_mean, nisar_used,
+              xgboost_model_version, features_count, trees_scanned_count,
+              total_biomass_tonnes, prev_year_biomass, delta_biomass,
+              carbon_tonnes, co2_equivalent, credits_issued,
+              ipfs_metadata_cid, tx_hash, token_id, minted_at
+          ) VALUES (
+              :land_id, :user_id, 2024, 'MINTED',
+              -13.2, -11.8, 0.64, 0.58,
+              13.4, 541.0, false,
+              'v3.1.0', 9, 11,
+              12.4, 0.0, 12.4, 5.828, 21.38, 21.38,
+              'QmDemoAcct4Baseline2024FakeIPFSHashXXXXXXXXXX',
+              :tx_hash, 4001, '2024-11-15T10:00:00Z'
+          )
+      """, {
+          "land_id": str(land_id),
+          "user_id": str(user_id),
+          "tx_hash": "0x" + "a" * 64,
+      })
+
+      db.commit()
+      print("  CREATED +919000000004 [FULL persistent -- 2024 audit, 21.38 CTT]")
+
+
+  def main():
+      print("=" * 60)
+      print("Seeding demo accounts...")
+      print("(Skips any account that already exists)")
+      print("=" * 60)
+      db = get_sync_db()
+      seed_account_from_checkpoint(db, "+919000000001", "FRESH")
+      seed_account_from_checkpoint(db, "+919000000002", "KYC_DONE")
+      seed_account_from_checkpoint(db, "+919000000003", "LAND_VERIFIED")
+      seed_account4(db)
+      print()
+      print("Done. Login credentials:")
+      print("  +91 9000000001  OTP: 111111  resets on next login -> FRESH")
+      print("  +91 9000000002  OTP: 222222  resets on next login -> KYC_DONE")
+      print("  +91 9000000003  OTP: 333333  resets on next login -> LAND_VERIFIED")
+      print("  +91 9000000004  OTP: 444444  NEVER resets (persistent)")
+
+  if __name__ == "__main__":
+      main()
+
+Run:
+  cd backend && python demo/scripts/seed_demo_accounts.py
+
+
+--------------------------------------------------------------------------------
+FILE: backend/demo/scripts/get_demo_uids.py
+--------------------------------------------------------------------------------
+
+  """
+  Prints the Firebase UID for each demo phone number.
+  Run AFTER logging in once with each number in the app (Step 3 of setup).
+  Paste the output into backend/demo/config.py -> DEMO_FIREBASE_UIDS.
+  Uses the same shared backend Google credential as the main app.
+  """
+
+  import os
+  import sys
+  sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+  import firebase_admin
+  from firebase_admin import auth, credentials
+
+  cred_path = os.getenv(
+      'GOOGLE_APPLICATION_CREDENTIALS',
+      './backend-google-service-account.json'
+  )
+  cred = credentials.Certificate(cred_path)
+  firebase_admin.initialize_app(cred)
+
+  phones = [
+      "+919000000001",
+      "+919000000002",
+      "+919000000003",
+      "+919000000004",
+  ]
+
+  print()
+  print("Paste this block into DEMO_FIREBASE_UIDS in backend/demo/config.py:")
+  print()
+  print('  DEMO_FIREBASE_UIDS: dict[str, str] = {')
+  all_found = True
+  for phone in phones:
+      try:
+          user = auth.get_user_by_phone_number(phone)
+          print(f'      "{phone}": "{user.uid}",')
+      except auth.UserNotFoundError:
+          print(f'      "{phone}": "NOT_FOUND -- log in once with this number first",')
+          all_found = False
+  print('  }')
+  print()
+  if not all_found:
+      print("Some UIDs missing. Log in with those numbers then run again.")
+  else:
+      print("All UIDs found. Paste the block above into config.py, then run:")
+      print("  python demo/scripts/seed_demo_accounts.py")
+
+Run:
+  cd backend && python demo/scripts/get_demo_uids.py
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 5 — MOBILE DEMO FOLDER: COMPLETE CODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+--------------------------------------------------------------------------------
+FILE: src/demo/demoState.ts
+--------------------------------------------------------------------------------
+
+  /**
+   * DEMO REDUX PRELOADED STATE
+   *
+   * Injected into configureStore() when DEMO_MODE=true in .env.development.
+   * Represents account 4's initial state (full user with 2024 audit history).
+   * The app opens directly at DEMO_START_SCREEN with this state loaded,
+   * bypassing Firebase auth entirely.
+   *
+   * NEVER imported in production. Config.DEMO_MODE is never 'true' in
+   * .env.production so this file is dead code that the bundler tree-shakes.
+   *
+   * Aligned to SRS v3.1 Redux store structure (Section 13.1).
+   */
+
+  export const DEMO_REDUX_STATE = {
+    auth: {
+      user: {
+        id:           'demo-user-uuid-004',
+        name:         'Suresh Kumar Demo',
+        phone:        '+919000000004',
+        aadhaar_hash: 'demo_hash_never_real',
+      },
+      walletAddress:   '0xDemo0000000000000000000000000000000004',
+      isAuthenticated: true,
+      kycCompleted:    true,
+    },
+
+    land: {
+      parcels: [
+        {
+          id:                   'demo-land-uuid-004',
+          farm_name:            'Main Demo Farm',
+          survey_number:        'DEMO-004-47',
+          district:             'Pune',
+          taluka:               'Haveli',
+          village:              'Kharadi',
+          state:                'Maharashtra',
+          area_hectares:        0.49,
+          is_verified:          true,
+          boundary_source:      'WMS_AUTO',
+          last_audit_year:      2024,
+          current_audit_id:     null,
+          current_audit_status: null,
+          thumbnail_url: 'https://placehold.co/300x200/2F855A/white?text=Demo+Farm',
+        },
+      ],
+      currentDraft: {
+        ocrResult:             null,
+        boundary:              null,
+        satelliteThumbnailUrl: null,
+        fetchStatus:           'idle' as const,
+      },
+    },
+
+    audit: {
+      activeAuditId:   null,
+      activeLandId:    null,
+      zones:           [],
+      currentZoneIndex: 0,
+      scannedTrees:    [],
+      arTier:          1 as const,
+      sessionComplete: false,
+      lastAuditId:     'demo-audit-2024-004',
+      maintenanceMode: false,
+      uploadStatus:    'idle' as const,
+    },
+
+    credits: {
+      balance: 21.38,
+      history: [
+        {
+          audit_year:           2024,
+          credits_issued:       21.38,
+          land_name:            'Main Demo Farm',
+          tx_hash:              '0x' + 'a'.repeat(64),
+          ipfs_certificate_url: 'https://gateway.pinata.cloud/ipfs/QmDemoHash2024',
+          minted_at:            '2024-11-15T10:00:00Z',
+        },
+      ],
+      pendingMint: false,
+    },
+
+    notifications: {
+      notifications: [],
+      unreadCount:   0,
+    },
+
+    profile: {
+      settingsNotificationsEnabled: true,
+      settingsHighAccuracyGPS:      false,
+      onboardingComplete:           true,
+    },
+  };
+
+
+--------------------------------------------------------------------------------
+FILE: src/demo/mockApiResponses.ts
+--------------------------------------------------------------------------------
+
+  /**
+   * OPTIONAL FRONTEND MOCK API RESPONSES
+   *
+   * Used only when USE_DEMO_API_RESPONSES=true in .env.development.
+   * Allows testing screens that depend on API calls without a running backend.
+   * Never used in production.
+   *
+   * How to activate: In src/services/api.ts add a request interceptor that
+   * checks Config.USE_DEMO_API_RESPONSES === 'true' and short-circuits with
+   * values from this file. For dynamic-path endpoints (e.g. /audit/result/*)
+   * use a prefix-match in the interceptor.
+   *
+   * Aligned to SRS v3.1 API response schemas (Section 12).
+   * Pagination fields (page, limit, total, has_more) match the updated spec.
+   */
+
+  export const MOCK_API_RESPONSES: Record<string, unknown> = {
+
+    '/api/v1/auth/me': {
+      user_id:        'demo-user-uuid-004',
+      firebase_uid:   'demo_firebase_uid_004',
+      phone_number:   '+919000000004',
+      full_name:      'Suresh Kumar Demo',
+      kyc_completed:  true,
+      wallet_address: '0xDemo0000000000000000000000000000000004',
+      wallet_recovery_status:       null,
+      wallet_recovery_requested_at: null,
+    },
+
+    '/api/v1/status': {
+      maintenance: false,
+      message:     null,
+    },
+
+    '/api/v1/land/list': {
+      items: [
+        {
+          id:                   'demo-land-uuid-004',
+          farm_name:            'Main Demo Farm',
+          survey_number:        'DEMO-004-47',
+          district:             'Pune',
+          taluka:               'Haveli',
+          village:              'Kharadi',
+          state:                'Maharashtra',
+          area_hectares:        0.49,
+          is_verified:          true,
+          boundary_source:      'WMS_AUTO',
+          last_audit_year:      2024,
+          registered_at:        '2024-10-01T09:00:00Z',
+          current_audit_id:     null,
+          current_audit_status: null,
+          thumbnail_url: 'https://placehold.co/300x200/2F855A/white?text=Demo+Farm',
+        },
+      ],
+      page: 1, limit: 20, total: 1, has_more: false,
+    },
+
+    '/api/v1/audit/zones': {
+      audit_id: 'demo-audit-uuid-new-session',
+      zones: [
+        {
+          zone_id:        'demo-zone-a',
+          label:          'A',
+          centre_gps:     { lat: 18.521, lng: 73.857 },
+          radius_metres:  9,
+          zone_type:      'high_density',
+          sequence_order: 1,
+          gedi_available: true,
+        },
+        {
+          zone_id:        'demo-zone-b',
+          label:          'B',
+          centre_gps:     { lat: 18.520, lng: 73.857 },
+          radius_metres:  9,
+          zone_type:      'medium_density',
+          sequence_order: 2,
+          gedi_available: false,
+        },
+        {
+          zone_id:        'demo-zone-c',
+          label:          'C',
+          centre_gps:     { lat: 18.521, lng: 73.856 },
+          radius_metres:  9,
+          zone_type:      'low_density',
+          sequence_order: 3,
+          gedi_available: true,
+        },
+      ],
+      walking_path_metres: 145,
+      min_trees_required:  9,
+    },
+
+    '/api/v1/credits/balance': {
+      balance_ctt: 21.38,
+      history: [
+        {
+          audit_year:           2024,
+          credits_issued:       21.38,
+          land_name:            'Main Demo Farm',
+          tx_hash:              '0x' + 'a'.repeat(64),
+          ipfs_certificate_url: 'https://gateway.pinata.cloud/ipfs/QmDemoHash2024',
+          minted_at:            '2024-11-15T10:00:00Z',
+        },
+      ],
+      page: 1, limit: 20, total: 1, has_more: false,
+    },
+
+  };
+
+
+--------------------------------------------------------------------------------
+FILE: src/demo/README.md
+--------------------------------------------------------------------------------
+
+  # TerraTrust Demo Mode
+
+  ## Demo accounts (Firebase test phone numbers)
+  Configured in: Firebase Console > Authentication > Phone numbers for testing
+
+    +91 9000000001  OTP: 111111  Resets to FRESH on next login
+    +91 9000000002  OTP: 222222  Resets to KYC_DONE on next login
+    +91 9000000003  OTP: 333333  Resets to LAND_VERIFIED on next login
+    +91 9000000004  OTP: 444444  Persistent -- never resets
+
+  ## DEMO_MODE (skip auth entirely, jump to any screen)
+  Set DEMO_MODE=true in .env.development.
+  The app opens directly at DEMO_START_SCREEN with account 4's full state.
+  No phone number, no OTP, no backend needed.
+  Set DEMO_START_SCREEN to any screen name from the navigation stack.
+
+  ## USE_DEMO_API_RESPONSES (mock all API calls)
+  Set USE_DEMO_API_RESPONSES=true to return local mock data from
+  src/demo/mockApiResponses.ts for every API call.
+  Use when the backend is not running.
+
+  ## MOCK_AR_MEASUREMENTS (fake AR results on emulator)
+  Set MOCK_AR_MEASUREMENTS=true to return fake diameter/confidence
+  values from the ARModule bridge instead of calling real ARCore.
+  Use on the Android emulator which cannot run ARCore.
+
+  ## .env.development variables
+    DEMO_MODE=false
+    DEMO_START_SCREEN=HomeScreen
+    USE_DEMO_API_RESPONSES=false
+    MOCK_AR_MEASUREMENTS=false
+
+  PRODUCTION SAFETY:
+  Config.DEMO_MODE is read from .env.production where it is always 'false'.
+  This entire folder is unreachable in release builds.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 6 — EXACT MINIMAL ADDITIONS TO EXISTING PROJECT FILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+These are the only 3 additions to existing main files. No line is removed
+or changed. Everything else is new code in the demo/ folders.
+
+--------------------------------------------------------------------------------
+ADDITION 1 OF 3 -- backend/main.py
+--------------------------------------------------------------------------------
+
+Append these 5 lines at the very end of main.py, after all existing
+app.include_router(...) calls and after the CORS middleware setup:
+
+  # -- Demo account support (development only) ---------------------------
+  import os as _os
+  if _os.getenv('ENABLE_DEMO_ACCOUNTS', 'false').lower() == 'true':
+      from demo.middleware import DemoResetMiddleware
+      from demo.router import router as _demo_router
+      app.add_middleware(DemoResetMiddleware)
+      app.include_router(_demo_router, prefix="/demo")
+  # ----------------------------------------------------------------------
+
+That is the entire change. 5 lines inside an if-block.
+When ENABLE_DEMO_ACCOUNTS is not 'true', no demo code is ever imported.
+
+
+--------------------------------------------------------------------------------
+ADDITION 2 OF 3 -- src/store/index.ts
+--------------------------------------------------------------------------------
+
+Add 3 lines near the top of the file (after existing imports) and
+1 option inside the existing configureStore() call:
+
+  // Demo preloaded state -- only active when DEMO_MODE=true in .env.development
+  import Config from 'react-native-config';
+  const _demoPreloaded = Config.DEMO_MODE === 'true'
+    ? require('../demo/demoState').DEMO_REDUX_STATE
+    : undefined;
+
+Then in the existing configureStore({...}) call add one property:
+
+  export const store = configureStore({
+    reducer: { auth: ..., land: ..., audit: ..., credits: ...,
+               notifications: ..., profile: ... },
+    preloadedState: _demoPreloaded,   // <-- ADD THIS LINE ONLY
+    middleware: ...
+  });
+
+That is the entire change. 3 lines + 1 property added to an existing object.
+When DEMO_MODE is not 'true', _demoPreloaded is undefined and configureStore
+behaves exactly as it does today.
+
+
+--------------------------------------------------------------------------------
+ADDITION 3 OF 3 -- backend/app/config.py
+--------------------------------------------------------------------------------
+
+Add this block inside the existing startup validation section of config.py,
+alongside other env var checks that run when the server starts:
+
+  # -- Demo account production safety guard ------------------------------
+  if (os.getenv('ENVIRONMENT', 'development') == 'production' and
+          os.getenv('ENABLE_DEMO_ACCOUNTS', 'false').lower() == 'true'):
+      raise RuntimeError(
+          "\n\nCRITICAL SECURITY ERROR:\n"
+          "ENABLE_DEMO_ACCOUNTS=true is set in production.\n"
+          "Demo phone numbers (+91 9000000001 etc.) are short and guessable.\n"
+          "Set ENABLE_DEMO_ACCOUNTS=false in production .env and redeploy.\n"
+      )
+  # ----------------------------------------------------------------------
+
+That is the entire change. 8 lines inside an if-block.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 7 — NEW ENVIRONMENT VARIABLES TO ADD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Add to SRS v3.1 Section 20 and BSDD v3.1 Section 1.11:
+
+BACKEND -- backend/.env.development (add):
+  ENABLE_DEMO_ACCOUNTS=true
+
+BACKEND -- backend/.env.production (add):
+  ENABLE_DEMO_ACCOUNTS=false   <- MUST always be false in production
+
+MOBILE -- .env.development (add):
+  DEMO_MODE=false
+  DEMO_START_SCREEN=HomeScreen
+  USE_DEMO_API_RESPONSES=false
+  MOCK_AR_MEASUREMENTS=false
+
+MOBILE -- .env.production (add):
+  DEMO_MODE=false
+  USE_DEMO_API_RESPONSES=false
+  MOCK_AR_MEASUREMENTS=false
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 8 -- ONE-TIME SETUP CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  [ ] Step 1
+      Add ENABLE_DEMO_ACCOUNTS=true  to backend/.env.development
+      Add ENABLE_DEMO_ACCOUNTS=false to backend/.env.production
+
+  [ ] Step 2
+      Firebase Console > Authentication > Sign-in method > Phone
+      > "Phone numbers for testing"
+      Add: +919000000001 -> 111111
+           +919000000002 -> 222222
+           +919000000003 -> 333333
+           +919000000004 -> 444444
+
+  [ ] Step 3
+      Run the app in development mode.
+      Log in once with each of the 4 numbers. The app will show errors
+      or an empty state -- that is expected at this point. The only purpose
+      is to force Firebase to create the user entries so UIDs exist.
+
+  [ ] Step 4
+      cd backend && python demo/scripts/get_demo_uids.py
+      Terminal prints 4 UIDs. If any say NOT_FOUND, redo Step 3 for that number.
+
+  [ ] Step 5
+      Open backend/demo/config.py
+      Paste the 4 UIDs into DEMO_FIREBASE_UIDS
+
+  [ ] Step 6
+      Make the 3 minimal additions to existing files (Part 6 above):
+        Add 5 lines to backend/main.py
+        Add 3+1 lines to src/store/index.ts
+        Add 8 lines to backend/app/config.py
+
+  [ ] Step 7
+      cd backend && python demo/scripts/seed_demo_accounts.py
+      Verify output shows CREATED for all 4 accounts.
+
+  [ ] Step 8 -- Verify account 4 (persistent)
+      Log in with +91 9000000004 / OTP: 444444
+      HomeScreen should show "Main Demo Farm" + 21.38 CTT balance
+      History tab should show the 2024 audit entry
+
+  [ ] Step 9 -- Verify account 3 reset
+      Log in with +91 9000000003 / OTP: 333333
+      HomeScreen should show "Demo North Field"
+      Add a second land parcel through the full land registration flow
+      Log out (ProfileScreen > Log Out > confirm)
+      Log in again with +91 9000000003 / OTP: 333333
+      Only "Demo North Field" should remain -- the second parcel is GONE
+      Reset is working.
+
+  [ ] Done.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 9 -- COMPLETE FILE SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NEW FILES (create these -- no existing file is touched except the 3 below):
+  backend/demo/__init__.py
+  backend/demo/config.py
+  backend/demo/checkpoints.py
+  backend/demo/restore.py
+  backend/demo/middleware.py
+  backend/demo/router.py
+  backend/demo/scripts/seed_demo_accounts.py
+  backend/demo/scripts/get_demo_uids.py
+  src/demo/demoState.ts
+  src/demo/mockApiResponses.ts
+  src/demo/README.md
+
+EXISTING FILES WITH MINIMAL ADDITIONS:
+  backend/main.py          5 lines added inside an if-block (end of file)
+  backend/app/config.py    8 lines added inside an if-block (startup section)
+  src/store/index.ts       3 + 1 lines added (imports + configureStore option)
+
+ENV FILES (add new keys):
+  backend/.env.development     ENABLE_DEMO_ACCOUNTS=true
+  backend/.env.production      ENABLE_DEMO_ACCOUNTS=false
+  .env.development             DEMO_MODE, DEMO_START_SCREEN, USE_DEMO_API_RESPONSES,
+                               MOCK_AR_MEASUREMENTS (all false by default)
+  .env.production              Same 3 flags, all false
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PART 10 -- SECURITY RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ENABLE_DEMO_ACCOUNTS must NEVER be true in production.
+   The startup check in config.py crashes the server if it is.
+
+2. The demo phone numbers are short and sequential. Anyone can guess them.
+   If the flag were on in production, an attacker could log in as account 3
+   and run fraudulent audits using the pre-verified land parcel.
+
+3. DemoResetMiddleware is only imported when ENABLE_DEMO_ACCOUNTS=true.
+   In all production deployments the flag is false, the middleware is never
+   imported, and zero overhead is added to any request.
+
+4. DEMO_MODE=true bypasses Firebase authentication entirely.
+   Config.DEMO_MODE is read from .env.production where it is always 'false',
+   so the bypass code is unreachable in release APK/AAB builds.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

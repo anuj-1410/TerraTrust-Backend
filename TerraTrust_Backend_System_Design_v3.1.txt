@@ -1,0 +1,2726 @@
+================================================================================
+BACKEND SYSTEM DESIGN DOCUMENT (BSDD)
+PROJECT: TERRATRUST-AR
+================================================================================
+
+Version         : 3.1 (Revised — Firebase Auth + Pinata alignment review)
+Role            : Central Verification Oracle, Satellite Fusion Engine,
+                  Blockchain Minting Gateway
+Tech Stack      : Python (FastAPI), Firebase Authentication,
+                  Supabase (PostgreSQL + PostGIS + Storage),
+                  Google Earth Engine, NISAR + Sentinel-1 + Sentinel-2 + GEDI
+                  + SRTM, Polygon Blockchain (Solidity), Pinata (IPFS)
+Last Updated    : April 2026
+
+--------------------------------------------------------------------------------
+WHAT CHANGED FROM PREVIOUS VERSION (v2.0)
+--------------------------------------------------------------------------------
+
+1. Self-hosted PostgreSQL replaced by Supabase (cloud-hosted, free tier).
+  Reason: No server needed. Supabase provides PostgreSQL + PostGIS + file
+  storage in one platform. All PostGIS spatial queries work identically.
+
+2. Firebase Auth restored as the dedicated identity provider.
+  Reason: Phone OTP is handled natively in Firebase Authentication on Android,
+  while Supabase remains focused on PostgreSQL/PostGIS + Storage.
+
+3. Satellite fusion engine completely rebuilt.
+   Old: Single Sentinel-1 VH band only. Single k-factor linear calibration.
+   New: 6-layer data stack — NISAR L-band (primary, from June 2026),
+   Sentinel-1 C-band (supplementary), Sentinel-2 optical (NDVI, EVI,
+   Red-Edge), GEDI canopy height, SRTM topography. XGBoost model replaces
+   single k-factor. Speckle filtering added to all SAR data.
+   Expected error: Reduced from ~35% to ~5-7%.
+
+4. Tree height source changed.
+   Old: AR measurement from farmer (phone anchor method).
+   New: NASA GEDI rh98 canopy height from space. AR height used as fallback
+  only for zones where GET /api/v1/audit/zones marks gedi_available=false.
+
+5. Sampling zones are satellite-guided.
+   Old: Fixed arbitrary zones (N, S, Centre).
+   New: Backend runs Sentinel-2 NDVI analysis to identify distinct vegetation
+   density zones. Zones placed inside high, medium, low density areas.
+
+6. Pinata is the chosen IPFS provider.
+  Reason: The backend only needs standards-compliant IPFS pinning for audit
+  metadata plus a dedicated gateway domain for certificate URLs.
+
+7. Smart contract fixed.
+  Fixed: creditAmount multiplication bug (removed * 10**18 scaling).
+       Contract now accepts integer deci-CTT units.
+   Added: retireCredits() burn function for carbon market compliance.
+   Added: Double-mint prevention mapping (auditMinted).
+   Added: Hardhat config for Polygon Amoy testnet.
+
+8. Planet Labs NICFI data removed.
+   Reason: No response received from Planet Labs. Not included in project.
+
+9. S3 file storage removed.
+   Reason: Supabase Storage (1GB free) replaces S3 for evidence photos.
+
+10. OCR engine changed from Tesseract to Google Cloud Vision API.
+  Reason: Cloud Vision handles multilingual structured documents without
+  bundling local model weights or OCR binaries into the backend image.
+  OpenCV remains responsible only for image cleanup and normalization before
+  OCR, and the same backend Google service account can be reused for Vision,
+  Firebase Admin, and Earth Engine via Application Default Credentials.
+
+================================================================================
+SECTION 1: PREREQUISITES AND ACCOUNTS SETUP
+================================================================================
+
+Before writing a single line of backend code, all external accounts and keys
+must be set up. This section defines every account, what it provides, and
+exactly how to set it up.
+
+--------------------------------------------------------------------------------
+1.1 FIREBASE AUTHENTICATION (Phone OTP)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - Phone number OTP authentication for the mobile app
+  - Firebase ID tokens for backend authentication
+  - Test phone numbers and fixed OTP codes for QA and emulator testing
+  - Firebase Admin SDK verification on the FastAPI backend
+
+Setup steps:
+  Step 1: Go to console.firebase.google.com. Create a project named
+          terratrust-ar. Use the same underlying Google Cloud project you plan
+          to use for Maps and Earth Engine.
+  Step 2: Add the Android app. Download google-services.json and place it in
+          android/app/ of the mobile project.
+  Step 3: Register BOTH SHA-1 and SHA-256 signing fingerprints for the app.
+          Firebase Phone Auth relies on app verification (Play Integrity when
+          available, reCAPTCHA fallback otherwise).
+  Step 4: Go to Authentication → Sign-in method. Enable the Phone provider.
+          Set the SMS region policy to allow India (+91) and any testing
+          regions you need.
+  Step 5: Add fictional phone numbers and fixed OTP codes in the Firebase
+          Console for development and QA.
+    Step 6: Enable Firebase App Check for the Android app.
+      Development builds use the Debug provider.
+      Production builds use Play Integrity.
+      Enforce App Check before production rollout to reduce OTP abuse.
+    Step 7: Do NOT generate a separate Firebase-only JSON key for this
+      project.
+      TerraTrust uses one shared backend Google service account created
+      in Google Cloud setup below. Firebase Admin SDK reads that
+      credential through GOOGLE_APPLICATION_CREDENTIALS.
+
+Environment variables from this step:
+  FIREBASE_PROJECT_ID=[your-firebase-project-id]
+
+--------------------------------------------------------------------------------
+1.2 SUPABASE (Database + File Storage)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - PostgreSQL 15 with PostGIS extension (all spatial queries work identically)
+  - File storage for land documents and evidence photos
+  - Visual dashboard to inspect tables, storage, and logs
+
+Important architecture note:
+  Supabase Auth is NOT used in this design. The mobile app does not connect to
+  Supabase directly. All database and storage access goes through FastAPI after
+  Firebase ID token verification.
+
+Free tier limits (as of March 2026):
+  - 500MB database storage
+  - 1GB file storage
+  - 5GB egress
+  - Free projects pause after 1 week of inactivity
+
+Setup steps:
+  Step 1: Go to supabase.com. Click "Start your project". Sign up.
+  Step 2: Click "New Project". Name it "terratrust-ar". Choose region:
+          Southeast Asia (Singapore) — closest free region to India.
+  Step 3: Set a strong database password. Save it. Click "Create new project".
+  Step 4: Wait 2 minutes for project to initialise.
+  Step 5: Go to SQL Editor in dashboard. Run:
+            CREATE EXTENSION IF NOT EXISTS postgis;
+            CREATE EXTENSION IF NOT EXISTS postgis_topology;
+          Click "Run". Confirm "Success".
+  Step 6: Go to Settings → API. Copy and save:
+            - Project URL: https://[ref].supabase.co
+            - service_role/secret key (backend only — never expose this)
+  Step 7: Create the private storage buckets used by the backend:
+            - land-documents
+            - evidence-photos
+
+Environment variables from this step:
+  SUPABASE_URL=https://[your-ref].supabase.co
+  SUPABASE_SERVICE_KEY=[service_role_key]   # Backend only, never in app
+
+Keep-alive ping to prevent 1-week pause:
+  Add a cron job at cron-job.org (free) to hit your FastAPI health endpoint
+  every 5 days:
+    URL: https://[your-api-domain]/health
+    Method: GET
+    Schedule: Every 5 days
+
+--------------------------------------------------------------------------------
+1.3 GOOGLE EARTH ENGINE (Satellite Data)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - Access to entire Sentinel-1, Sentinel-2, GEDI, SRTM datasets
+  - Server-side processing — no data download needed
+  - Python API (earthengine-api) for all satellite operations
+  - Free for non-commercial and research use
+  - Petabytes of satellite imagery available
+
+Setup steps:
+  Step 1: Go to signup.earthengine.google.com.
+          Sign in with your Google account.
+          Select "Academic or research use" category.
+          Fill in project description: "Carbon credit verification for
+          smallholder agroforestry farmers in India using multi-modal satellite
+          fusion."
+          Submit. Approval usually takes 1-3 days.
+  Step 2: Once approved, go to console.cloud.google.com.
+          Select your project (same one used for Maps SDK).
+          Go to APIs & Services → Library.
+          Search "Earth Engine API". Click Enable.
+    Step 3: Create one shared backend service account for server-side Google
+      integrations:
+          APIs & Services → Credentials → Create Credentials
+          → Service Account.
+      Name: "terratrust-backend-service"
+          Role: "Earth Engine" → "Earth Engine Resource Writer"
+          Click Done.
+  Step 4: Click on the service account just created.
+          Go to Keys tab → Add Key → Create new key → JSON.
+      Download the JSON file. Save as: backend-google-service-account.json
+          NEVER commit this file to git. Add to .gitignore.
+    Step 5: Ensure the Cloud project itself is registered for Earth Engine:
+      Go to console.cloud.google.com/earth-engine.
+      Confirm the project is registered and the Earth Engine API is enabled.
+      IMPORTANT: Earth Engine now applies noncommercial quota tiers at the
+      project level. Select the correct tier for this project before
+      rollout. If no tier is selected by April 27, 2026, the project will
+      use the Community Tier by default.
+    Step 6: Enable Cloud Vision API in the same Google Cloud project and reuse
+      this same backend service account for Vision, Firebase Admin, and Earth
+      Engine. Do not create separate JSON keys per Google service.
+
+Environment variables from this step:
+  GOOGLE_CLOUD_PROJECT=[google-cloud-project-id]
+  GOOGLE_APPLICATION_CREDENTIALS=./backend-google-service-account.json
+
+Test command (run after setup):
+  import ee
+  ee.Initialize(project='[google-cloud-project-id]')
+  print(ee.Number(42).getInfo())  # Should print 42
+
+--------------------------------------------------------------------------------
+1.4 NISAR SATELLITE DATA (Alaska Satellite Facility)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - NISAR L-band SAR data (launched July 2025, operational January 2026)
+  - Free global L-band radar data, 1-2 days after acquisition
+  - Data hosted on AWS, accessible via asf_search Python library
+  - Covers India every 6-12 days
+  - Promotion to production is expected only after calibration is confirmed
+
+IMPORTANT PHASING:
+  Before June 2026: Use Sentinel-1 as primary SAR. Use NISAR data for
+  development and testing only (pre-calibration data available but not
+  production-grade).
+  After calibration is confirmed in production readiness testing: switch NISAR
+  to primary SAR source. Sentinel-1 becomes supplementary.
+
+Setup steps:
+  Step 1: Go to urs.earthdata.nasa.gov. Create a free NASA Earthdata account.
+  Step 2: Go to asf.alaska.edu. Sign in with Earthdata credentials.
+  Step 3: Accept the End User License Agreement for NISAR data.
+  Step 4: In your terminal:
+            pip install asf_search
+            python -c "import asf_search; asf_search.ASFSession().auth_with_creds(
+              'YOUR_USERNAME', 'YOUR_PASSWORD')"
+          This saves credentials to ~/.netrc for automated access.
+
+Environment variables from this step:
+  NASA_EARTHDATA_USERNAME=[your username]
+  NASA_EARTHDATA_PASSWORD=[your password]
+
+--------------------------------------------------------------------------------
+1.5 METAMASK AND POLYGON WALLET (Blockchain)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - Admin/Oracle wallet: the blockchain identity of your backend server
+  - This wallet is the only one authorised to call mint() on the smart contract
+  - POL test tokens needed for gas fees (transaction costs on Polygon Amoy)
+
+Setup steps:
+  Step 1: Install MetaMask browser extension at metamask.io.
+  Step 2: Create a new wallet. Write down the 12-word seed phrase on paper.
+          Store it safely offline. If lost, wallet cannot be recovered.
+  Step 3: Add Polygon Amoy Testnet to MetaMask:
+      Network Name: Polygon Amoy Testnet
+      RPC URL: https://rpc-amoy.polygon.technology/
+      Chain ID: 80002
+      Currency Symbol: POL
+      Block Explorer: https://amoy.polygonscan.com
+  Step 4: Get free test POL from Polygon faucet:
+      Go to faucet.polygon.technology.
+      Connect MetaMask. Request test POL.
+      This is fake POL for testing — no real money involved.
+  Step 5: Export private key from MetaMask:
+      Account Details → Export Private Key → Enter password → Copy key.
+      NEVER share this key. NEVER commit to git.
+  NOTE: Polygon documentation now labels the gas token as POL. Older
+      tutorials may still say MATIC, but TerraTrust v3.1 uses the Amoy
+      values above only.
+
+Environment variables from this step:
+  ADMIN_WALLET_PRIVATE_KEY=[exported private key]
+  ADMIN_WALLET_ADDRESS=[your public wallet address]
+
+--------------------------------------------------------------------------------
+1.6 ALCHEMY (Blockchain RPC Provider)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - A gateway URL to connect your Python backend to the Polygon network
+  - Without this you would need to run your own blockchain node (impossible)
+  - Free tier: 300 million compute units per month (far more than needed)
+
+Setup steps:
+  Step 1: Go to alchemy.com. Sign up with Google or email.
+  Step 2: Click "Create new app".
+          Name: TerraTrust-AR
+          Chain: Polygon
+          Network: Amoy (testnet for development)
+          Click Create.
+  Step 3: Click "API Key" on your new app.
+          Copy the HTTPS URL shown.
+          Example: https://polygon-amoy.g.alchemy.com/v2/abc123xyz
+  Step 4: TerraTrust v3.1 uses only the Amoy app above. Do not configure a
+          mainnet app for testing or pilot use.
+
+Environment variables from this step:
+  ALCHEMY_POLYGON_AMOY_URL=https://polygon-amoy.g.alchemy.com/v2/[key]
+
+--------------------------------------------------------------------------------
+1.7 PINATA (IPFS — Metadata Pinning)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - IPFS pinning for audit metadata JSON
+  - JWT-based backend authentication for pinning requests
+  - Dedicated gateway domain for user-facing certificate URLs
+  - Standard IPFS CID output for on-chain storage
+
+Setup steps:
+  Step 1: Go to app.pinata.cloud. Create an account.
+  Step 2: Open API Keys. Click "New Key".
+          Start with Admin privileges in development.
+          Copy the JWT immediately.
+  Step 3: Open Gateways. Copy your gateway domain.
+          Example: example-gateway.mypinata.cloud
+  Step 4: Backend endpoint used in this project:
+          https://api.pinata.cloud/pinning/pinJSONToIPFS
+
+Environment variables from this step:
+  PINATA_JWT=[backend jwt]
+  PINATA_GATEWAY_URL=[your-gateway].mypinata.cloud
+
+--------------------------------------------------------------------------------
+1.8 HARDHAT (Smart Contract Development Tool)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - Local blockchain for testing contracts before deploying
+  - Deployment scripts for Polygon Amoy testnet
+  - Contract verification on PolygonScan
+  - Replaces the need for Remix IDE
+
+Setup steps:
+  Step 1: Create a contracts/ folder in your project root.
+  Step 2: In that folder:
+            npm init -y
+            npm install --save-dev hardhat
+            npm install --save-dev @nomicfoundation/hardhat-toolbox
+            npm install @openzeppelin/contracts
+            npx hardhat --init
+          Select "Create a JavaScript project" when prompted.
+  Step 3: Create hardhat.config.js with Polygon Amoy configuration
+          (full config provided in Section 7 of this document).
+
+--------------------------------------------------------------------------------
+1.9 POLYGONSCAN API (Contract Verification)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - Allows you to verify your contract source code publicly on PolygonScan
+  - Carbon market auditors can read exactly what your contract does
+  - Proves the contract is not hiding any malicious logic
+  - Free
+
+Setup steps:
+  Step 1: Go to polygonscan.com. Click "Sign In" → "Register".
+  Step 2: After registering, go to API Keys section.
+          Click "Add". Name: "terratrust". Copy the key.
+
+Environment variables from this step:
+  POLYGONSCAN_API_KEY=[your api key]
+
+--------------------------------------------------------------------------------
+1.10 MAHARASHTRA LGD API (Land Records)
+--------------------------------------------------------------------------------
+
+What it provides:
+  - Official government REST API for Maharashtra location codes
+  - Returns District codes, Taluka codes, Village codes in JSON
+  - These codes are used to construct the gis_code for BhuNaksha WMS
+  - Officially published by Maharashtra government at mahavillages.mahabhumi.gov.in
+  - No authentication required, no API key needed
+
+Base URL: http://115.124.105.220/API/
+
+No setup required. No account needed. Call directly from backend.
+
+Key endpoints used:
+  POST /GetAllDistricts                   Returns all district codes
+  POST /GetTalukasOfDistrict              Input: distcode → Returns taluka codes
+  POST /GetVillagesOfDistrictAndTaluka    Input: distcode + talukacode → village codes
+
+--------------------------------------------------------------------------------
+1.11 SUMMARY OF ALL ENVIRONMENT VARIABLES
+--------------------------------------------------------------------------------
+
+Create a file named .env in your backend project root.
+NEVER commit this file to git. Add .env to .gitignore immediately.
+
+  # Firebase Authentication
+  FIREBASE_PROJECT_ID=[firebase-project-id]
+
+  # Supabase
+  SUPABASE_URL=https://[ref].supabase.co
+  SUPABASE_SERVICE_KEY=[service_role_key]
+
+  # Shared Google backend credentials
+  GOOGLE_CLOUD_PROJECT=[google-cloud-project-id]
+  GOOGLE_APPLICATION_CREDENTIALS=./backend-google-service-account.json
+
+  # NASA NISAR
+  NASA_EARTHDATA_USERNAME=[username]
+  NASA_EARTHDATA_PASSWORD=[password]
+  NISAR_PRODUCTION_READY=false
+
+  # Blockchain
+  ADMIN_WALLET_PRIVATE_KEY=[private key]
+  ADMIN_WALLET_ADDRESS=[public address]
+  ALCHEMY_POLYGON_AMOY_URL=https://polygon-amoy.g.alchemy.com/v2/[key]
+  CONTRACT_ADDRESS=[deployed contract address — filled after Section 7]
+
+  # IPFS
+  PINATA_JWT=[jwt]
+  PINATA_GATEWAY_URL=[your-gateway].mypinata.cloud
+
+  # PolygonScan
+  POLYGONSCAN_API_KEY=[key]
+
+  # Government APIs
+  LGD_API_BASE=http://115.124.105.220/API  # Maharashtra LGD API base URL
+
+  # App Config
+  ENVIRONMENT=development        # or production
+  REDIS_URL=redis://localhost:6379/0   # Update to cloud Redis URL for production 
+  WEB_CORS_ORIGINS=https://[future-web-domain]   # Optional. Not required for mobile-only RN clients.
+
+================================================================================
+SECTION 2: ARCHITECTURE OVERVIEW
+================================================================================
+
+2.1 DESIGN PATTERN
+------------------
+The backend follows a Modular Monolithic Architecture, designed to be
+migratable to Microservices when the project scales. It uses an Asynchronous
+Event-Driven model for long-running operations.
+
+What "modular monolithic" means in practice: all services (Auth, Land, Fusion,
+Blockchain) live in one Python project and one deployment. But they are
+structured as separate modules with clean interfaces between them, so any
+single module can be extracted to its own service later without rewriting.
+
+What "async event-driven" means: when a farmer submits their audit data, the
+API immediately returns a response ("processing started"). The heavy satellite
+computation runs in the background via Celery tasks executed by a worker
+process running alongside FastAPI in the same backend service. The mobile app
+polls for results. This prevents the API from timing out during 60-second
+satellite jobs.
+
+2.2 TECHNOLOGY STACK
+---------------------
+
+Component          | Technology              | Version | Reason
+-------------------|-------------------------|---------|---------------------------
+Runtime            | Python                  | 3.11+   | Mature geospatial,
+                   |                         |         | AI (scikit-learn/XGBoost),
+                   |                         |         | and async support.
+API Framework      | FastAPI                 | 0.110+  | Async I/O for high
+                   |                         |         | concurrency. Auto-generates
+                   |                         |         | Swagger docs. Type-safe.
+ASGI Server        | Uvicorn                 | Latest  | Production ASGI server
+                   |                         |         | for FastAPI.
+Database           | Supabase                | Managed | PostgreSQL 15 + PostGIS
+                   |                         |         | 3.3 in cloud. Free tier.
+                   |                         |         | No server management.
+Authentication     | Firebase Authentication | Managed | Phone OTP for the mobile app.
+                   |                         |         | Backend verifies Firebase
+                   |                         |         | ID tokens with Admin SDK.
+Database Client    | supabase-py             | Latest  | Python client for Supabase.
+ORM / Queries      | SQLAlchemy + asyncpg    | 2.0+    | Async PostgreSQL queries.
+                   |                         |         | Raw SQL for PostGIS spatial
+                   |                         |         | operations.
+Task Queue         | Celery                  | 5.3+    | Background processing for
+                   |                         |         | satellite computation and
+                   |                         |         | blockchain transactions.
+Message Broker     | Redis                   | 7.0+    | Celery message broker.
+                   |                         |         | Use Upstash Redis over TLS
+                   |                         |         | via REDIS_URL.
+Satellite Engine   | Google Earth Engine API | Latest  | Server-side access to
+                   |                         |         | Sentinel-1, Sentinel-2,
+                   |                         |         | GEDI, SRTM datasets.
+NISAR Access       | asf_search              | Latest  | Python library to search
+                   |                         |         | and download NISAR L-band
+                   |                         |         | data from Alaska Satellite
+                   |                         |         | Facility.
+ML Model           | XGBoost                 | 2.0+    | Gradient boosted trees for
+                   |                         |         | multi-feature biomass
+                   |                         |         | regression. Replaces single
+                   |                         |         | k-factor approach.
+OCR Engine         | Google Cloud Vision API | Latest  | OCR for 7/12 land document
+                   | + OpenCV                |         | field extraction. Uses
+                   |                         |         | DOCUMENT_TEXT_DETECTION and
+                   |                         |         | shared backend Google creds.
+Blockchain Client  | web3.py                 | 7.x     | Python interface to call
+                   |                         |         | Polygon smart contract
+                   |                         |         | mint() and retire()
+                   |                         |         | functions.
+IPFS Upload        | Pinata Pinning API      | REST    | Pin audit metadata JSON to
+                   |                         |         | IPFS and expose it through
+                   |                         |         | a dedicated gateway domain.
+Validation         | Pydantic                | 2.0+    | Request/response data
+                   |                         |         | validation. Built into
+                   |                         |         | FastAPI.
+Spatial Library    | Shapely                 | 2.0+    | GeoJSON polygon validation
+                   |                         |         | and geometry operations.
+Image Processing   | OpenCV (cv2)            | 4.9+    | Document image processing
+                   |                         |         | for Layer 3 manual upload.
+
+2.3 SYSTEM FLOW OVERVIEW
+--------------------------
+
+The backend sits between the mobile app and three external systems:
+
+Mobile App
+    |
+    | HTTPS + JWT (Firebase ID token)
+    v
+FastAPI Backend
+    |
+    |--- Land Service -------> Maharashtra LGD API (get location codes)
+    |                    ----> BhuNaksha WMS (get official boundary GeoJSON)
+    |                    ----> Supabase PostGIS (store verified boundary)
+    |
+    |--- Fusion Service -----> Google Earth Engine (satellite imagery)
+    |                    ----> Alaska Satellite Facility (NISAR data)
+    |                    ----> Supabase (store biomass audit results)
+    |
+    |--- Minting Service ----> Pinata IPFS (pin metadata)
+                         ----> Polygon Blockchain via Alchemy (mint tokens)
+                         ----> Supabase (store tx_hash)
+
+================================================================================
+SECTION 3: PROJECT FOLDER STRUCTURE
+================================================================================
+
+backend/
+├── main.py                          # FastAPI app entry point
+│                                    # Also exposes /health and /api/v1/status
+├── requirements.txt                 # All Python dependencies
+├── .env                             # Environment variables (never commit)
+├── .env.example                     # Template showing all required variables
+├── .gitignore
+├── backend-google-service-account.json  # Shared Google backend credential
+├── Procfile.render                  # Runs Uvicorn + Celery in one service
+│
+├── app/
+│   ├── __init__.py
+│   ├── config.py                    # Loads all env vars, validates on startup
+│   ├── firebase_auth.py             # Firebase Admin init + ID token verify
+│   ├── database.py                  # Supabase client + SQLAlchemy async engine
+│   └── dependencies.py              # FastAPI dependency injection (auth, db)
+│
+├── routers/                         # FastAPI route definitions
+│   ├── auth.py                      # GET  /api/v1/auth/me
+│   │                                # POST /api/v1/auth/kyc
+│   │                                # POST /api/v1/auth/register-wallet
+│   │                                # POST /api/v1/auth/recover-wallet
+│   ├── land.py                      # POST /api/v1/land/verify-document
+│   │                                # GET  /api/v1/land/fetch-boundary
+│   │                                # POST /api/v1/land/fetch-boundary (manual map)
+│   │                                # POST /api/v1/land/register
+│   │                                # GET  /api/v1/land/list
+│   │                                # PATCH /api/v1/land/{land_id}
+│   ├── audit.py                     # GET  /api/v1/audit/zones
+│   │                                # POST /api/v1/audit/submit-samples
+│   │                                # GET  /api/v1/audit/result/{audit_id}
+│   │                                # GET  /api/v1/audit/history/{land_id}
+│   └── credits.py                   # GET  /api/v1/credits/balance
+│
+├── services/                        # Core business logic
+│   ├── ocr_service.py               # Google Cloud Vision OCR for 7/12 documents
+│   ├── land_boundary_service.py     # LGD API + BhuNaksha WMS + state router
+│   ├── zone_generation_service.py   # Sentinel-2 NDVI zone analysis
+│   ├── fusion_engine.py             # Main biomass calculation engine
+│   ├── satellite_service.py         # GEE data fetching + Sentinel-2 PNG generation
+│   ├── nisar_service.py             # NISAR L-band data fetching via asf_search
+│   ├── minting_service.py           # IPFS upload + blockchain transaction
+│   └── ipfs_service.py              # Pinata upload functions
+│
+├── models/                          # Pydantic data models (request/response)
+│   ├── user.py
+│   ├── land.py
+│   ├── audit.py
+│   └── blockchain.py
+│
+├── tasks/                           # Celery background tasks
+│   ├── celery_app.py                # Celery app initialisation with Upstash Redis
+│   ├── fusion_task.py               # Long-running satellite fusion task
+│   └── minting_task.py              # Blockchain minting task
+│
+└── contracts/                       # Solidity smart contracts
+    ├── contracts/
+    │   └── TerraToken.sol           # Main ERC-1155 token contract
+    ├── hardhat.config.js            # Hardhat deployment config
+    ├── package.json                 # Hardhat npm dependencies
+    ├── scripts/
+    │   └── deploy.js                # Deployment script
+    ├── test/
+    │   └── TerraToken.test.js       # Hardhat contract tests (run before deploy)
+    └── artifacts/                   # Compiled contract ABIs (auto-generated)
+        └── TerraToken_ABI.json      # Used by web3.py to call contract
+
+================================================================================
+SECTION 4: DATABASE DESIGN (SUPABASE + POSTGIS)
+================================================================================
+
+4.1 SETUP
+---------
+Run these SQL commands in Supabase SQL Editor before anything else:
+
+  -- Enable PostGIS extensions
+  CREATE EXTENSION IF NOT EXISTS postgis;
+  CREATE EXTENSION IF NOT EXISTS postgis_topology;
+  CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+  -- Verify PostGIS is working
+  SELECT PostGIS_Version();
+
+4.2 TABLE: users
+-----------------
+Purpose: Stores farmer identity, authentication linkage, and blockchain wallet.
+
+  CREATE TABLE users (
+      id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      firebase_uid     VARCHAR(128) UNIQUE NOT NULL,
+      phone_number     VARCHAR(15) UNIQUE NOT NULL,
+      full_name        VARCHAR(255),
+      aadhaar_hash     VARCHAR(64),       -- SHA-256 hash, never plain text
+      wallet_address   VARCHAR(42),       -- Polygon public address (0x...)
+      role             VARCHAR(20) DEFAULT 'FARMER',  -- FARMER, AUDITOR, ADMIN
+      kyc_completed    BOOLEAN DEFAULT FALSE,
+      created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  CREATE INDEX idx_users_firebase_uid ON users(firebase_uid);
+  CREATE INDEX idx_users_phone ON users(phone_number);
+  CREATE INDEX idx_users_wallet ON users(wallet_address);
+
+4.2A TABLE: wallet_recovery_requests
+------------------------------------
+Purpose: Stores admin-assisted wallet rotation requests initiated from the
+mobile app. Historical audit evidence and already-issued on-chain token
+ownership remain tied to the original wallet; approved requests affect only
+future credit issuance and future certificates.
+
+  CREATE TABLE wallet_recovery_requests (
+      id                 UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id            UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      old_wallet_address VARCHAR(42),
+      new_wallet_address VARCHAR(42) NOT NULL,
+      status             VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+                         -- 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'
+      requested_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+      reviewed_at        TIMESTAMP WITH TIME ZONE,
+      completed_at       TIMESTAMP WITH TIME ZONE,
+      reviewer_note      TEXT
+  );
+
+  CREATE INDEX idx_wallet_recovery_user ON wallet_recovery_requests(user_id);
+  CREATE INDEX idx_wallet_recovery_status ON wallet_recovery_requests(status);
+
+4.3 TABLE: land_parcels
+-----------------------
+Purpose: Stores verified farm land boundaries as spatial geometry.
+This is the most critical table — every biomass calculation is clipped to
+this polygon.
+
+  CREATE TABLE land_parcels (
+      id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      farm_name        VARCHAR(255),      -- User-given editable name e.g. "North Field"
+      survey_number    VARCHAR(50) NOT NULL,   -- Extracted by OCR from 7/12
+      district         VARCHAR(100) NOT NULL,
+      taluka           VARCHAR(100) NOT NULL,
+      village          VARCHAR(100) NOT NULL,
+      state            VARCHAR(100) NOT NULL DEFAULT 'Maharashtra',
+      geom             GEOMETRY(POLYGON, 4326) NOT NULL,  -- Official boundary
+      area_hectares    FLOAT,             -- Auto-calculated by PostGIS
+      is_verified      BOOLEAN DEFAULT FALSE,
+      boundary_source  VARCHAR(50),       -- 'WMS_AUTO', 'SCRAPE', 'MANUAL'
+      ocr_owner_name   VARCHAR(255),      -- Name extracted from 7/12 document
+      doc_image_url    VARCHAR(500),      -- Supabase Storage URL of 7/12 scan
+      lgd_district_code VARCHAR(10),      -- From LGD API 
+      lgd_taluka_code   VARCHAR(10),
+      lgd_village_code  VARCHAR(10),
+      gis_code         VARCHAR(50),       -- Constructed for BhuNaksha WMS
+        created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  -- GIST spatial index — required for all PostGIS geometry queries
+  CREATE INDEX idx_land_parcels_geom ON land_parcels USING GIST(geom);
+  CREATE INDEX idx_land_parcels_user ON land_parcels(user_id);
+
+  -- Trigger: auto-calculate area_hectares whenever geom is inserted/updated
+  CREATE OR REPLACE FUNCTION update_land_area()
+  RETURNS TRIGGER AS $$
+  BEGIN
+      NEW.updated_at := NOW();
+      NEW.area_hectares := ST_Area(NEW.geom::geography) / 10000;
+      RETURN NEW;
+  END;
+  $$ LANGUAGE plpgsql;
+
+  CREATE TRIGGER trg_land_area
+  BEFORE INSERT OR UPDATE ON land_parcels
+  FOR EACH ROW EXECUTE FUNCTION update_land_area();
+
+4.4 TABLE: sampling_zones
+--------------------------
+Purpose: Stores satellite-guided sampling zones generated per audit session.
+
+  CREATE TABLE sampling_zones (
+      id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      land_id          UUID NOT NULL REFERENCES land_parcels(id),
+      audit_id         UUID,              -- Linked when audit starts
+      zone_label       VARCHAR(5) NOT NULL,  -- 'A', 'B', 'C', etc.
+      centre_point     GEOMETRY(POINT, 4326) NOT NULL,  -- GPS to walk to
+      radius_metres    FLOAT NOT NULL,    -- Scan all trees within this radius
+      zone_type        VARCHAR(20),       -- 'high_density', 'medium_density', 'low_density'
+      ndvi_mean        FLOAT,             -- Average NDVI in this zone
+      gedi_available   BOOLEAN DEFAULT FALSE,
+      sequence_order   INT NOT NULL,      -- Order in walking path
+      created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  CREATE INDEX idx_zones_land ON sampling_zones(land_id);
+  CREATE INDEX idx_zones_audit ON sampling_zones(audit_id);
+
+4.5 TABLE: ar_tree_scans
+-------------------------
+Purpose: Stores individual tree measurements from AR scanning session.
+These are the ground truth data points used to train the XGBoost model.
+
+  CREATE TABLE ar_tree_scans (
+      id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      audit_id         UUID NOT NULL,
+      land_id          UUID NOT NULL REFERENCES land_parcels(id),
+      zone_id          UUID REFERENCES sampling_zones(id),
+      gps_location     GEOMETRY(POINT, 4326) NOT NULL,
+      gps_accuracy_m   FLOAT,             -- GPS horizontal accuracy (m)
+      species          VARCHAR(100) NOT NULL,  -- TF Lite detected species
+      species_confidence FLOAT CHECK (species_confidence BETWEEN 0 AND 1),
+      species_source   VARCHAR(20) NOT NULL,   -- MODEL_AUTO / MODEL_CONFIRMED / MANUAL_SELECTED
+      dbh_cm           FLOAT NOT NULL CHECK (dbh_cm > 0 AND dbh_cm < 500),
+      height_m         FLOAT,             -- AR-measured height (fallback only)
+      gedi_height_m    FLOAT,             -- GEDI rh98 height resolved for this tree/zone
+      height_source    VARCHAR(20),       -- 'GEDI' or 'AR_FALLBACK'
+      wood_density     FLOAT NOT NULL,    -- Species-specific rho value (g/cm3)
+      agb_kg           FLOAT,             -- Calculated by backend via Chave eq
+      ar_tier_used     INT CHECK (ar_tier_used IN (1, 2, 3)),
+      confidence_score FLOAT CHECK (confidence_score BETWEEN 0 AND 1),
+      evidence_photo_path VARCHAR(500),   -- Supabase Storage object path
+      evidence_photo_hash VARCHAR(64),    -- SHA-256 hash of photo
+      scan_timestamp   TIMESTAMP WITH TIME ZONE NOT NULL,
+      created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  CREATE INDEX idx_scans_audit ON ar_tree_scans(audit_id);
+  CREATE INDEX idx_scans_land ON ar_tree_scans(land_id);
+  CREATE INDEX idx_scans_gps ON ar_tree_scans USING GIST(gps_location);
+
+4.6 TABLE: carbon_audits
+-------------------------
+Purpose: Stores the final verified carbon calculation for each land per year.
+This is the permanent ledger of all carbon credit generations.
+
+  CREATE TABLE carbon_audits (
+      id               UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+      land_id          UUID NOT NULL REFERENCES land_parcels(id),
+      user_id          UUID NOT NULL REFERENCES users(id),
+      audit_year       INT NOT NULL,
+      status           VARCHAR(20) DEFAULT 'PROCESSING',
+      -- Status values: PROCESSING, CALCULATING, READY_TO_MINT,
+      --                MINTED, COMPLETE_NO_CREDITS, FAILED
+      -- Satellite data used
+      s1_vh_mean_db    FLOAT,             -- Sentinel-1 VH mean backscatter
+      s1_vv_mean_db    FLOAT,             -- Sentinel-1 VV mean backscatter
+      s2_ndvi_mean     FLOAT,             -- Sentinel-2 NDVI mean
+      s2_evi_mean      FLOAT,             -- Sentinel-2 EVI mean
+      gedi_height_mean FLOAT,             -- GEDI rh98 mean over land
+      srtm_elevation_mean FLOAT,          -- SRTM mean elevation
+      nisar_used       BOOLEAN DEFAULT FALSE,  -- Whether NISAR data was used
+      -- Model results
+      xgboost_model_version VARCHAR(20),  -- Model version used
+      features_count   INT,               -- Normally 9 or 12; 8 or 11 when GEDI is unavailable
+      total_biomass_tonnes FLOAT,         -- Total AGB for entire land
+      -- Carbon calculation
+      prev_year_biomass FLOAT,            -- From previous audit
+      delta_biomass    FLOAT,             -- Growth = current - previous
+      carbon_tonnes    FLOAT,             -- delta * 0.47
+      co2_equivalent   FLOAT,             -- carbon * 3.667 (44/12 = CO2 conversion)
+      credits_issued   FLOAT,             -- Human-readable CTT amount
+                  -- On-chain raw units = credits_issued * 10
+      trees_scanned_count INT,
+      -- Blockchain
+      ipfs_metadata_cid VARCHAR(255),     -- IPFS CID of evidence package
+      tx_hash          VARCHAR(66),       -- Polygon transaction hash (0x...)
+      token_id         BIGINT,            -- ERC-1155 audit certificate ID
+      minted_at        TIMESTAMP WITH TIME ZONE,
+      created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  CREATE UNIQUE INDEX idx_audits_land_year ON carbon_audits(land_id, audit_year);
+  CREATE INDEX idx_audits_user ON carbon_audits(user_id);
+  CREATE INDEX idx_audits_status ON carbon_audits(status);
+
+4.7 IMPORTANT POSTGIS QUERIES
+------------------------------
+
+-- Check if a GPS point is inside a land boundary (geofencing)
+SELECT id FROM land_parcels
+WHERE user_id = '[user_uuid]'
+AND ST_Contains(geom, ST_SetSRID(ST_MakePoint([lng], [lat]), 4326));
+
+-- Get area of a land parcel in hectares
+SELECT ST_Area(geom::geography) / 10000 AS area_hectares
+FROM land_parcels WHERE id = '[land_uuid]';
+
+-- Get last year's biomass for delta calculation
+SELECT total_biomass_tonnes FROM carbon_audits
+WHERE land_id = '[land_uuid]'
+ORDER BY audit_year DESC LIMIT 1;
+
+-- Validate that a submitted GeoJSON polygon is valid geometry
+SELECT ST_IsValid(
+    ST_GeomFromGeoJSON('[geojson_string]')
+) AS is_valid;
+
+================================================================================
+SECTION 5: API SPECIFICATION (FASTAPI)
+================================================================================
+
+Base URL (development): http://localhost:8000
+Base URL (production):  https://[your-domain]
+
+All endpoints (except /health and /api/v1/status) require:
+Authorization: Bearer [firebase_id_token]
+The token is returned by Firebase Authentication after OTP verification.
+
+--------------------------------------------------------------------------------
+5.1 HEALTH CHECK
+--------------------------------------------------------------------------------
+
+GET /health
+  Purpose:   Confirms backend is running. Used by keep-alive cron job.
+  Auth:      None required
+  Response:  { "status": "ok", "timestamp": "2026-03-07T10:00:00Z" }
+
+GET /api/v1/status
+  Purpose:   Farmer-facing app status check used during app bootstrap before
+             the authenticated profile flow begins.
+  Auth:      None required
+  Response:  { "maintenance": false, "message": null }
+             or
+             { "maintenance": true,
+               "message": "Scheduled maintenance in progress" }
+  Note:      When maintenance mode is active, any farmer-facing endpoint may
+             also short-circuit with HTTP 503 and the same JSON payload.
+             While the maintenance screen is visible, the mobile app polls
+             GET /api/v1/status every 10 seconds until maintenance=false.
+
+--------------------------------------------------------------------------------
+5.2 AUTH MODULE (/api/v1/auth)
+--------------------------------------------------------------------------------
+
+POST /api/v1/auth/kyc
+  Purpose:   Saves farmer KYC identity data after first OTP login.
+  Auth:      Required (Firebase ID token)
+  Request:   {
+               "full_name": "Ramesh Patil",
+               "aadhaar_number": "XXXXXXXXXXXX"   // 12 digits, will be hashed
+             }
+  Reason:    OTP verifies control of the phone number, but not the claimant's
+             real-world identity. Aadhaar is the v3.1 KYC identifier used to
+             anchor the farmer record, support owner-name matching against the
+             7/12 extract, and re-verify the same person during wallet recovery.
+  Process:   1. Hash aadhaar_number with SHA-256. Store hash only.
+             2. Store full_name in users table.
+             3. Set kyc_completed = true.
+  Response:  { "status": "success", "user_id": "uuid" }
+  Error 400: { "error": "Invalid Aadhaar number format" }
+
+POST /api/v1/auth/register-wallet
+  Purpose:   Stores the farmer's public blockchain wallet address after the
+             mobile app silently generates it on first login.
+  Auth:      Required (Firebase ID token)
+  Request:   { "wallet_address": "0x..." }   // Public address only
+  Process:   1. Validate wallet_address format (42-char 0x hex string).
+             2. Store wallet_address in users table for the authenticated user.
+  Response:  { "status": "success" }
+  Error 400: { "error": "Invalid wallet address format" }
+
+POST /api/v1/auth/recover-wallet
+  Purpose:   Creates an admin-assisted wallet rotation request after the
+         farmer re-verifies identity on a new device.
+  Auth:      Required (Firebase ID token)
+  Request:   { "new_wallet_address": "0x..." }
+  Process:   1. Verify the user has completed KYC and already has an
+           existing wallet on record.
+         2. Validate new_wallet_address format and ensure it differs from
+           the current wallet.
+         3. Insert a PENDING row into wallet_recovery_requests.
+         4. Return a pending response. Do not swap wallet_address yet;
+           approval is required before future issuance changes.
+  Response:  { "status": "pending",
+          "message": "Wallet recovery request submitted" }
+  Error 400: { "error": "Invalid wallet address format" }
+  Error 409: { "error": "A wallet recovery request is already pending" }
+
+GET /api/v1/auth/me
+  Purpose:   Bootstrap TerraTrust profile state after Firebase sign-in.
+  Auth:      Required (Firebase ID token)
+  Process:   1. Verify Firebase ID token.
+             2. Extract uid + phone_number.
+             3. Upsert minimal users row if missing.
+             4. Return KYC and wallet status.
+  Response:  {
+               "user_id": "uuid",
+               "firebase_uid": "firebase-uid",
+               "phone_number": "+91XXXXXXXXXX",
+               "full_name": "Ramesh Patil",
+               "kyc_completed": true,
+               "wallet_address": "0x...",
+               "wallet_recovery_status": null,
+               "wallet_recovery_requested_at": null
+             }
+
+--------------------------------------------------------------------------------
+5.3 LAND MODULE (/api/v1/land)
+--------------------------------------------------------------------------------
+
+POST /api/v1/land/verify-document
+  Purpose:   Accepts 7/12 document photo. Runs OCR. Returns extracted fields.
+  Auth:      Required
+  Request:   multipart/form-data
+             image: [photo file — JPG or PNG, max 10MB]
+  Process:
+    1. Receive image. Save temporarily.
+    2. Pre-process with OpenCV:
+         - Normalize orientation from EXIF metadata when available
+         - Convert to greyscale
+         - Apply adaptive thresholding (binarise)
+         - Denoise
+         - Optionally retry with original image bytes if preprocessing hurts OCR
+    3. Run Google Cloud Vision DOCUMENT_TEXT_DETECTION:
+         from google.cloud import vision
+         client = vision.ImageAnnotatorClient()
+         response = client.document_text_detection(
+             image=vision.Image(content=processed_img_bytes)
+         )
+         text = response.full_text_annotation.text
+    4. Regex extraction:
+         survey_number = re.search(r'(?:Survey|Gat|सर्व्हे)\s*[Nn]o\.?\s*:?\s*(\d+)', text)
+         owner_name    = re.search(r'(?:Owner|मालक|धारक)\s*:?\s*([A-Z\u0900-\u097F\s]+)', text)
+         village       = re.search(r'(?:Village|गाव)\s*:?\s*([A-Z\u0900-\u097F\s]+)', text)
+         taluka        = re.search(r'(?:Taluka|तालुका)\s*:?\s*([A-Z\u0900-\u097F\s]+)', text)
+         district      = re.search(r'(?:District|जिल्हा)\s*:?\s*([A-Z\u0900-\u097F\s]+)', text)
+    5. Return extracted fields. Do NOT cross-check owner name here — that
+       happens in the next step when farmer confirms.
+  Response:  {
+               "survey_number": "47",
+               "owner_name": "Ramesh Shankar Patil",
+               "village": "Kharadi",
+               "taluka": "Haveli",
+               "district": "Pune",
+               "state": "Maharashtra",
+               "extraction_confidence": 0.87   // 0.0 to 1.0
+             }
+  Error 422: { "error": "Could not extract required fields. Image quality too
+                          low. Please retake photo." }
+
+GET /api/v1/land/fetch-boundary
+  Purpose:   Auto-fetches official land boundary from government GIS system.
+  Auth:      Required
+  Query params:
+             survey_number=[string]
+             district=[string]
+             taluka=[string]
+             village=[string]
+             state=[string]
+             user_lat=[float]     // Farmer's current GPS for WMS bbox
+             user_lng=[float]
+  Process (3-Layer State Router):
+
+    LAYER 1 — LGD API + BhuNaksha WMS (try first):
+      a. Call Maharashtra LGD API to get official location codes:
+         POST http://115.124.105.220/API/GetTalukasOfDistrict
+              body: { "distcode": district_code }
+         POST http://115.124.105.220/API/GetVillagesOfDistrictAndTaluka
+              body: { "distcode": dist_code, "talukacode": taluka_code }
+      b. Construct gis_code:
+         Pattern: "RVM" + region_code + division_code + "27" (Maharashtra state)
+                  + taluka_lgd_padded_4 + village_lgd_padded_6
+                  + survey_number_padded_6
+      c. Build WMS bounding box from user GPS (±0.01 degree around farmer loc)
+      d. Call BhuNaksha WMS GetFeatureInfo:
+         GET https://mahabhunakasha.mahabhumi.gov.in/WMS?
+             SERVICE=WMS&VERSION=1.3.0&REQUEST=GetFeatureInfo
+             &INFO_FORMAT=application/json
+             &QUERY_LAYERS=PLOT_BOUNDARY
+             &gis_code=[constructed_code]
+             &BBOX=[lng-0.01],[lat-0.01],[lng+0.01],[lat+0.01]
+             &WIDTH=800&HEIGHT=600
+             &I=[pixel_x]&J=[pixel_y]    // GPS converted to pixel coords
+      e. If response is valid GeoJSON polygon: return it. Mark source='WMS_AUTO'
+
+    LAYER 2 — Scraping fallback (if Layer 1 fails):
+      a. Use Selenium/Playwright headless browser to navigate BhuNaksha portal
+      b. Select District, Taluka, Village from dropdowns using extracted names
+      c. Click on survey number to select parcel
+      d. Extract polygon coordinates from rendered map canvas
+      e. If successful: return GeoJSON. Mark source='SCRAPE'
+
+    LAYER 3 — Manual (if Layers 1 and 2 fail):
+      a. Return { "status": "manual_required", "message": "Please download and
+                   upload your land map manually" }
+      b. Mobile app then shows manual upload guide
+
+  Response:  {
+               "status": "success",
+               "boundary_source": "WMS_AUTO",
+               "satellite_thumbnail_url": "https://[signed-supabase-url]/boundary-47.png",
+               "geojson": {
+                 "type": "Feature",
+                 "geometry": {
+                   "type": "Polygon",
+                   "coordinates": [[[73.981, 18.545], [73.982, 18.546], ...]]
+                 },
+                 "properties": {
+                   "survey_number": "47",
+                   "owner_name": "Ramesh Shankar Patil",
+                   "area_sqm": 4856.2
+                 }
+               }
+             }
+  Response (fallback): { "status": "manual_required" }
+
+POST /api/v1/land/fetch-boundary
+  Purpose:   Layer 3 manual-map processing variant used after the farmer
+             uploads a downloaded government parcel map image.
+  Auth:      Required
+  Request:   multipart/form-data with map_image, survey_number, district,
+             taluka, village, state
+  Process:   Extract polygon edges from the uploaded map image with OpenCV,
+             validate the polygon, generate the same Sentinel-2 thumbnail, and
+             return the standard boundary payload with boundary_source='MANUAL'.
+  Response:  Same success payload as GET /api/v1/land/fetch-boundary,
+             with "boundary_source": "MANUAL".
+  Error 422: { "error": "Could not extract a valid parcel boundary from the uploaded map." }
+
+POST /api/v1/land/register
+  Purpose:   Saves confirmed land boundary to database after farmer confirms.
+  Auth:      Required
+  Request:   {
+               "farm_name": "North Field",
+               "survey_number": "47",
+               "district": "Pune",
+               "taluka": "Haveli",
+               "village": "Kharadi",
+               "state": "Maharashtra",
+               "boundary_source": "WMS_AUTO",
+               "geojson": { ...GeoJSON polygon... },
+               "ocr_owner_name": "Ramesh Shankar Patil"
+             }
+  Process:
+    1. Cross-check ocr_owner_name against user's full_name from KYC:
+         Use fuzzy string matching (80%+ similarity via difflib or rapidfuzz).
+         If similarity is below 80%: Return 400 error.
+    2. Validate GeoJSON:
+         SELECT ST_IsValid(ST_GeomFromGeoJSON('[geojson]')) — must be TRUE
+    3. Check for duplicate: same user_id + survey_number must not already exist
+    4. Insert into land_parcels. Area auto-calculated by trigger.
+    5. Return land_id.
+  Response:  { "land_id": "uuid", "area_hectares": 0.49, "status": "verified" }
+  Error 400: { "error": "Owner name on document does not match your registered
+                          name." }
+  Error 409: { "error": "This survey number is already registered to your
+                          account." }
+
+GET /api/v1/land/list
+  Purpose:   Returns paginated land parcels registered by the authenticated farmer.
+             Called when LandListScreen loads and when HomeScreen fetches the
+             parcel preview cards.
+  Auth:      Required
+  Query:     page=1&limit=20
+  Process:   Fetch all land_parcels rows where user_id matches the
+             authenticated backend user resolved from the verified Firebase
+             ID token.
+             Include latest audit year plus current-year audit metadata from
+             carbon_audits for each parcel so the app can decide whether to
+             show Start Audit, Resume Audit, or View Status.
+  Response:  {
+               "items": [
+                 {
+                   "id": "uuid",
+                   "farm_name": "North Field",
+                   "survey_number": "47",
+                   "district": "Pune",
+                   "taluka": "Haveli",
+                   "village": "Kharadi",
+                   "state": "Maharashtra",
+                   "area_hectares": 0.49,
+                   "is_verified": true,
+                   "boundary_source": "WMS_AUTO",
+                   "registered_at": "2026-05-18T12:00:00Z",
+                   "last_audit_year": 2025,
+                    "current_audit_id": "uuid",
+                    "current_audit_status": "CALCULATING",
+                   "thumbnail_url": "https://[signed-supabase-url]/..."
+                 }
+               ],
+               "page": 1,
+               "limit": 20,
+               "total": 7,
+               "has_more": false
+             }
+
+PATCH /api/v1/land/{land_id}
+  Purpose:   Updates the farmer-facing parcel name from EditLandNameScreen.
+  Auth:      Required
+  Request:   { "farm_name": "North Field" }
+  Process:   1. Resolve authenticated user from the Firebase ID token.
+             2. Verify the land_id belongs to that user.
+             3. Update farm_name only. Do not allow geometry or survey edits.
+  Response:  { "status": "success", "land_id": "uuid",
+               "farm_name": "North Field" }
+  Error 404: { "error": "Land parcel not found" }
+
+--------------------------------------------------------------------------------
+5.4 AUDIT MODULE (/api/v1/audit)
+--------------------------------------------------------------------------------
+
+GET /api/v1/audit/zones
+  Purpose:   Generates satellite-guided sampling zones for a land parcel.
+             This is the first step of an annual audit.
+  Auth:      Required
+  Query:     land_id=[uuid]
+  Process:
+    1. Fetch land boundary GeoJSON from land_parcels table.
+    2. Call Google Earth Engine:
+         region = ee.Geometry.Polygon(geojson['coordinates'])
+         s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+              .filterBounds(region)
+              .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20))
+              .median()
+         ndvi = s2.normalizedDifference(['B8', 'B4'])
+         ndvi_values = ndvi.reduceRegion(
+             reducer=ee.Reducer.percentile([25, 50, 75]),
+             geometry=region, scale=10
+         ).getInfo()
+    3. Identify zone thresholds from NDVI percentiles:
+         low_density:    NDVI < 25th percentile
+         medium_density: NDVI between 25th and 75th percentile
+         high_density:   NDVI > 75th percentile
+    4. Find centroid of each density cluster (use ee.Reducer.centroid()).
+    5. Calculate plot radius based on land area:
+         area = land.area_hectares
+         if area <= 0.4:   radius = 7
+         elif area <= 1.2: radius = 9
+         else:             radius = 11
+    6. Calculate linear walking path through zone centroids (nearest neighbour).
+    7. Check if GEDI data exists within each zone:
+         gedi = ee.ImageCollection('LARSE/GEDI/GEDI02_A_002_MONTHLY')
+                .filterBounds(region).select(['rh98']).mean()
+         gedi_coverage = check if any GEDI footprints exist in each zone
+    8. Save zones to sampling_zones table. Create audit record with
+       status='PROCESSING'. Returned zones are scan-required areas only;
+       sparse canopy portions without a returned zone remain satellite-only.
+    9. Return zones.
+  Response:  {
+               "audit_id": "uuid",
+               "zones": [
+                 {
+                   "zone_id": "uuid",
+                   "label": "A",
+                   "centre_gps": { "lat": 18.546, "lng": 73.981 },
+                   "radius_metres": 9,
+                   "zone_type": "high_density",
+                   "sequence_order": 1,
+                   "gedi_available": true
+                 },
+                 ...
+               ],
+               "walking_path_metres": 145,
+               "min_trees_required": 9
+             }
+  Note:      Example above is a 3-zone parcel, so min_trees_required = 9.
+             gedi_available is determined per zone. When true, the backend
+             resolves height from the nearest valid GEDI sample inside that
+             zone and the app keeps height capture hidden. When false, the
+             app must collect AR height for every tree in that zone.
+  Error 409: { "error": "An audit already exists for this land in the current audit year.",
+               "existing_audit_id": "uuid",
+               "status": "CALCULATING" }
+
+POST /api/v1/audit/submit-samples
+  Purpose:   Receives all AR tree scan data. Stores it. Triggers background
+             satellite fusion computation via Celery.
+  Auth:      Required
+  Request:   {
+               "land_id": "uuid",
+               "audit_id": "uuid",
+               "trees": [
+                 {
+                   "zone_id": "uuid",
+                   "species": "Teak",
+                   "species_confidence": 0.91,
+                   "species_source": "MODEL_AUTO",
+                   "dbh_cm": 22.4,
+                   "height_m": null,        // null = use GEDI
+                   "gps": { "lat": 18.5461, "lng": 73.9812 },
+                    "gps_accuracy_m": 4.2,  // horizontal accuracy in metres
+                   "ar_tier_used": 1,
+                   "confidence_score": 0.87,
+                   "evidence_photo_base64": "[base64 of final JPEG bytes only, no data URI prefix, max 1280x960, EXIF stripped, JPEG quality 85]",
+                   "evidence_photo_hash": "[sha256 hex string of the exact decoded bytes above]",
+                   "scan_timestamp": "2026-11-10T10:24:31Z"
+                 }
+               ]
+             }
+  Process:
+     1. Validate minimum tree count (must be >= 3 per generated zone;
+       min_trees_required = zone_count x 3).
+       Validate species according to species_source:
+         MODEL_AUTO      requires species_confidence >= 0.80
+         MODEL_CONFIRMED requires 0.60 <= species_confidence < 0.80
+         MANUAL_SELECTED requires species to be in the approved list
+                          even when model confidence is lower
+       Reject any tree with gps_accuracy_m > 30.
+       Reject any payload where evidence_photo_hash does not match the
+       SHA-256 of the decoded, EXIF-stripped, final JPEG bytes provided.
+    2. For each tree:
+         a. Look up wood_density from species constants table.
+         b. Store photo to Supabase Storage:
+            path = f'{audit_id}/{tree_id}.jpg'
+            supabase.storage.from_('evidence-photos').upload(path, photo_bytes)
+         c. Insert into ar_tree_scans table.
+    3. Update carbon_audits status to 'CALCULATING'.
+    4. Dispatch Celery background task:
+         fusion_task.delay(audit_id, land_id)
+     5. Return immediately — do not wait for computation.
+       If the same audit_id is submitted again while the audit is still in a
+       non-terminal state, return the current processing response and do not
+       create duplicate jobs.
+  Response:  {
+               "status": "PROCESSING",
+               "audit_id": "uuid",
+               "estimated_seconds": 60,
+               "message": "Satellite verification in progress"
+             }
+  Error 400: { "error": "Minimum [min_trees_required] trees required for this audit." }
+
+GET /api/v1/audit/result/{audit_id}
+  Purpose:   Returns current status and result of audit computation.
+             Mobile app polls this every 5 seconds after submission.
+  Auth:      Required
+  Response (non-terminal):
+             { "status": "PROCESSING" } OR
+             { "status": "CALCULATING" } OR
+             { "status": "READY_TO_MINT" }
+  Response (complete, no credits):
+             {
+               "status": "COMPLETE_NO_CREDITS",
+               "total_biomass_tonnes": 14.8,
+               "credits_issued": 0,
+               "audit_year": 2026,
+               "reason": "No biomass growth detected compared to the latest prior successful audit"
+             }
+  Response (complete):
+             {
+               "status": "MINTED",
+               "total_biomass_tonnes": 14.8,
+               "credits_issued": 2.4,
+               "tx_hash": "0x1a2b3c...",
+               "ipfs_certificate_url": "https://[pinata-gateway]/ipfs/[CID]",
+               "audit_year": 2026
+             }
+  Response (failed):
+             { "status": "FAILED",
+               "error": "Insufficient satellite data for this region." }
+
+GET /api/v1/audit/history/{land_id}
+  Purpose:   Returns full audit history for a specific land parcel.
+             Used for parcel-specific drill-down or operational support.
+             HomeScreen and CreditHistoryScreen use
+             GET /api/v1/credits/balance for the all-parcels history view.
+  Auth:      Required
+  Query:     page=1&limit=20
+  Process:   Fetch carbon_audits rows for land_id, ordered by audit_year DESC.
+  Response:  {
+               "items": [
+                 {
+                   "audit_year": 2025,
+                   "total_biomass_tonnes": 14.8,
+                   "credits_issued": 2.4,
+                   "tx_hash": "0x...",
+                   "ipfs_certificate_url": "https://[pinata-gateway]/ipfs/[CID]",
+                   "minted_at": "2025-11-15T14:23:00Z"
+                 }
+               ],
+               "page": 1,
+               "limit": 20,
+               "total": 4,
+               "has_more": false
+             }
+
+--------------------------------------------------------------------------------
+5.5 CREDITS MODULE (/api/v1/credits)
+--------------------------------------------------------------------------------
+
+GET /api/v1/credits/balance
+  Purpose:   Returns farmer's current token balance and audit history.
+  Auth:      Required
+  Query:     page=1&limit=20
+  Process:
+    1. Look up wallet_address for the authenticated Firebase user.
+    2. Call Polygon blockchain via web3.py:
+         contract.functions.balanceOf(wallet_address, CARBON_CREDIT).call()
+      Contract returns integer deci-CTT units; backend divides by 10 before
+      returning balance_ctt to the mobile app.
+    3. Fetch audit history from carbon_audits table for this user.
+  Response:  {
+               "balance_ctt": 47.3,
+               "history": [
+                 {
+                   "audit_year": 2025,
+                   "credits_issued": 12.4,
+                   "land_name": "North Field",
+                   "tx_hash": "0x...",
+                   "ipfs_certificate_url": "https://[pinata-gateway]/ipfs/[CID]",
+                   "minted_at": "2025-11-15T14:23:00Z"
+                 }
+               ],
+               "page": 1,
+               "limit": 20,
+               "total": 12,
+               "has_more": false
+             }
+
+================================================================================
+SECTION 6: SATELLITE FUSION ENGINE
+================================================================================
+
+6.1 OVERVIEW
+------------
+The fusion engine is the scientific core of TerraTrust-AR. It takes the AR tree
+scan measurements as ground truth and uses them to calibrate a multi-source
+satellite model that predicts biomass for every 10m × 10m area of the farm.
+
+It runs as a Celery background task, invoked after the farmer submits scans.
+It typically takes 30-90 seconds to complete.
+
+The engine uses 6 satellite data sources in combination. All are free and
+available on Google Earth Engine. The XGBoost machine learning model learns
+the relationship between the 12 satellite features and actual measured biomass
+at the scan locations, then predicts biomass for the entire farm.
+
+6.2 PHASED SAR USAGE
+---------------------
+Before June 2026:
+  Primary SAR: Sentinel-1 C-band (VH + VV bands)
+  NISAR: Available for development/testing only (pre-calibration data)
+  Reason: NISAR calibrated data release expected June 2026
+
+After June 2026:
+  Primary SAR: NISAR L-band (HH + HV bands + ratio)
+  Supplementary: Sentinel-1 C-band
+  Reason: L-band penetrates full canopy without saturation, giving better
+  biomass estimates in high-density tree areas.
+  Estimated error improvement: ~35% → ~5-7%
+
+6.3 WOOD DENSITY CONSTANTS (Chave Equation Parameter)
+------------------------------------------------------
+These values are used in Chave's allometric equation: AGB = 0.0673 *
+(wood_density * DBH^2 * Height)^0.976. They are looked up by species name.
+
+  SPECIES_WOOD_DENSITY = {
+      "Teak":            0.60,   # Tectona grandis
+      "Eucalyptus":      0.55,   # Eucalyptus spp.
+      "Neem":            0.56,   # Azadirachta indica
+      "Mango":           0.54,   # Mangifera indica
+      "Bamboo":          0.70,   # Bambusa spp.
+      "Pongamia":        0.67,   # Pongamia pinnata
+      "Subabul":         0.56,   # Leucaena leucocephala
+      "Casuarina":       0.69,   # Casuarina equisetifolia
+      "Indian Rosewood": 0.75,   # Dalbergia sissoo
+      "Drumstick":       0.39,   # Moringa oleifera
+      "Amla":            0.74,   # Phyllanthus emblica
+  }
+
+Any species not in this dictionary should be rejected at the mobile app level
+(TF Lite shows "not approved" message).
+Canonical naming rule:
+The display label "Indian Rosewood" refers specifically to Dalbergia sissoo.
+Use the scientific identity as the canonical key and treat "Indian Rosewood",
+"Shisham", and "North Indian Rosewood" as display aliases for that same
+approved species only.
+Mobile TFLite contract:
+Input = RGB image, 224x224, normalized to [0,1]. Output = a fixed-order
+probability vector of 12 labels: the 11 approved species above plus
+NOT_APPROVED. The versioned mobile artifact in
+src/assets/tflite/species_model.tflite must ship with the matching class
+mapping for that model version. The backend never trains or runs this model at
+runtime; it validates the submitted approved label together with
+species_source and species_confidence.
+The mobile model is trained offline from a curated labeled species dataset and
+exported as a versioned TFLite artifact. The backend does not train this model
+at runtime; it only validates the approved label set and the documented
+species_source contract.
+
+6.4 COMPLETE FUSION ENGINE CODE
+---------------------------------
+
+  # services/fusion_engine.py
+
+  import ee
+  import xgboost as xgb
+  import numpy as np
+  import asf_search as asf
+  from typing import List, Dict
+
+  SPECIES_WOOD_DENSITY = { ... }   # From Section 6.3
+
+  def run_fusion(audit_id: str, land_id: str, tree_scans: List[Dict],
+                 land_boundary_geojson: Dict, audit_year: int) -> Dict:
+
+      # --- INITIALISE GEE ---
+        ee.Initialize(project=GOOGLE_CLOUD_PROJECT)
+
+      start_date = f'{audit_year}-01-01'
+      end_date   = f'{audit_year}-12-31'
+
+      region = ee.Geometry.Polygon(land_boundary_geojson['coordinates'])
+
+      # ====================================================================
+      # LAYER 1: NISAR L-BAND (Primary SAR — After June 2026)
+      # ====================================================================
+      # Before June 2026: skip NISAR, use Sentinel-1 as primary
+        nisar_available = check_nisar_availability(
+          land_boundary_geojson, start_date, end_date
+        )
+        nisar_ready = os.getenv('NISAR_PRODUCTION_READY', 'false').lower() == 'true'
+
+        if nisar_available and nisar_ready:
+          nisar_hh, nisar_hv, nisar_ratio = fetch_nisar_data(
+            land_boundary_geojson, start_date, end_date
+          )
+      else:
+          nisar_hh = nisar_hv = nisar_ratio = None
+
+      # ====================================================================
+      # LAYER 2: SENTINEL-1 C-BAND SAR (Always used, supplementary after 2026)
+      # ====================================================================
+      s1 = ee.ImageCollection('COPERNICUS/S1_GRD') \
+            .filterBounds(region) \
+            .filterDate(start_date, end_date) \
+            .filter(ee.Filter.eq('instrumentMode', 'IW')) \
+            .filter(ee.Filter.listContains('transmitterReceiverPolarisation', 'VH')) \
+            .select(['VH', 'VV']) \
+            .median()
+
+      # CRITICAL: Apply speckle filter to reduce radar noise
+      # Lee speckle filter — 3x3 kernel
+      s1_filtered = s1.focal_median(radius=1, kernelType='square', units='pixels')
+      s1_vh = s1_filtered.select('VH')
+      s1_vv = s1_filtered.select('VV')
+      s1_ratio = s1_vh.divide(s1_vv).rename('VH_VV_RATIO')
+
+      # ====================================================================
+      # LAYER 3: SENTINEL-2 OPTICAL (Annual cloud-free composite)
+      # ====================================================================
+      s2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED') \
+            .filterBounds(region) \
+            .filterDate(start_date, end_date) \
+            .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 20)) \
+            .median()
+
+      # NDVI: Normalized Difference Vegetation Index
+      # Formula: (NIR - Red) / (NIR + Red) — Bands B8, B4
+      ndvi = s2.normalizedDifference(['B8', 'B4']).rename('NDVI')
+
+      # EVI: Enhanced Vegetation Index (does not saturate in high biomass)
+      # Formula: 2.5 * (NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1)
+      evi = s2.expression(
+          '2.5 * ((NIR - RED) / (NIR + 6 * RED - 7.5 * BLUE + 1))',
+          {'NIR': s2.select('B8'), 'RED': s2.select('B4'), 'BLUE': s2.select('B2')}
+      ).rename('EVI')
+
+      # Red-Edge Band B7 — proven to improve accuracy in plantation forests
+      red_edge = s2.select('B7').rename('RED_EDGE')
+
+      # ====================================================================
+      # LAYER 4: GEDI CANOPY HEIGHT (Where footprints exist)
+      # ====================================================================
+      # rh98 = height at which 98% of returned laser energy is below
+      # = effective canopy top height = tree height from space
+      gedi = ee.ImageCollection('LARSE/GEDI/GEDI02_A_002_MONTHLY') \
+              .filterBounds(region) \
+              .select(['rh98']) \
+              .mean() \
+              .rename('GEDI_HEIGHT')
+
+      gedi_has_land_coverage = image_has_valid_pixels(gedi, region)
+
+      # ====================================================================
+      # LAYER 5: SRTM TOPOGRAPHY (Terrain correction)
+      # ====================================================================
+      # SRTM: Shuttle Radar Topography Mission — global 30m elevation data
+      # Used to correct radar signal distortion caused by terrain slope
+      srtm = ee.Image('USGS/SRTMGL1_003')
+      elevation = srtm.select('elevation').rename('ELEVATION')
+      slope = ee.Terrain.slope(srtm).rename('SLOPE')
+      # Slope: steeper slope = radar signal distorted, may over/under estimate
+
+      # ====================================================================
+      # STACK ALL FEATURES INTO ONE IMAGE
+      # ====================================================================
+        if nisar_available and nisar_hh is not None and gedi_has_land_coverage:
+          feature_stack = ee.Image.cat([
+              nisar_hh,         # Feature 1: NISAR HH backscatter
+              nisar_hv,         # Feature 2: NISAR HV backscatter
+              nisar_ratio,      # Feature 3: NISAR HH/HV ratio
+              s1_vh,            # Feature 4: Sentinel-1 VH
+              s1_vv,            # Feature 5: Sentinel-1 VV
+              s1_ratio,         # Feature 6: S1 VH/VV ratio
+              ndvi,             # Feature 7: Sentinel-2 NDVI
+              evi,              # Feature 8: Sentinel-2 EVI
+              red_edge,         # Feature 9: Sentinel-2 Red-Edge
+              gedi,             # Feature 10: GEDI canopy height
+              elevation,        # Feature 11: SRTM elevation
+              slope             # Feature 12: SRTM slope
+          ])
+            elif nisar_available and nisar_hh is not None and not gedi_has_land_coverage:
+              # GEDI absent across the parcel: use 11 features without GEDI
+              feature_stack = ee.Image.cat([
+                nisar_hh, nisar_hv, nisar_ratio,
+                s1_vh, s1_vv, s1_ratio,
+                ndvi, evi, red_edge,
+                elevation, slope
+              ])
+            elif gedi_has_land_coverage:
+              # Pre-NISAR or NISAR disabled: 9 features
+          feature_stack = ee.Image.cat([
+              s1_vh, s1_vv, s1_ratio,
+              ndvi, evi, red_edge,
+              gedi, elevation, slope
+          ])
+            else:
+              # GEDI absent across the parcel: use 8 features and rely on
+              # AR-measured heights only for tree-level Chave calculations.
+              feature_stack = ee.Image.cat([
+                s1_vh, s1_vv, s1_ratio,
+                ndvi, evi, red_edge,
+                elevation, slope
+              ])
+
+      # ====================================================================
+      # GROUND TRUTH: CHAVE'S ALLOMETRIC EQUATION
+      # ====================================================================
+      training_points = []
+      for scan in tree_scans:
+          # Get tree height — prefer GEDI, fall back to AR measurement
+          if scan.get('gedi_height_m') and scan['gedi_height_m'] > 0:
+              height = scan['gedi_height_m']
+              height_source = 'GEDI'
+          else:
+              height = scan['height_m']
+              height_source = 'AR_FALLBACK'
+
+          if scan['species'] not in SPECIES_WOOD_DENSITY:
+              raise ValueError(f"Unsupported species: {scan['species']}")
+          wood_density = SPECIES_WOOD_DENSITY[scan['species']]
+          dbh = scan['dbh_cm']
+
+          # Chave's Allometric Equation (Chave et al., 2014)
+          # AGB = 0.0673 * (rho * D^2 * H)^0.976
+          # rho = wood density (g/cm3), D = DBH (cm), H = height (m)
+          # Output: AGB in kg
+          agb_kg = 0.0673 * (wood_density * (dbh ** 2) * height) ** 0.976
+
+          # Convert to tonnes per hectare using one 10m x 10m satellite pixel
+          # as the mapping unit (0.01 ha).
+          # Simplifying assumption: each scanned tree represents one pixel,
+          # not its literal canopy/crown area.
+          agb_t_per_ha = (agb_kg / 1000) / 0.01
+
+          training_points.append({
+              'lat': scan['gps']['lat'],
+              'lng': scan['gps']['lng'],
+              'agb_t_per_ha': agb_t_per_ha,
+              'height_source': height_source
+          })
+
+          # Update scan record with calculated AGB
+          update_scan_agb(scan['id'], agb_kg, height_source)
+
+      # ====================================================================
+      # TRAIN XGBOOST ON AR GROUND TRUTH + SATELLITE FEATURES
+      # ====================================================================
+        # Build a lightweight label collection, then attach all satellite bands
+        # in one sampleRegions() call to avoid per-tree getInfo() requests.
+        points_fc = ee.FeatureCollection([
+          ee.Feature(
+            ee.Geometry.Point([pt['lng'], pt['lat']]),
+            {
+              'agb_t_per_ha': pt['agb_t_per_ha'],
+              'height_source': pt['height_source'],
+            }
+          )
+          for pt in training_points
+        ])
+
+        training_fc = feature_stack.sampleRegions(
+          collection=points_fc,
+          properties=['agb_t_per_ha', 'height_source'],
+          scale=10,
+          geometries=False
+        )
+
+      # XGBoost Gradient Boosted Trees (replaces single k-factor approach)
+      # Uses GEE's built-in smileGradientTreeBoost classifier
+      xgb_model = ee.Classifier.smileGradientTreeBoost(
+          numberOfTrees=100,      # 100 decision trees
+          shrinkage=0.05,         # Learning rate
+          samplingRate=0.7,       # Use 70% of data per tree (prevents overfitting)
+          maxNodes=None           # Let tree depth be determined automatically
+      ).setOutputMode('REGRESSION').train(
+          features=training_fc,
+          classProperty='agb_t_per_ha',
+          inputProperties=feature_stack.bandNames()
+      )
+
+      # ====================================================================
+      # PREDICT BIOMASS FOR EVERY PIXEL IN THE LAND BOUNDARY
+      # ====================================================================
+      # Each pixel = 10m x 10m = 100 m2
+      # Predicted value = AGB in tonnes per hectare for that pixel
+      biomass_map = feature_stack.classify(xgb_model)
+
+      # Sum all pixel values * pixel area to get total farm biomass
+      pixel_area_ha = 0.01   # 100 m2 = 0.01 hectares
+
+      total_biomass_result = biomass_map.multiply(pixel_area_ha).reduceRegion(
+          reducer=ee.Reducer.sum(),
+          geometry=region,
+          scale=10,
+          maxPixels=1e9
+      ).getInfo()
+
+      total_biomass_tonnes = total_biomass_result.get('classification', 0)
+
+      return {
+          'total_biomass_tonnes': total_biomass_tonnes,
+          'training_points_count': len(training_points),
+          'features_used': 12 if nisar_available else 9,
+          'nisar_used': nisar_available
+      }
+
+
+  def fetch_nisar_data(geojson, start_date, end_date):
+      """
+      Fetch NISAR L-band data from Alaska Satellite Facility.
+      Available from October 2025.
+      Treat as development/validation input until calibrated production
+      readiness is confirmed, targeted from June 2026 onward.
+      """
+      import asf_search as asf
+      from shapely.geometry import shape
+
+      polygon = shape(geojson)
+      wkt = polygon.wkt
+
+      results = asf.search(
+          platform=asf.PLATFORM.NISAR,
+          intersectsWith=wkt,
+          processingLevel='GCOV',   # Geocoded Covariance — best for biomass
+          start=start_date,
+          end=end_date
+      )
+
+      if not results:
+          return None, None, None
+
+      # Download and process NISAR data
+      # Then ingest as GEE image for consistent pixel-level operations
+      # This is a simplified representation — actual implementation requires
+      # downloading HDF5 files, extracting HH/HV bands, and uploading to GEE
+      # as an Earth Engine asset.
+
+      # Once ingested as GEE asset:
+      nisar_img = ee.Image(f'users/terratrust/nisar_{start_date[:4]}')
+      hh = nisar_img.select('HH').rename('NISAR_HH')
+      hv = nisar_img.select('HV').rename('NISAR_HV')
+      ratio = hh.divide(hv).rename('NISAR_HH_HV_RATIO')
+
+      return hh, hv, ratio
+
+6.5 CARBON CREDIT CALCULATION
+-------------------------------
+Run after fusion engine returns total_biomass_tonnes:
+
+  def calculate_credits(total_biomass_tonnes: float,
+                         land_id: str,
+                         audit_year: int) -> Dict:
+
+        # Query the latest prior successful audit, not simply audit_year - 1.
+        # Ignore FAILED / PROCESSING records.
+        prev_audit = get_latest_successful_audit_before(land_id, audit_year)
+
+        if not prev_audit:
+          return {
+            'prev_biomass': 0,
+            'current_biomass': total_biomass_tonnes,
+            'delta_biomass': 0,
+            'carbon_tonnes': 0,
+            'co2_equivalent': 0,
+            'credits_issued': 0,
+            'reason': 'Baseline year established; future growth earns credits'
+          }
+
+        prev_biomass = prev_audit['total_biomass_tonnes']
+
+      delta_biomass = total_biomass_tonnes - prev_biomass
+
+      if delta_biomass <= 0:
+          # No growth — no credits earned
+          return {
+              'credits_issued': 0,
+              'reason': 'No biomass growth detected compared to previous year'
+          }
+
+      # Carbon fraction of dry biomass = 0.47 (IPCC standard value)
+      carbon_tonnes = delta_biomass * 0.47
+
+      # CO2 equivalent: carbon * (44/12) = carbon * 3.667
+      co2_equivalent = carbon_tonnes * 3.667
+
+      # credits_issued is the human-readable CTT amount.
+      # Minting converts it to integer deci-CTT units on-chain.
+      credits_issued = co2_equivalent
+
+      return {
+          'prev_biomass': prev_biomass,
+          'current_biomass': total_biomass_tonnes,
+          'delta_biomass': delta_biomass,
+          'carbon_tonnes': carbon_tonnes,
+          'co2_equivalent': co2_equivalent,
+          'credits_issued': credits_issued
+      }
+
+================================================================================
+SECTION 7: BLOCKCHAIN ARCHITECTURE
+================================================================================
+
+7.1 WHY BLOCKCHAIN
+------------------
+Blockchain is used exclusively as a tamper-proof permanent record. Once a
+carbon credit is minted on Polygon, the record cannot be edited, deleted, or
+disputed. Carbon market buyers can verify every credit's origin, measurement
+data, and land ownership proof by reading the on-chain certificate.
+
+7.2 TOKEN STANDARD: ERC-1155
+------------------------------
+ERC-1155 (Multi-Token Standard) is used because the system needs two types
+of tokens per audit:
+
+Type 1 — Carbon Credit Token (Fungible, ID=1)
+  Fungible means all credits are interchangeable. 1 CTT from Farm A is worth
+  exactly the same as 1 CTT from Farm B. Like currency notes.
+  These are the actual tradable carbon credits.
+
+Type 2 — Audit Certificate NFT (Non-Fungible, unique ID per audit)
+  Each audit certificate is unique — it represents a specific farm, a specific
+  year, with specific measurement data linked via IPFS.
+  These prove how and where each batch of credits was generated.
+
+Both are minted in one transaction, saving on blockchain fees.
+
+7.3 WHAT GETS STORED ON IPFS (via Pinata)
+-------------------------------------------
+Before minting, the backend creates a JSON metadata package containing all
+evidence for the audit. This is uploaded to IPFS via Pinata's
+pinJSONToIPFS endpoint. The returned CID (permanent content address) is stored
+on blockchain as ipfs://CID, while the API returns a Pinata gateway URL for
+certificate viewing inside the app.
+
+IPFS metadata package structure:
+  {
+    "name": "TerraTrust Audit — Farm [land_id], Year [year]",
+    "land_id": "uuid",
+    "survey_number": "47",
+    "district": "Pune",
+    "land_boundary_hash": "sha256 of GeoJSON string",
+    "audit_year": 2026,
+    "measurement_date": "2026-11-10",
+    "total_biomass_tonnes": 14.8,
+    "prev_biomass_tonnes": 12.4,
+    "delta_biomass": 2.4,
+    "carbon_tonnes": 1.128,
+    "co2_equivalent": 4.1,
+    "credits_issued": 2.4,
+    "satellite_data": {
+      "sentinel1_vh_mean_db": -12.4,
+      "sentinel2_ndvi_mean": 0.68,
+      "gedi_height_mean": 14.2,
+      "srtm_elevation_mean": 545.0,
+      "nisar_used": true,
+      "features_count": 12,
+      "processing_method": "NISAR_S1_S2_GEDI_SRTM_XGBoost_v3.1"
+    },
+    "tree_samples": [
+      {
+        "species": "Teak",
+        "dbh_cm": 22.4,
+        "height_source": "GEDI",
+        "height_m": 15.3,
+        "agb_kg": 245.6,
+        "gps": { "lat": 18.546, "lng": 73.981 },
+        "scan_timestamp": "2026-11-10T10:24:31Z",
+        "measurement_tier": 1,
+        "evidence_photo_hash": "sha256..."
+      }
+    ],
+    "boundary_verification_method": "WMS_AUTO"
+  }
+
+7.4 THE COMPLETE SMART CONTRACT (TerraToken.sol)
+-------------------------------------------------
+
+UUID-to-uint256 conversion rule:
+  audit_token_id = uuid.UUID(audit_id).int
+  Use this exact conversion in the backend before calling mintAudit().
+
+  // SPDX-License-Identifier: MIT
+  pragma solidity 0.8.29;
+
+  import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+  import "@openzeppelin/contracts/access/Ownable.sol";
+
+  contract TerraTrustToken is ERC1155, Ownable {
+
+      // ID = 1 is used for all fungible carbon credit tokens
+      uint256 public constant CARBON_CREDIT = 1;
+
+      // Stores IPFS evidence link per audit certificate
+      // auditId => "ipfs://CID..."
+      mapping(uint256 => string) public auditEvidence;
+
+      // Prevents minting the same land+year combination twice
+      // keccak256(landId + auditYear) => bool
+      mapping(bytes32 => bool) public auditMinted;
+
+      // Tracks how many credits each address has permanently retired
+      mapping(address => uint256) public retiredCredits;
+
+      // Emitted every time credits are permanently retired
+      // Creates permanent public record for carbon market compliance
+      event CreditRetired(
+          address indexed retiredBy,
+          uint256 amount,
+          string retirementReason,
+          uint256 timestamp
+      );
+
+      constructor() ERC1155("") Ownable(msg.sender) {}
+
+      // ================================================================
+      // MINT FUNCTION — called only by backend Oracle wallet
+      // ================================================================
+      function mintAudit(
+          address farmer,        // Farmer's wallet address
+          uint256 auditId,       // uuid.UUID(audit_id).int
+          uint256 creditAmount,  // Integer deci-CTT units e.g. 124 for 12.4 CTT
+                     // NO 10^18 scaling; backend sends display_ctt * 10
+          string memory ipfsHash, // "ipfs://CID..." — points to evidence
+          string memory landId,  // Internal land UUID as string
+          uint256 auditYear      // e.g. 2026
+      ) public onlyOwner {
+
+          // PREVENT DOUBLE MINTING
+          // Same land cannot be minted twice in the same year
+          bytes32 auditKey = keccak256(abi.encodePacked(landId, auditYear));
+          require(!auditMinted[auditKey],
+              "Credits already minted for this land this year");
+          auditMinted[auditKey] = true;
+
+          // Mint fungible carbon credit tokens to farmer
+          // creditAmount is raw deci-CTT units (e.g. 124 = 12.4 CTT)
+          _mint(farmer, CARBON_CREDIT, creditAmount, "");
+
+          // Mint unique audit certificate NFT to farmer
+          _mint(farmer, auditId, 1, "");
+
+          // Store IPFS link permanently on-chain
+          auditEvidence[auditId] = ipfsHash;
+      }
+
+      // ================================================================
+      // RETIRE FUNCTION — called by carbon credit buyer
+      // ================================================================
+      // When a company buys credits to offset emissions, they must RETIRE
+      // (permanently burn) those credits to prove usage. Without this,
+      // the same credit could be sold twice. All major carbon markets
+      // (Verra, Gold Standard) require on-chain retirement records.
+      function retireCredits(
+          uint256 amount,
+          string memory reason   // "Offset for Q1 2026 manufacturing emissions"
+      ) public {
+
+          require(
+              balanceOf(msg.sender, CARBON_CREDIT) >= amount,
+              "Insufficient credits to retire"
+          );
+
+          // Permanently burn — cannot be undone
+          _burn(msg.sender, CARBON_CREDIT, amount);
+
+          // Record total retired by this address
+          retiredCredits[msg.sender] += amount;
+
+          // Emit permanent public retirement record
+          emit CreditRetired(msg.sender, amount, reason, block.timestamp);
+      }
+  }
+
+7.5 HARDHAT CONFIGURATION
+--------------------------
+
+  // contracts/hardhat.config.js
+  require("@nomicfoundation/hardhat-toolbox");
+  require("dotenv").config({ path: "../.env" });
+
+  module.exports = {
+    solidity: {
+      compilers: [{
+        version: "0.8.29",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+          evmVersion: "cancun"
+        }
+      }]
+    },
+    defaultNetwork: "hardhat",
+    networks: {
+      polygon_amoy: {
+        url: process.env.ALCHEMY_POLYGON_AMOY_URL || "",
+        accounts: process.env.ADMIN_WALLET_PRIVATE_KEY
+          ? [process.env.ADMIN_WALLET_PRIVATE_KEY]
+          : [],
+        chainId: 80002
+      }
+    },
+    etherscan: {
+      apiKey: process.env.POLYGONSCAN_API_KEY,
+      customChains: [{
+        network: "polygon_amoy",
+        chainId: 80002,
+        urls: {
+          apiURL: "https://api-amoy.polygonscan.com/api",
+          browserURL: "https://amoy.polygonscan.com"
+        }
+      }]
+    },
+    paths: {
+      sources: "./contracts",
+      tests: "./test",
+      cache: "./cache",
+      artifacts: "./artifacts"
+    }
+  };
+
+7.6 DEPLOYMENT SCRIPT
+----------------------
+
+  // contracts/scripts/deploy.js
+  const hre = require("hardhat");
+  const fs = require("fs");
+  const path = require("path");
+
+  async function main() {
+    const [deployer] = await hre.ethers.getSigners();
+    console.log("Deploying TerraTrustToken with account:", deployer.address);
+
+    const balance = await hre.ethers.provider.getBalance(deployer.address);
+    console.log("Account balance:", balance.toString());
+
+    const Token = await hre.ethers.getContractFactory("TerraTrustToken");
+    const token = await Token.deploy();
+    await token.waitForDeployment();
+
+    const contractAddress = await token.getAddress();
+
+    console.log("TerraTrustToken deployed to:", contractAddress);
+
+    const artifact = await hre.artifacts.readArtifact("TerraTrustToken");
+    const outputPaths = [
+      path.join(__dirname, "..", "artifacts", "TerraTrustToken_ABI.json"),
+      path.join(__dirname, "..", "artifacts", "TerraToken_ABI.json")
+    ];
+    outputPaths.forEach((outputPath) => {
+      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+      fs.writeFileSync(outputPath, JSON.stringify(artifact.abi, null, 2));
+      console.log("ABI exported to:", outputPath);
+    });
+  }
+
+  main().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+
+  // Run with:
+  // npx hardhat run scripts/deploy.js --network polygon_amoy
+  // After success, verify on PolygonScan:
+  // npx hardhat verify --network polygon_amoy [CONTRACT_ADDRESS]
+
+7.7 PYTHON MINTING SERVICE
+---------------------------
+
+  # services/minting_service.py
+  import json, requests
+  from web3 import Web3
+  from eth_account import Account
+  import os
+
+  w3 = Web3(Web3.HTTPProvider(os.getenv('ALCHEMY_POLYGON_AMOY_URL')))
+  admin_account = Account.from_key(os.getenv('ADMIN_WALLET_PRIVATE_KEY'))
+
+  with open('./contracts/artifacts/TerraToken_ABI.json') as f:
+      CONTRACT_ABI = json.load(f)
+
+  contract = w3.eth.contract(
+      address=w3.to_checksum_address(os.getenv('CONTRACT_ADDRESS')),
+      abi=CONTRACT_ABI
+  )
+
+  def upload_to_ipfs(metadata: dict) -> str:
+      """Upload audit evidence JSON to Pinata. Returns IPFS URI."""
+      response = requests.post(
+        'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+          headers={
+          'Authorization': f'Bearer {os.getenv("PINATA_JWT")}',
+              'Content-Type': 'application/json'
+          },
+        json={
+          'pinataContent': metadata,
+          'pinataMetadata': {
+            'name': f'audit-{metadata["audit_year"]}-{metadata["land_id"]}'
+          }
+        },
+          timeout=30
+      )
+      response.raise_for_status()
+      cid = response.json()['IpfsHash']
+      return f'ipfs://{cid}'
+
+  def mint_carbon_credits(farmer_address: str, audit_id_int: int,
+                           credit_amount: int, metadata: dict,
+                           land_id: str, audit_year: int) -> Dict:
+      """
+      Complete minting flow:
+      1. Upload evidence to IPFS
+      2. Build blockchain transaction
+      3. Sign and send transaction
+      4. Wait for confirmation
+      5. Return tx_hash
+      """
+      # Step 1: Upload evidence to IPFS
+      ipfs_url = upload_to_ipfs(metadata)
+
+      # Step 2: Build transaction
+      nonce = w3.eth.get_transaction_count(admin_account.address)
+      gas_price = w3.eth.gas_price
+
+      transaction = contract.functions.mintAudit(
+          w3.to_checksum_address(farmer_address),
+          audit_id_int,
+          credit_amount,    # Actual number, no multiplication
+          ipfs_url,
+          land_id,
+          audit_year
+      ).build_transaction({
+          'from':     admin_account.address,
+          'nonce':    nonce,
+          'gas':      300000,
+          'gasPrice': gas_price,
+          'chainId':  80002   # Amoy testnet only in current TerraTrust scope
+      })
+
+      # Step 3: Sign and send
+      signed_txn = admin_account.sign_transaction(transaction)
+      tx_hash = w3.eth.send_raw_transaction(signed_txn.raw_transaction)
+
+      # Step 4: Wait for confirmation (up to 60 seconds)
+      receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
+
+      if receipt['status'] == 0:
+          raise Exception(f"Transaction failed: {tx_hash.hex()}")
+
+      return {
+          'tx_hash': tx_hash.hex(),
+          'ipfs_url': ipfs_url,
+          'block_number': receipt['blockNumber'],
+          'gas_used': receipt['gasUsed']
+      }
+
+================================================================================
+SECTION 8: CELERY BACKGROUND TASK SYSTEM
+================================================================================
+
+8.1 WHY CELERY
+--------------
+Satellite fusion takes 30-90 seconds. Blockchain transactions can take 15-30
+seconds. These cannot run inside a synchronous API request (client would time
+out). Celery runs them as background jobs. The mobile app polls for results.
+
+8.2 SETUP
+---------
+
+  # tasks/celery_app.py
+  from celery import Celery
+  import os
+
+  celery_app = Celery(
+      'terratrust',
+      broker=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
+      backend=os.getenv('REDIS_URL', 'redis://localhost:6379/0'),
+      include=['tasks.fusion_task', 'tasks.minting_task']
+  )
+
+  celery_app.conf.update(
+      task_serializer='json',
+      result_serializer='json',
+      accept_content=['json'],
+      task_track_started=True,
+      task_time_limit=300,       # Kill task if it runs more than 5 minutes
+      worker_prefetch_multiplier=1
+  )
+
+  Free-tier worker note:
+    Start with Celery concurrency=1 on Render free/low-memory instances.
+    Increase above 1 only after measuring memory headroom for GEE + OCR workloads.
+    task_time_limit=300 is an MVP safeguard, not a hard scientific upper bound.
+    If NISAR-enabled or quota-delayed runs approach that limit in practice,
+    increase it deliberately and document the new bound before production.
+
+Free Redis hosting options:
+  - Upstash Redis free tier: serverless Redis over TLS via REDIS_URL
+  - Local Redis: redis://localhost:6379/0 for development only
+
+8.3 FUSION TASK
+---------------
+
+  # tasks/fusion_task.py
+  from tasks.celery_app import celery_app
+  from services.fusion_engine import run_fusion, calculate_credits
+  from services.minting_service import mint_carbon_credits
+  from app.database import update_audit_status, get_audit_data
+
+  @celery_app.task(bind=True, max_retries=2)
+  def run_audit_fusion(self, audit_id: str):
+      try:
+          # Update status: CALCULATING
+          update_audit_status(audit_id, 'CALCULATING')
+
+          # Fetch all data needed for fusion
+          audit_data = get_audit_data(audit_id)
+
+          # Run satellite fusion
+          fusion_result = run_fusion(
+              audit_id=audit_id,
+              land_id=audit_data['land_id'],
+              tree_scans=audit_data['tree_scans'],
+              land_boundary_geojson=audit_data['boundary'],
+              audit_year=audit_data['audit_year']
+          )
+
+          # Calculate carbon credits from biomass result
+          credit_result = calculate_credits(
+              total_biomass_tonnes=fusion_result['total_biomass_tonnes'],
+              land_id=audit_data['land_id'],
+              audit_year=audit_data['audit_year']
+          )
+
+          # Save results to database
+          save_audit_results(audit_id, fusion_result, credit_result)
+
+          # If credits > 0, trigger minting
+          if credit_result['credits_issued'] > 0:
+              update_audit_status(audit_id, 'READY_TO_MINT')
+              run_minting_task.delay(audit_id)
+          else:
+              update_audit_status(audit_id, 'COMPLETE_NO_CREDITS')
+
+      except Exception as exc:
+          update_audit_status(audit_id, 'FAILED')
+          raise self.retry(exc=exc, countdown=30)
+
+================================================================================
+SECTION 9: OCR SERVICE — LAND DOCUMENT PROCESSING
+================================================================================
+
+9.1 SETUP REQUIREMENTS
+-----------------------
+
+No system-level OCR installation is required. The backend uses the managed
+Google Cloud Vision API and authenticates with the shared backend Google
+service account exposed through GOOGLE_APPLICATION_CREDENTIALS.
+
+Install on server:
+  pip install google-cloud-vision opencv-python-headless Pillow
+
+Deployment note:
+  There is no first-run OCR model download. The only setup requirement is:
+    - Cloud Vision API enabled in GOOGLE_CLOUD_PROJECT
+    - GOOGLE_APPLICATION_CREDENTIALS pointing to the shared backend JSON file
+
+On Render.com free tier:
+  No GPU or OCR model bootstrap is needed. The backend sends OCR requests to
+  Cloud Vision over HTTPS.
+
+9.2 PREPROCESSING PIPELINE
+----------------------------
+
+Note on preprocessing vs previous version:
+  OpenCV now handles image cleanup before calling Cloud Vision. Orientation is
+  normalised from image metadata when available, and the backend can retry OCR
+  with the original bytes if the processed image performs worse.
+
+  # services/ocr_service.py
+  import cv2
+  import numpy as np
+  import re
+  from typing import Dict
+  from google.cloud import vision
+
+  vision_client = vision.ImageAnnotatorClient()
+
+  def preprocess_document_image(image_bytes: bytes) -> bytes:
+      """
+      Prepare 7/12 document image for Cloud Vision.
+      OpenCV is used for orientation normalisation, contrast cleanup,
+      and denoising before OCR.
+      """
+      # Convert bytes to numpy array
+      nparr = np.frombuffer(image_bytes, np.uint8)
+      img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+      # Step 1: Convert to greyscale
+      grey = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+      # Step 2: Adaptive thresholding (handles uneven lighting and shadows)
+      # Government documents are often photographed with uneven phone lighting
+      thresh = cv2.adaptiveThreshold(grey, 255,
+                                      cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                      cv2.THRESH_BINARY, 11, 2)
+
+      # Step 3: Denoise — remove camera noise from low-light photos
+      denoised = cv2.fastNlMeansDenoising(thresh, h=10)
+
+      # Step 4: Encode to PNG bytes for Vision API
+      success, encoded = cv2.imencode('.png', denoised)
+      if not success:
+          raise ValueError("Could not prepare document image for OCR.")
+
+      return encoded.tobytes()
+
+  def extract_fields_from_document(image_bytes: bytes) -> Dict:
+      """
+      Run Cloud Vision OCR and extract structured fields from 7/12 document.
+      Returns extracted fields dict or raises ValueError if extraction fails.
+      """
+      processed = preprocess_document_image(image_bytes)
+
+      def detect_text(content: bytes) -> str:
+          response = vision_client.document_text_detection(
+              image=vision.Image(content=content)
+          )
+          if response.error.message:
+              raise ValueError(f"Cloud Vision OCR failed: {response.error.message}")
+          return response.full_text_annotation.text or ""
+
+      # Try the cleaned image first, then fall back to the original image.
+      full_text = detect_text(processed).strip()
+      if len(full_text) < 10:
+          full_text = detect_text(image_bytes).strip()
+
+      # Extract fields using regex (handles both English and Marathi labels)
+      survey_no = re.search(
+          r'(?:Survey|Gat|Gut|सर्व्हे|गट)\s*[Nn]o\.?\s*[:\-]?\s*(\d+(?:/\d+)?)',
+          full_text, re.IGNORECASE
+      )
+      owner = re.search(
+          r'(?:Name of Owner|Owner|मालकाचे नाव|धारकाचे नाव)\s*[:\-]?\s*'
+          r'([A-Z][a-zA-Z\s]+|[\u0900-\u097F\s]+)',
+          full_text, re.IGNORECASE
+      )
+      village = re.search(
+          r'(?:Village|गाव)\s*[:\-]?\s*([A-Z][a-zA-Z\s]+|[\u0900-\u097F\s]+)',
+          full_text, re.IGNORECASE
+      )
+      taluka = re.search(
+          r'(?:Taluka|तालुका)\s*[:\-]?\s*([A-Z][a-zA-Z\s]+|[\u0900-\u097F\s]+)',
+          full_text, re.IGNORECASE
+      )
+      district = re.search(
+          r'(?:District|जिल्हा)\s*[:\-]?\s*([A-Z][a-zA-Z\s]+|[\u0900-\u097F\s]+)',
+          full_text, re.IGNORECASE
+      )
+
+      # Check minimum required fields were extracted
+      if not survey_no or not owner:
+          raise ValueError("Could not extract survey number or owner name. "
+                           "Image quality may be too low.")
+
+      # Calculate extraction confidence based on how many fields were found
+      fields_found = sum([bool(x) for x in [survey_no, owner, village,
+                                              taluka, district]])
+      confidence = fields_found / 5
+
+      return {
+          'survey_number': survey_no.group(1).strip() if survey_no else None,
+          'owner_name':    owner.group(1).strip() if owner else None,
+          'village':       village.group(1).strip() if village else None,
+          'taluka':        taluka.group(1).strip() if taluka else None,
+          'district':      district.group(1).strip() if district else None,
+          'state':         'Maharashtra',
+          'extraction_confidence': confidence
+      }
+
+================================================================================
+SECTION 10: PYTHON DEPENDENCIES
+================================================================================
+
+Save as requirements.txt in backend/ folder:
+
+  # Core Framework
+  fastapi==0.135.1
+  uvicorn[standard]==0.41.0
+  python-multipart==0.0.22     # For file upload handling
+  python-dotenv==1.2.2
+  firebase-admin>=6.5,<7       # Verify Firebase ID tokens in FastAPI
+
+  # Database
+  supabase==2.28.0             # Supabase Python client
+  SQLAlchemy[asyncio]==2.0.48
+  asyncpg==0.31.0              # Async PostgreSQL driver
+  shapely==2.1.2               # GeoJSON geometry operations
+
+  # Satellite / Geospatial
+  earthengine-api==1.7.17      # Google Earth Engine
+  asf-search>=8,<9             # NISAR data from Alaska Satellite Facility
+  numpy==1.26.4
+  scipy==1.13.1
+
+  # OCR / Google APIs
+  google-cloud-vision==3.11.0  # Cloud Vision OCR for land documents
+  opencv-python-headless==4.10.0.84
+  Pillow==12.1.1
+
+  # Machine Learning
+  xgboost==2.0.3
+  scikit-learn==1.4.2          # For preprocessing / train-test split
+
+  # Background Tasks
+  celery==5.6.2
+  flower==2.0.1
+  redis==7.3.0
+  honcho==1.1.0                # Runs Uvicorn + Celery in one Render service
+
+  # Blockchain
+  web3==7.14.1
+  eth-account==0.13.7
+  requests==2.32.5            # Pinata upload + external REST calls
+
+  # Validation
+  pydantic==2.12.5
+  pydantic-settings==2.13.1
+
+  # Utilities
+  httpx==0.28.1                # Async HTTP client for external API calls
+  playwright>=1.50,<2
+
+Install all:
+  pip install -r requirements.txt
+
+================================================================================
+SECTION 11: DEPLOYMENT
+================================================================================
+
+11.1 LOCAL DEVELOPMENT
+-----------------------
+
+  # Terminal 1: Start FastAPI
+  cd backend
+  uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Terminal 2: Start Celery worker
+  cd backend
+  celery -A tasks.celery_app worker --loglevel=info --concurrency=1
+
+  # Terminal 3: Redis (if running locally)
+  redis-server
+
+  # Access Swagger API docs at: http://localhost:8000/docs
+
+  # Optional single-command layout matching Render deployment
+  # backend/Procfile.render
+  #   web: uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+  #   worker: celery -A tasks.celery_app worker --loglevel=info --concurrency=1
+  # Run with: honcho -f Procfile.render start
+
+11.2 DOCKER (OPTIONAL FOR LOCAL)
+----------------------------------
+
+  # docker-compose.yml
+  version: '3.8'
+  services:
+
+    backend:
+      build: ./backend
+      command: honcho -f Procfile.render start
+      ports: ["8000:8000"]
+      env_file: .env
+      depends_on: [redis]
+      volumes:
+        - ./backend:/app
+        - ./backend-google-service-account.json:/app/backend-google-service-account.json
+
+    redis:
+      image: redis:7-alpine
+      ports: ["6379:6379"]
+
+  # Run with:
+  # docker-compose up --build
+
+11.3 FREE CLOUD DEPLOYMENT OPTIONS
+------------------------------------
+
+Render.com + Upstash (Recommended for MVP hosting):
+  - One Render web service runs both FastAPI and the Celery worker
+  - Upstash Redis provides the Celery broker/result backend over TLS
+  - Both connect to Supabase (already cloud-hosted)
+  Steps:
+   1. Push code to GitHub
+   2. Create Render account at render.com
+   3. New Web Service → Connect GitHub repo → Set build command:
+     pip install -r requirements.txt
+   4. Add backend/Procfile.render:
+      web: uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+      worker: celery -A tasks.celery_app worker --loglevel=info --concurrency=1
+   5. Set start command: honcho -f Procfile.render start
+   6. Add all environment variables from Section 1.11.
+     Upload backend-google-service-account.json as a Render Secret File.
+     Set GOOGLE_APPLICATION_CREDENTIALS=/etc/secrets/backend-google-service-account.json
+     and GOOGLE_CLOUD_PROJECT=[your-google-cloud-project-id].
+   7. Create an Upstash Redis database. Copy the rediss:// URL into REDIS_URL.
+     Do NOT use Upstash REST credentials for Celery.
+
+11.4 CORS CONFIGURATION
+------------------------
+React Native mobile clients do not require browser CORS. Add this middleware
+only if a web dashboard is introduced later:
+
+  from fastapi.middleware.cors import CORSMiddleware
+
+  app.add_middleware(
+      CORSMiddleware,
+      allow_origins=os.getenv('WEB_CORS_ORIGINS', '').split(','),
+      allow_credentials=True,
+      allow_methods=["*"],
+      allow_headers=["*"],
+  )
+
+================================================================================
+SECTION 12: SECURITY
+================================================================================
+
+Private Key Storage:
+  ADMIN_WALLET_PRIVATE_KEY must be stored only in environment variables.
+  Never in code files. Never in git. Use Render.com environment variables
+  section or a secrets manager in production.
+
+Backend Data Access Policy:
+  Mobile app never talks to Supabase directly and never receives
+  SUPABASE_SERVICE_KEY. All database and storage access runs through FastAPI.
+  Authorization is enforced in backend code after resolving users.firebase_uid
+  from a verified Firebase ID token. Supabase RLS can remain enabled as a
+  defense-in-depth control, but it is not the primary authorization boundary
+  in this architecture.
+
+Firebase ID Token Validation:
+  All protected endpoints validate Firebase ID tokens via the Authorization
+  header. FastAPI dependency checks the token on every protected request:
+    from firebase_admin import auth as firebase_auth
+
+    async def get_current_user(token: str = Depends(oauth2_scheme)):
+        decoded = firebase_auth.verify_id_token(token)
+        firebase_uid = decoded['uid']
+        phone_number = decoded.get('phone_number')
+        user = get_user_by_firebase_uid(firebase_uid, phone_number)
+        if not user:
+            raise HTTPException(401, "Authenticated user not provisioned")
+        return user
+
+Google Credentials:
+  backend-google-service-account.json never goes in git.
+  In production, upload it as a Render Secret File and set
+  GOOGLE_APPLICATION_CREDENTIALS=/etc/secrets/backend-google-service-account.json.
+  Reuse this one file for Firebase Admin, Cloud Vision, and Earth Engine.
+
+Smart Contract:
+  onlyOwner modifier ensures only the admin wallet can call mint().
+  Double-mint mapping prevents duplicate credits per land per year.
+  No user-facing function can mint tokens — only the backend Oracle.
+
+================================================================================
+SECTION 13: TESTING
+================================================================================
+
+13.1 UNIT TESTS
+---------------
+
+  # Run all tests
+  pytest backend/tests/ -v
+
+  # Test files to create:
+  tests/
+  ├── test_ocr_service.py         # Test field extraction with sample 7/12 images
+  ├── test_fusion_engine.py       # Test Chave equation, credit calculation
+  ├── test_land_boundary.py       # Test LGD API call, gis_code construction
+  ├── test_minting_service.py     # Test IPFS upload, web3 transaction building
+  └── test_blockchain_contract.py # Hardhat tests for Solidity contract
+
+  Key test cases:
+  - Chave equation: known inputs → known AGB output (verify against published data)
+  - Credit calculation: delta_biomass = 0 → credits = 0 (no credits for no growth)
+  - Credit calculation: negative delta → credits = 0 (no credits for decline)
+  - OCR service: test with clear image → all fields extracted
+  - OCR service: test with blurry image → appropriate error returned
+  - Contract: mintAudit same land+year twice → second call reverts
+
+13.2 HARDHAT CONTRACT TESTS
+-----------------------------
+
+  # contracts/test/TerraToken.test.js
+  describe("TerraTrustToken", function () {
+    it("Should mint credits to farmer", async function () { ... });
+    it("Should prevent double minting same land+year", async function () { ... });
+    it("Should allow farmer to retire credits", async function () { ... });
+    it("Should prevent non-owner from minting", async function () { ... });
+    it("Should emit CreditRetired event on retirement", async function () { ... });
+  });
+
+  # Run: npx hardhat test
+
+================================================================================
+SECTION 14: IMPLEMENTATION SEQUENCE
+================================================================================
+
+Follow this order to build the backend. This backend schedule aligns to the
+16-week implementation sequence in the SRS.
+
+WEEKS 1-2 — FOUNDATION
+  1. Set up all accounts from Section 1.
+  2. Create Supabase project, enable PostGIS, and run all CREATE TABLE statements.
+  3. Set up the FastAPI project structure from Section 3.
+  4. Implement /health, Firebase token validation, /auth/me, /auth/kyc,
+    and /auth/register-wallet.
+  5. Test OTP bootstrap and KYC persistence with Firebase test numbers.
+
+WEEKS 3-4 — LAND REGISTRATION
+  1. Enable and validate Cloud Vision OCR with sample 7/12 images.
+  2. Implement OCR extraction, LGD API integration, and BhuNaksha WMS lookup.
+  3. Implement /land/verify-document, /land/fetch-boundary, /land/register,
+    and paginated /land/list.
+  4. Test the full OCR → boundary → registration flow, including manual fallback.
+
+WEEKS 5-7 — AUDIT BACKEND INTERFACES
+  1. Implement /audit/zones with NDVI-based zone generation and GEDI availability.
+  2. Implement /audit/submit-samples with server-side geofence validation,
+    photo hash validation contract, and Celery dispatch.
+  3. Set up Celery + Redis, background job retries, and COMPLETE_NO_CREDITS flow.
+
+WEEKS 8-11 — SATELLITE ENGINE
+  1. Set up shared Google credential auth and GEE caching strategy.
+  2. Implement S1 + S2 + GEDI + SRTM fusion, Chave equation, and
+    sampleRegions-based training.
+  3. Implement latest-successful-audit baseline logic for credit calculation.
+  4. Implement /audit/result and paginated /audit/history/{land_id}.
+
+WEEKS 12-14 — BLOCKCHAIN + DASHBOARD SUPPORT
+  1. Finalize TerraToken.sol, Hardhat tests, and Polygon Amoy deployment.
+  2. Implement canonical IPFS metadata generation and minting service.
+  3. Implement paginated /credits/balance and optional backend-side balance check.
+  4. Validate end-to-end minting and certificate URLs.
+
+WEEKS 15-16 — TESTING, HARDENING, DEPLOYMENT
+  1. Enable production rate limiting, structured logging, and backup routines.
+  2. Run AR accuracy field tests and GPS zone-arrival validation with the
+     mobile team before production sign-off.
+  3. Run mock-GPS and backend-only-access-policy validation.
+  4. Deploy the single backend web service to Render with Upstash Redis.
+  5. Upload backend-google-service-account.json as a Render Secret File and
+     verify GOOGLE_APPLICATION_CREDENTIALS resolves correctly.
+  6. Configure cron-job.org keep-alive/health monitoring.
+  7. Run full end-to-end tests, including no-credit completion and recovery paths.
+
+================================================================================
+APPENDIX A: ALIGNMENT CLARIFICATIONS (APRIL 2026)
+================================================================================
+
+1. Realtime geofencing boundary check
+  The mobile app performs local point-in-polygon checks against cached
+  official GeoJSON. The backend does not expose a per-GPS realtime endpoint.
+  Server-side ST_Contains() remains mandatory during sample submission.
+
+2. Boundary rejection handling
+  When the farmer rejects a fetched boundary, the mobile app must preserve
+  the OCR-extracted document fields and either retry /land/fetch-boundary
+  once or switch to the manual-upload path. The backend should treat both
+  paths as the same registration flow and not require a fresh OCR run unless
+  the image itself changed.
+
+3. Photo evidence contract
+  evidence_photo_base64 must represent the final JPEG bytes only, with no
+  data URI prefix. Resize to a maximum of 1280×960 pixels, strip EXIF metadata,
+  and compress at JPEG quality 85 before hashing/upload.
+  evidence_photo_hash is SHA-256 of those exact decoded bytes. Backend must
+  reject mismatches.
+
+4. Species acceptance contract
+  The backend accepts only the 11 approved species.
+  MODEL_AUTO requires species_confidence >= 0.80.
+  MODEL_CONFIRMED requires 0.60 <= species_confidence < 0.80 and an explicit
+  farmer confirmation in the mobile flow.
+  MANUAL_SELECTED permits lower model confidence only when the farmer chose an
+  approved species label explicitly after a low-confidence or NOT_APPROVED
+  result. Any unknown species label must still be rejected upstream.
+
+5. GPS quality contract
+  Zone arrival requires distance <= 10m and gps_accuracy_m <= 20.
+  Backend should reject saved scans with gps_accuracy_m > 30.
+
+6. Rate limiting
+  Minimum production limits:
+  POST /api/v1/land/verify-document = 10/hour/user
+  GET /api/v1/land/fetch-boundary = 20/hour/user
+  GET /api/v1/audit/zones = 5/hour/user
+  POST /api/v1/audit/submit-samples = 3/hour/user
+  GET /api/v1/audit/result/{audit_id} = 60/minute/user
+  GET /api/v1/credits/balance = 30/minute/user
+  Return HTTP 429 with Retry-After.
+  Parcel-scale Earth Engine work runs inside the single fusion Celery task for
+  that audit, not separate nested Celery subtasks. MVP quota policy starts
+  with Celery concurrency=1 so only one parcel-scale GEE fusion job is active
+  per worker/project until quota testing proves a higher safe limit. If Earth
+  Engine returns quota or rate-limit errors, keep the audit status at
+  CALCULATING, back off, and retry within Celery rather than requiring the
+  mobile client to resubmit.
+
+7. Monitoring and backup
+  Production services must emit structured JSON logs with audit_id, land_id,
+  user_id, route, dependency name, retry count, and latency.
+  Celery task failures and blockchain minting failures must trigger alerts.
+  Logs must be PII-safe and must not contain plain phone numbers, names,
+  Aadhaar, private keys, or raw OCR output.
+  Run daily database backups, weekly storage manifest exports, and quarterly
+  restore drills.
+  Blockchain event history plus IPFS metadata are the source of truth for
+  already-issued credits if off-chain recovery is required.
+
+8. Wallet recovery requirement
+  Production launch requires an admin-assisted wallet rotation capability.
+  The backend must support identity-verified replacement of the farmer wallet
+  while preserving future credit issuance and future certificate continuity.
+  Already-issued on-chain balances remain at the original wallet in v3.1 and
+  must be disclosed clearly in the product copy.
+
+9. Aadhaar handling
+  Aadhaar is collected only because OTP proves phone possession, while the
+  platform also needs a one-time identity anchor for owner-name matching and
+  wallet-recovery re-verification.
+  It is not used for biomass calculation, credit minting, or routine app use.
+  Plain Aadhaar must be processed only in volatile memory, hashed
+  immediately, excluded from logs, and never stored as an image or plaintext.
+  Production launch requires legal review against India's Digital Personal
+  Data Protection Act, 2023 (DPDPA).
+
+10. Mobile/frontend-safe RPC key separation
+  If the React Native 0.84.1 mobile app performs optional direct chain
+  validation, it must use a different frontend-safe Alchemy key from the
+  backend server key.
+
+11. iOS future scope
+  iOS support requires a separate ARKit bridge, non-Android-specific boundary
+  map rendering, Apple device attestation/App Check support, Firebase static
+  framework configuration in CocoaPods, and Keychain parity testing before it
+  can enter scope.
+
+12. Versioning and contract upgrade policy
+  Mobile releases use semantic versioning plus platform build numbers.
+  Breaking API changes require a new API path version and a minimum supported
+  app version gate.
+  Minted audits remain historically immutable when xgboost_model_version changes.
+  ERC-1155 contract changes are handled via new contract deployment rather than
+  in-place mutation of historical token records.
+
+13. Audit due definition
+  "Audit due" means once per calendar audit_year.
+  If a parcel already has a current-year audit, /audit/zones should return
+  HTTP 409 with existing_audit_id and current status so the mobile UI can
+  route to resume/status instead of attempting a duplicate audit.
+
+================================================================================
+END OF DOCUMENT
+================================================================================

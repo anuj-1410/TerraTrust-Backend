@@ -1,0 +1,1497 @@
+================================================================================
+TERRATRUST-AR — COMPLETE FRONTEND FLOW & NAVIGATION SPECIFICATION
+================================================================================
+
+Document Purpose  : Complete screen-by-screen navigation, tab structure,
+                    cross-document clarifications, and full user flow for AI agent implementation
+Based On          : SRS v3.1, Backend System Design v3.1, FDD v3.1
+Platform          : Android (React Native CLI 0.84.1 + TypeScript 5.9.x)
+Navigation Library: React Navigation v7
+Date              : April 2026
+
+================================================================================
+SECTION 1: WHAT THIS DOCUMENT NORMALISES
+================================================================================
+
+The current SRS v3.1, Backend System Design v3.1, and FDD v3.1 already define
+the core screen set, primary API contracts, and high-level navigation model.
+This document now serves as the detailed navigation companion that resolves the
+remaining cross-document ambiguities and makes the interaction rules explicit.
+
+This document normalises:
+  - exact navigator hierarchy (root stack, tab stacks, modal flows)
+  - which screens are stack pushes versus full-screen modals
+  - header and back-navigation rules per screen
+  - CTA destinations from Home, Land, Audit, and Profile flows
+  - polling, deep-link, notification, empty-state, and error-state behaviour
+  - maintenance detection via GET /api/v1/status, while /health remains the
+    liveness probe for infrastructure
+
+Canonical clarifications applied here:
+  - WalletRecoveryScreen belongs to the Profile stack. It is not a global
+    utility modal, although the tab bar is hidden during that flow.
+  - AuditStartScreen is always launched as a full-screen modal on the
+    RootNavigator, regardless of whether the user starts from HomeScreen,
+    LandListScreen, or LandDetailScreen.
+  - GET /api/v1/credits/balance is the shared credits endpoint and returns the
+    farmer's current balance plus paginated audit history.
+
+================================================================================
+SECTION 2: NAVIGATION ARCHITECTURE — COMPLETE STRUCTURE
+================================================================================
+
+The app uses THREE navigator types from React Navigation v7:
+
+  1. RootNavigator (Native Stack) — top-level router between auth and main app
+  2. MainTabNavigator (Bottom Tabs) — the primary navigation after login
+  3. Sub-stack navigators — one per tab to allow deep navigation per feature
+
+--------------------------------------------------------------------------------
+2.1 ROOT NAVIGATOR
+--------------------------------------------------------------------------------
+
+RootNavigator is a Native Stack Navigator. It contains:
+
+  STACK A — AuthStack (shown to unauthenticated users)
+    Screens: SplashScreen, LoginScreen, OTPScreen, KYCScreen, OnboardingScreen
+
+  STACK B — MainStack (shown to authenticated + KYC-complete users)
+    Contains: MainTabNavigator as the root
+    Plus modal screens pushed above tabs (full-screen modals):
+      - ZoneNavigationScreen     (full-screen modal during active audit)
+      - ARCameraScreen           (full-screen modal during active audit)
+      - ManualMeasureScreen      (full-screen modal during active audit)
+      - TreeResultScreen         (full-screen modal during active audit)
+      - AuditCompleteScreen      (full-screen modal during active audit)
+      - AuditStatusScreen        (full-screen modal after submission polling)
+      - DocumentUploadScreen     (full-screen modal for adding land)
+      - BoundaryConfirmScreen    (full-screen modal for confirming boundary)
+      - ManualUploadGuideScreen  (full-screen modal for fallback land upload)
+      - NotificationsScreen      (full-screen modal from header bell icon)
+      - MaintenanceScreen        (full-screen modal, blocks all other screens)
+
+  STACK C — Maintenance override
+    MaintenanceScreen replaces everything if the backend returns a
+    maintenance flag. No other screen is accessible.
+
+--------------------------------------------------------------------------------
+2.2 MAIN TAB NAVIGATOR (BOTTOM TABS)
+--------------------------------------------------------------------------------
+
+The bottom tab bar is ALWAYS visible when the farmer is in the main app,
+EXCEPT during active AR audit screens (those are full-screen modals with
+their own back/close button and no tab bar shown).
+
+The tab bar has FOUR tabs:
+
+  TAB 1 — Home (house icon)
+    Stack: HomeStack
+    Screens in stack:
+      - HomeScreen (root of this tab)
+      - CreditHistoryScreen (pushed from HomeScreen)
+      - LandDetailScreen (pushed from HomeScreen land card tap)
+      - EditLandNameScreen (pushed from LandDetailScreen)
+
+  TAB 2 — My Lands (leaf/field icon)
+    Stack: LandStack
+    Screens in stack:
+      - LandListScreen (root of this tab)
+      - LandDetailScreen (pushed from LandListScreen card tap)
+      - EditLandNameScreen (pushed from LandDetailScreen)
+      NOTE: AuditStartScreen is not part of LandStack. It is opened as a
+        full-screen modal on the RootNavigator from LandDetailScreen or
+        LandListScreen, and the rest of the audit flow stays on that
+        RootNavigator modal stack above the tab bar.
+
+  TAB 3 — History (clock/chart icon)
+    Stack: HistoryStack
+    Screens in stack:
+      - CreditHistoryScreen (root of this tab)
+      NOTE: This is the same CreditHistoryScreen as the Home tab links to.
+            Reuse the same screen component. Tab just navigates directly to it.
+
+  TAB 4 — Profile (person icon)
+    Stack: ProfileStack
+    Screens in stack:
+      - ProfileScreen (root of this tab)
+      - SettingsScreen (pushed from ProfileScreen)
+      - WalletRecoveryScreen (pushed from ProfileScreen)
+
+TAB BAR VISUAL SPECS:
+  Active icon + label colour:   #2F855A (Forest Green)
+  Inactive icon + label colour: #A0AEC0 (Disabled Grey)
+  Background:                   #FFFFFF (Card White)
+  Border top:                   1px solid #E2E8F0 (light grey)
+  Label font:                   Roboto Regular, 11sp
+  Icon size:                    24px
+  Tab bar height:               56px + bottom safe area inset
+  Notification badge:           Red dot on Profile tab when wallet recovery
+                                is pending (derived from
+                                GET /api/v1/auth/me.wallet_recovery_status).
+                                Red dot on Home tab when a
+                                background-sync audit upload completes.
+
+--------------------------------------------------------------------------------
+2.3 HEADER BAR RULES
+--------------------------------------------------------------------------------
+
+Each screen must define its header bar. Rules are as follows:
+
+DEFAULT HEADER (most screens):
+  - Back arrow on left (navigates back in stack)
+  - Screen title centred
+  - Background: #FFFFFF
+  - Title font: Roboto Bold 18sp, colour #2D3748
+
+NO HEADER (full-screen screens):
+  - SplashScreen: no header
+  - LoginScreen: no header (logo shown in body)
+  - OTPScreen: custom back arrow in body, no system header
+  - ARCameraScreen: no header (camera is full-screen)
+  - ZoneNavigationScreen: no header (map is full-screen)
+  - MaintenanceScreen: no header
+
+HEADER WITH RIGHT-SIDE ACTION:
+  - HomeScreen: Bell icon (🔔) on right. Tapping opens NotificationsScreen.
+                Show red dot badge on bell if there are unread notifications.
+  - LandListScreen: No right-side action.
+  - ProfileScreen: No right-side action.
+
+NO BACK BUTTON (screens where going back is not allowed):
+  - HomeScreen (root tab — back exits app with Android back)
+  - LandListScreen (root tab)
+  - CreditHistoryScreen when accessed via History tab (root tab)
+  - ProfileScreen (root tab)
+  - KYCScreen (farmer must complete KYC, cannot go back to OTP)
+  - AuditCompleteScreen (cannot go back into scanning after submitting)
+  - AuditStatusScreen (cannot interrupt polling)
+
+================================================================================
+SECTION 3: ALL SCREENS — COMPLETE SPECIFICATIONS
+================================================================================
+
+This section defines every screen in the app including screens missing from
+the original documents.
+
+================================================================================
+AUTH STACK SCREENS
+================================================================================
+
+--------------------------------------------------------------------------------
+SCREEN 1: SplashScreen
+--------------------------------------------------------------------------------
+File:       src/features/auth/screens/SplashScreen.tsx
+Header:     None
+Back:       None
+
+What farmer sees:
+  - TerraTrust logo centred on #F7FAFC background
+  - Lottie spinning_leaf.json animation below logo
+  - No text. Pure visual load state.
+
+Logic (runs silently, farmer just sees the animation):
+  Step 1: Check Firebase currentUser.
+  Step 2: If no Firebase user → navigate to LoginScreen (replace, no back).
+  Step 3: If Firebase user exists:
+            Refresh ID token.
+            Call GET /api/v1/auth/me.
+  Step 4: If /auth/me returns 200:
+            If kyc_completed is false → navigate to KYCScreen (replace).
+            If kyc_completed is true:
+              Check if this is the very first time the main app is loaded
+              (MMKV key 'onboarding_complete' is missing or false).
+              If onboarding not done → navigate to OnboardingScreen.
+              If onboarding done → navigate to HomeScreen (tab navigator, replace).
+  Step 5: If /auth/me returns 401 or network error:
+            Clear Firebase session.
+            Navigate to LoginScreen.
+
+Timeout: If /auth/me takes more than 10 seconds, navigate to LoginScreen
+         with banner: "Connection issue. Please log in again."
+
+--------------------------------------------------------------------------------
+SCREEN 2: LoginScreen
+--------------------------------------------------------------------------------
+File:       src/features/auth/screens/LoginScreen.tsx
+Header:     None
+Back:       None (pressing Android back exits app)
+
+What farmer sees:
+  - TerraTrust logo at top (smaller than Splash)
+  - Tagline below logo (in simple English and local language line)
+  - "+91" prefix shown as static text left of phone input field
+  - Phone number input: numeric keyboard, max 10 digits
+  - "Send OTP" primary button (disabled until 10 digits entered)
+  - Footer note: "Standard SMS rates may apply. Phone number processed by
+    Google/Firebase for verification."
+
+Validation:
+  - Exactly 10 digits after +91
+  - Must not start with 0 or 1
+
+On "Send OTP" tap:
+  - Show inline loading spinner inside button, disable button.
+  - Call Firebase auth().signInWithPhoneNumber('+91' + number).
+  - On success: navigate to OTPScreen, pass the confirmation object.
+  - On failure: Show red error below input with the Firebase error message
+    simplified to plain English. Re-enable button.
+
+--------------------------------------------------------------------------------
+SCREEN 3: OTPScreen
+--------------------------------------------------------------------------------
+File:       src/features/auth/screens/OTPScreen.tsx
+Header:     Custom in-body back arrow (top left). Tapping returns to LoginScreen.
+Back:       Custom back, not system header.
+
+What farmer sees:
+  - "Enter the 6-digit code sent to +91XXXXXXXXXX"
+    (last 4 digits of number shown, rest masked: +91 XXXXXX1234)
+  - 6 individual digit input boxes in a row
+  - "Resend in 28s" countdown timer
+  - After timer reaches 0: "Resend OTP" link replaces timer text
+  - "Verify" primary button (disabled until all 6 boxes filled)
+
+Behaviour:
+  - Each box accepts one digit. Auto-focuses next box.
+  - Backspace on an empty box focuses the previous box.
+  - Paste of 6 digits auto-fills all boxes.
+  - "Resend OTP" calls signInWithPhoneNumber again with same number.
+
+On "Verify" tap:
+  - Disable button, show loading inside button.
+  - Call confirmation.confirm(code) from Firebase.
+  - On success:
+      Call GET /api/v1/auth/me.
+      If wallet_address is null:
+        Run silent wallet creation (ethers.js → react-native-keychain).
+        Call POST /api/v1/auth/register-wallet with public address only.
+        Refresh /auth/me state in Redux.
+      If kyc_completed is false → navigate to KYCScreen.
+      If kyc_completed is true:
+        If onboarding_complete is false → navigate to OnboardingScreen.
+        Else → navigate to HomeScreen (tab navigator, replace stack).
+  - On failure: Show error below boxes. Clear all 6 boxes. Re-focus box 1.
+
+--------------------------------------------------------------------------------
+SCREEN 4: KYCScreen
+--------------------------------------------------------------------------------
+File:       src/features/auth/screens/KYCScreen.tsx
+Header:     None (no back — farmer must complete KYC)
+Back:       None
+
+What farmer sees:
+  - Header text: "Complete Your Profile"
+  - Subtitle: "This is a one-time setup. Your name must match your land document."
+  - Input 1: Full Name (text input, floating label)
+  - Input 2: Aadhaar Number (numeric, 12 digits, floating label, masked after entry)
+  - Important note in a yellow card: "Enter your name exactly as written on
+    your 7/12 land document. A mismatch will block land registration."
+  - Why Aadhaar is requested: OTP proves the phone number, but TerraTrust also
+    needs a one-time identity anchor to compare the KYC name with the 7/12
+    owner name and to re-verify the same person during wallet recovery.
+  - "Continue" primary button (disabled until both fields valid)
+  - Privacy note at bottom: "Your Aadhaar number is hashed before storage and
+    never stored as plain text."
+
+Validation:
+  - Full Name: not empty, only letters and spaces, min 2 characters.
+  - Aadhaar: exactly 12 digits.
+
+IMPORTANT — Security rule:
+  Aadhaar number must NEVER be stored in Redux state, MMKV, logs, or
+  screenshots. It exists only in React local state (useState) during form
+  filling and in the POST request body. Once the API call completes,
+  clear the local state.
+
+On "Continue" tap:
+  - Disable button, show loading.
+  - POST /api/v1/auth/kyc with { full_name, aadhaar_number }.
+  - On success:
+      Update auth Redux slice: kycCompleted = true, name = full_name.
+      If onboarding_complete is false → navigate to OnboardingScreen.
+      Else → navigate to HomeScreen (tab navigator, replace stack).
+  - On failure: Show error message in red. Re-enable button.
+
+--------------------------------------------------------------------------------
+SCREEN 5: OnboardingScreen
+--------------------------------------------------------------------------------
+File:       src/features/auth/screens/OnboardingScreen.tsx
+Header:     None
+Back:       None (must complete or skip)
+
+Purpose:
+  Shown ONCE after first successful login + KYC. Introduces the app flow
+  to the farmer with simple illustrated cards. Farmer must see this before
+  reaching HomeScreen for the first time.
+
+What farmer sees:
+  - 3 swipeable cards (horizontal pager):
+    Card 1: Icon of document. Text: "Register your land — Upload your 7/12
+            document and we fetch your official boundary."
+    Card 2: Icon of phone with tree. Text: "Scan your trees — Walk to the
+            zones we show you and scan trees with your phone."
+    Card 3: Icon of coin/token. Text: "Earn Carbon Credits — We calculate
+            your credits and send them to your digital wallet."
+  - Dot indicators below cards (3 dots)
+  - "Next" button on cards 1 and 2. "Get Started" button on card 3.
+  - "Skip" small link on cards 1 and 2 (tapping jumps to HomeScreen directly)
+
+On "Get Started" or "Skip":
+  - Write MMKV key: onboarding_complete = true.
+  - Navigate to HomeScreen (tab navigator, replace stack).
+
+================================================================================
+MAIN APP SCREENS — TAB 1: HOME STACK
+================================================================================
+
+--------------------------------------------------------------------------------
+SCREEN 6: HomeScreen
+--------------------------------------------------------------------------------
+File:       src/features/dashboard/screens/HomeScreen.tsx
+Header:     Title "TerraTrust" (or app logo), bell icon on right
+Back:       None (root tab — Android back exits app after confirmation dialog)
+Tab:        TAB 1 (Home)
+
+What farmer sees:
+
+  SECTION A — Greeting bar:
+    "Good morning, [Farmer First Name]"
+    Date shown below in small text.
+
+  SECTION B — Token Balance Card (large card, top prominence):
+    Large CTT number (48sp Bold): "[47.3] CTT"
+    Subtitle: "Carbon Ton Tokens earned"
+    Explanation: "= 47.3 tonnes of CO₂ stored on your land"
+    Small link at bottom: "View on PolygonScan ↗" (opens browser)
+    Loading state: Show skeleton shimmer while GET /api/v1/credits/balance loads.
+    Offline state: Show cached value with "Last updated [time]" badge below.
+
+  SECTION C — My Lands (horizontal scroll or vertical list, max 3 visible):
+    Title: "My Lands"  +  "See All →" link (navigates to LandListScreen tab)
+    Each land card:
+      - Sentinel-2 satellite thumbnail image (cached GEE PNG, 80x80 rounded)
+      - Farm name
+      - Area in acres
+      - Verification badge (Verified green)
+      - Audit status sub-text:
+        If no audit yet: "No audit yet"
+        If audit due: "Audit due — tap to start"
+        If audit is processing: "Verification in progress"
+        If audit done this year: "Audit complete ✓"
+      - "Start Audit" button shown when no current-year audit exists
+      - "View Status" button shown if audit is in PROCESSING/CALCULATING/READY_TO_MINT
+    If no lands yet:
+      Show empty state card: "You haven't registered any land yet."
+      "Register Your First Land" button → navigates to DocumentUploadScreen.
+
+  SECTION D — Credit History Preview:
+    Title: "Credit History"  +  "View All →" link (navigates to CreditHistoryScreen)
+    Show last 2 audit entries:
+      "2025 — North Field: +12.4 CTT  [View Certificate]"
+      "2024 — North Field: +9.8 CTT   [View Certificate]"
+    "View Certificate" opens Pinata gateway URL in system browser.
+    If no history: "No credits yet. Complete your first audit to earn credits."
+
+Navigation from HomeScreen:
+  - Tap land card body → navigate to LandDetailScreen (HomeStack push)
+  - Tap "Start Audit" on land card → navigate to AuditStartScreen as a
+    full-screen modal on RootNavigator
+  - Tap "View All" in My Lands section → switch to TAB 2 (LandListScreen)
+  - Tap "View All" in Credit History → switch to TAB 3 (CreditHistoryScreen)
+  - Tap bell icon → navigate to NotificationsScreen (modal push on RootNavigator)
+  - Tap "Register Your First Land" → navigate to DocumentUploadScreen (modal)
+
+API calls on mount:
+  GET /api/v1/credits/balance (page=1, limit=2)
+  GET /api/v1/land/list (page=1, limit=3)
+
+--------------------------------------------------------------------------------
+SCREEN 7: LandDetailScreen
+--------------------------------------------------------------------------------
+File:       src/features/land/screens/LandDetailScreen.tsx
+Header:     Farm name as title, back arrow, edit (pencil) icon on right
+Back:       Yes — goes back to HomeScreen or LandListScreen depending on origin
+Tab:        Appears in both HomeStack and LandStack
+
+Purpose:
+  Detailed view of a single land parcel. Central hub for all per-land actions.
+
+What farmer sees:
+  TOP SECTION — Large satellite image (full-width, 200px tall):
+    GEE Sentinel-2 PNG of this parcel, with the boundary polygon overlaid.
+    This is a static image only (not interactive map). Uses same cached PNG.
+
+  DETAILS CARD:
+    Farm name (editable via pencil icon in header)
+    Survey Number: [value]
+    Village, Taluka, District: [values]
+    Area: [X] acres / [Y] hectares
+    Boundary source: "Official Government Record" or "Manual Upload"
+    Registration date: [date]
+    Verification badge: Verified
+    Current audit state: No audit yet / Processing / Complete
+
+  AUDIT HISTORY FOR THIS LAND:
+    Title: "Audit History"
+    List of past audits for this specific land:
+      Each entry: Year, Credits earned, "View Certificate" link
+    Calls GET /api/v1/audit/history/{land_id}
+    Empty state: "No audits yet for this land."
+
+  ACTION BUTTONS at bottom:
+    If land is Verified and no current-year audit:
+      Primary button: "Start Audit" (green)
+    If land has a current-year audit in PROCESSING/CALCULATING/READY_TO_MINT:
+      Primary button: "View Audit Status" (teal)
+    If land has completed audit for current year:
+      Primary button: "View Latest Certificate" (green outline)
+    Always:
+      Secondary button: none in v1 beyond farm-name editing.
+      Boundary disputes are an operator-support workflow, not an in-app
+      parcel re-registration flow for already saved land.
+
+Navigation from LandDetailScreen:
+  - Tap pencil icon → navigate to EditLandNameScreen
+  - Tap "Start Audit" → navigate to AuditStartScreen as a RootNavigator
+    full-screen modal
+  - Tap "View Audit Status" → navigate to AuditStatusScreen
+  - Tap "View Latest Certificate" → open Pinata URL in browser
+
+--------------------------------------------------------------------------------
+SCREEN 8: EditLandNameScreen
+--------------------------------------------------------------------------------
+File:       src/features/land/screens/EditLandNameScreen.tsx
+Header:     "Edit Farm Name", back arrow, "Save" text button on right
+Back:       Yes — discards changes and goes back to LandDetailScreen
+
+What farmer sees:
+  - Single text input pre-filled with current farm name.
+  - Helper text: "This name is only for your reference. It does not affect
+    your land records."
+  - "Save" text button in header (or "Save" primary button at bottom of screen)
+
+On Save:
+  - Call PATCH /api/v1/land/{land_id} with { farm_name: newName }.
+  - Update Redux land.parcels to reflect new name.
+  - Navigate back to LandDetailScreen.
+
+--------------------------------------------------------------------------------
+SCREEN 9: CreditHistoryScreen (accessed via Home tab "View All" or History tab)
+--------------------------------------------------------------------------------
+File:       src/features/dashboard/screens/CreditHistoryScreen.tsx
+Header:     "Credit History", back arrow (when accessed from Home tab),
+            No back (when accessed as root of History tab)
+Back:       Depends on access origin (React Navigation handles this automatically
+            when screens are in different stacks)
+Tab:        TAB 1 (HomeStack push) or TAB 3 (HistoryStack root)
+
+What farmer sees:
+  TOP — Bar chart (react-native-chart-kit):
+    Year-over-year CTT earnings across all parcels.
+    X-axis: years. Y-axis: CTT earned.
+    Teal (#38B2AC) bars.
+
+  BELOW CHART — Complete audit list (paginated, infinite scroll):
+    Each entry:
+      Land name (e.g. "North Field")
+      Audit Year (e.g. 2025)
+      Credits: "+12.4 CTT" in green
+      Date minted
+      Transaction hash (truncated, tappable → opens PolygonScan in browser)
+      "View Certificate" button → opens Pinata gateway URL in browser
+
+  Empty state: "No credit history yet. Complete your first audit to earn credits."
+  Loading state: Lottie spinning_leaf.json centred on screen.
+  Offline state: Show cached history with "Last updated [time]" banner at top.
+
+Pagination:
+  Load page 1 on mount. Append more on scroll to bottom when has_more=true.
+  API: GET /api/v1/credits/balance with page and limit parameters.
+
+================================================================================
+MAIN APP SCREENS — TAB 2: LAND STACK
+================================================================================
+
+--------------------------------------------------------------------------------
+SCREEN 10: LandListScreen
+--------------------------------------------------------------------------------
+File:       src/features/land/screens/LandListScreen.tsx
+Header:     "My Lands", no back, "+" icon on right (add new land)
+Back:       None (root tab)
+Tab:        TAB 2 (My Lands)
+
+What farmer sees:
+  A scrollable list of all registered land parcels.
+  Each card:
+    - Sentinel-2 satellite thumbnail (80x80, rounded)
+    - Farm name
+    - Survey Number
+    - Area in acres
+    - Verification badge (Verified)
+    - Audit status text: No audit yet / Audit due / Processing / Complete
+    - Last audit year (or "No audit yet")
+    - "Start Audit" button (shown only when Verified + no current-year audit)
+    - "Resume" / "View Status" button (shown when audit is in progress)
+    - Chevron (›) on right indicating card is tappable
+
+  Pagination: Infinite scroll. Load more when scrolling to bottom (has_more=true).
+
+  Empty state:
+    Illustration of a farmer's field.
+    "Register your first land parcel"
+    "Add Land" primary button (same as "+" in header)
+
+  Floating Action Button:
+    "+" circle button (Forest Green, bottom right, 56px diameter).
+    Tapping opens DocumentUploadScreen as a full-screen modal.
+
+Navigation from LandListScreen:
+  - Tap any land card body → navigate to LandDetailScreen (LandStack push)
+  - Tap "Start Audit" on a card → navigate to AuditStartScreen as a
+    RootNavigator full-screen modal
+  - Tap "+" in header or FAB → navigate to DocumentUploadScreen (modal)
+
+API on mount: GET /api/v1/land/list (page=1, limit=10)
+
+================================================================================
+LAND REGISTRATION FLOW — MODAL SCREENS (above tab bar)
+================================================================================
+
+These screens are pushed as full-screen modals on the RootNavigator.
+The tab bar is HIDDEN during these screens.
+Back button cancels the flow and returns to LandListScreen.
+
+--------------------------------------------------------------------------------
+SCREEN 11: DocumentUploadScreen
+--------------------------------------------------------------------------------
+File:       src/features/land/screens/DocumentUploadScreen.tsx
+Header:     "Register Land", close (✕) icon on left (cancels entire flow)
+Back:       Close button returns to LandListScreen (modal dismiss)
+Progress:   Step indicator: ● ○ ○ (Step 1 of 3)
+
+What farmer sees:
+  Instruction text: "Take a clear photo of your 7/12 Extract or Record
+  of Rights document"
+  Sub-instruction: "Make sure all text is clearly visible. Place the document
+  on a flat surface in good lighting."
+  Two large buttons:
+    "Take Photo" (camera icon) — opens react-native-vision-camera
+    "Upload from Gallery" (image icon) — opens gallery picker
+
+  After image is captured or selected:
+    Preview of the image fills the screen.
+    Overlay instruction: "Is the document clearly visible and not tilted?"
+    Two buttons: "Use this photo" and "Retake"
+
+  After "Use this photo":
+    Full-screen loading state: Lottie spinning_leaf.json
+    Text: "Reading your document..."
+    API call: POST /api/v1/land/verify-document (multipart image upload)
+
+  After OCR success:
+    Show extracted fields in a card:
+      "Survey Number: [value]"
+      "Owner Name: [value]"
+      "Village: [value]"
+      "Taluka: [value]"
+      "District: [value]"
+    Instruction: "Please check if these details are correct."
+    Two buttons:
+      "This looks correct — Continue" (primary, green)
+      "Try Again" (secondary) — returns to photo capture
+
+  If owner name does NOT match KYC name:
+    Show red error card: "The name on this document ([OCR name]) does not
+    match your registered name ([KYC name]). Please use the land document
+    where you are listed as the owner."
+    Only "Try Again" button shown.
+
+  After "This looks correct — Continue":
+    Automatically call GET /api/v1/land/fetch-boundary in background.
+    Show loading: Lottie spinning_leaf.json
+    Text: "Fetching your official land boundary..."
+    API response routes:
+      success → navigate to BoundaryConfirmScreen
+      manual_required → navigate to ManualUploadGuideScreen
+
+  On network error during OCR:
+    Show error state with "Try Again" button.
+
+--------------------------------------------------------------------------------
+SCREEN 12: BoundaryConfirmScreen
+--------------------------------------------------------------------------------
+File:       src/features/land/screens/BoundaryConfirmScreen.tsx
+Header:     "Confirm Your Land", back arrow
+Back:       Returns to the screen that produced the current boundary:
+            DocumentUploadScreen for auto-fetch, or ManualUploadGuideScreen
+            for a manually uploaded map.
+Progress:   Step indicator: ● ● ○ (Step 2 of 3)
+
+What farmer sees:
+  Full-screen map area:
+    - GEE Sentinel-2 PNG as background (loaded from satellite_thumbnail_url)
+    - react-native-maps with mapType="none" on Android
+    - GeoJSON boundary polygon drawn on top in green (20% opacity fill + 2px border)
+    - Map is not interactive (no pan/zoom needed — just for visual confirmation)
+
+  Bottom sheet (always visible, not dismissible):
+    Title: "Is this your land?"
+    Survey Number: [value]
+    Area: [X] acres
+    Owner Name: [value]
+    Source: "Official Government Record" (if Layer 1 or 2) or "Manual Map" (if Layer 3)
+    Large green button: "Yes, this is my land — Confirm"
+    Small red text below: "This boundary looks wrong — Report and try again"
+
+  On "Confirm":
+    Call POST /api/v1/land/register
+    Show loading inside button.
+    On success: navigate to LandRegistrationSuccessScreen.
+
+  On "This boundary looks wrong":
+    Show a bottom sheet with three explicit options (not automatic navigation):
+      "Try fetching the boundary again" → re-calls GET /api/v1/land/fetch-boundary
+      "Upload my map manually" → navigate to ManualUploadGuideScreen
+      "Retake document photo" → navigate back to DocumentUploadScreen
+
+--------------------------------------------------------------------------------
+SCREEN 13: ManualUploadGuideScreen
+--------------------------------------------------------------------------------
+File:       src/features/land/screens/ManualUploadGuideScreen.tsx
+Header:     "Upload Land Map", back arrow
+Back:       Goes back to DocumentUploadScreen
+Progress:   Step indicator: ● ● ○ (Step 2 of 3 — same step as BoundaryConfirm)
+
+What farmer sees:
+  Step-by-step guide with numbered cards + screenshots:
+    Step 1: "Open bhunaksha.mahabhumi.gov.in" [tappable link — opens browser]
+    Step 2: "Select your District, Taluka, and Village from the menus"
+    Step 3: "Find your Survey Number [shows OCR-extracted number] and tap Download"
+    Step 4: "Come back to this app and tap Upload below"
+
+  Progress indicator: Step 1 → Step 2 → Step 3 → Step 4
+
+  "Upload Downloaded Map" primary button at bottom.
+    Opens gallery picker.
+    After image selected: show preview.
+    "Process this map" button → calls POST /api/v1/land/fetch-boundary
+    with the uploaded image plus survey_number, district, taluka, village,
+    and state. Backend handles OpenCV polygon extraction from the image.
+    On success: navigate to BoundaryConfirmScreen.
+    On failure: show error + "Try Again" + "Go Back".
+
+--------------------------------------------------------------------------------
+SCREEN 14: LandRegistrationSuccessScreen
+--------------------------------------------------------------------------------
+File:       src/features/land/screens/LandRegistrationSuccessScreen.tsx
+Header:     None
+Back:       None (progress: ● ● ● — Step 3 of 3, final)
+
+What farmer sees:
+  - Large success animation: Lottie scan_success.json (or a custom land-verified animation)
+  - Large green checkmark
+  - "Land Registered!" heading
+  - "[Farm Name] has been verified using official government records."
+  - Area: "[X] acres"
+  - Next step hint: "You can now start your annual audit for this land."
+  - Single button: "Go to My Lands" → dismisses modal, navigates to LandListScreen tab
+
+  Auto-dismiss: After 5 seconds, auto-navigate to LandListScreen if farmer doesn't tap.
+
+================================================================================
+MAIN APP SCREENS — AUDIT FLOW (full-screen modals, no tab bar)
+================================================================================
+
+Audit flow starts from either:
+  A) HomeScreen → "Start Audit" button on a land card
+  B) LandListScreen → "Start Audit" button on a land card
+  C) LandDetailScreen → "Start Audit" button
+
+In all cases, push AuditStartScreen as a full-screen modal on the RootNavigator.
+The entire audit flow (AuditStart → ZoneNavigation → ARCamera → TreeResult →
+AuditComplete → AuditStatus) is a single continuous modal stack.
+The bottom tab bar is HIDDEN throughout the audit flow.
+
+--------------------------------------------------------------------------------
+SCREEN 15: AuditStartScreen
+--------------------------------------------------------------------------------
+File:       src/features/ar-audit/screens/AuditStartScreen.tsx
+Header:     "Annual Audit", close (✕) on left (shows confirmation: "Cancel audit?")
+Back:       Close with confirmation dialog
+
+What farmer sees:
+  Land name as sub-heading.
+  Land thumbnail image (80x80).
+  Area and last audit year.
+
+  Status card:
+    "You will walk to [N] zones on your land and scan trees at each one."
+    "Estimated time: 20-30 minutes"
+    After zones are loaded:
+    "Walking distance: approximately [X] metres"
+    "Trees to scan: at least [N] total"
+
+  AR Tier info card (read from Redux audit.arTier, already detected):
+    Tier 1: "Your phone supports high-precision AR scanning ●" (green dot)
+    Tier 2: "Your phone supports standard AR scanning ●" (blue dot)
+    Tier 3: "Your phone will use manual measurement ●" (grey dot) +
+            brief explanation: "You'll measure trees with a string — it's accurate
+            and accepted by carbon verification standards."
+
+  Mock GPS warning: If mock GPS is detected, show blocking error:
+    "Please disable Mock Location in your Developer Settings and reopen the app."
+    "Start Audit" button stays disabled.
+
+  Large green button: "Start Audit"
+    On tap: Call GET /api/v1/audit/zones?land_id=[id]
+    Loading state: "Preparing your scanning map..."
+    On success: navigate to ZoneNavigationScreen (push in audit modal stack).
+    On 409 (audit already exists for this year):
+      Navigate to AuditStatusScreen with the existing_audit_id.
+
+--------------------------------------------------------------------------------
+SCREEN 16: ZoneNavigationScreen
+--------------------------------------------------------------------------------
+File:       src/features/ar-audit/screens/ZoneNavigationScreen.tsx
+Header:     None (full-screen map)
+Back:       Floating back button (top-left) with confirmation dialog:
+            "Exit audit? Your progress will be saved."
+
+What farmer sees:
+  Full-screen Google Maps road map (mapType="standard").
+  Overlays (see FDD Section 9.4 for exact colours):
+    - Blue dot: farmer's real-time GPS position
+    - Green dashed circle: current target zone (e.g., Zone A)
+    - Grey solid circles: completed zones
+    - Green dotted line: walking path through all zones
+    - Small green pin markers: dropped at each scanned tree location
+    - Green dashed outline: farm land boundary
+
+  Bottom card (always visible, slides up):
+    Zone name: "Walk to Zone A"
+    Distance: "[X] metres ahead"
+    Direction arrow: animated, pointing toward zone centre
+    Button:
+      If farmer is >10m from zone: Grey disabled "Start Scanning (get closer)"
+      If farmer is within 10m and gps_accuracy_m <= 20: Green "You're here — Start Scanning"
+      If gps_accuracy_m > 20 and farmer is within 10m: Orange "Weak GPS — wait for better signal"
+      If gps_accuracy_m > 30: Block button regardless of distance.
+
+  Outside-boundary warning banner (orange, at top):
+    "You appear to be outside your registered land. Return to your land to scan."
+    Shown when farmer GPS is outside the cached GeoJSON boundary polygon.
+
+  Progress indicator (top right corner):
+    "Zone 1 of [N]" or "Zone A — 2 of [N] zones done"
+
+  On "Start Scanning":
+    Haptic vibration.
+    Navigate to ARCameraScreen (push on audit modal stack).
+    Pass current zone details (zone_id, zone_label, radius_metres, gedi_available).
+
+  Zone completion logic:
+    After 3 trees are scanned in a zone (the per-zone minimum in v3.1;
+    overall min_trees_required from the API equals zone_count x 3):
+    Show bottom sheet: "Zone A complete! [N] trees scanned."
+    Two buttons: "Scan more trees in this zone" and "Go to Zone B →"
+    On "Go to Zone B": Update currentZoneIndex in Redux.
+    Map updates to show Zone B as target. ZoneNavigationScreen stays on screen.
+    Repeat until all zones complete.
+    After last zone done: bottom sheet shows "All zones done!" with
+    "Review and Submit" button → navigate to AuditCompleteScreen.
+
+--------------------------------------------------------------------------------
+SCREEN 17: ARCameraScreen
+--------------------------------------------------------------------------------
+File:       src/features/ar-audit/screens/ARCameraScreen.tsx
+Header:     None (full-screen camera)
+Back:       Floating "← Back to Zone" button (top-left), no confirmation needed.
+            Goes back to ZoneNavigationScreen.
+
+What farmer sees:
+  Full-screen camera view via react-native-vision-camera.
+  White crosshair reticle at centre.
+  Top status text (dynamic):
+    "Point camera at tree trunk"
+    "Trunk detected" (green text)
+    "Measuring..." (with progress ring)
+    "Measurement complete ✓" (green)
+  AR cylinder wireframe (green) when trunk is detected (Tier 1/2 only).
+  Progress counter (top right): "3 of 5 trees scanned in Zone A"
+
+  Three action buttons at bottom (always visible):
+    1. "Identify Species" (leaf icon)
+    2. "Measure Diameter" (ruler icon)
+    3. "Measure Height" (only shown if gedi_available=false for this zone)
+
+  After both species AND diameter are collected:
+    "Save This Tree →" button appears prominently. Tapping this is the only
+    way to proceed to TreeResultScreen.
+    (Height from GEDI is fetched automatically by backend — farmer does not
+    need to tap anything for height unless GEDI is unavailable.)
+
+Species identification flow:
+  Tap "Identify Species" → capture still frame → TFLite model runs on-device.
+  Result overlay:
+    "Teak (Tectona grandis) — 87% confident" (if >= 80% confidence)
+    If < 60% confidence: show dropdown of all approved species for manual pick.
+    If < 80% but >= 60%: show result with "Is this correct?" Yes/No buttons.
+    If species not in approved list: red error "This species is not eligible
+    for carbon credits. Please scan a different tree."
+  After selection confirmed: species name shown below camera with green checkmark.
+
+Diameter measurement flow:
+  Tap "Measure Diameter":
+    Tier 1: Progress ring for 3 seconds. Phone stays still.
+    Tier 2: Animated left-right arrow guide for 5 seconds.
+    Tier 3: Navigate to ManualMeasureScreen (push on audit modal stack).
+    On success (Tier 1/2): Bottom sheet slides up: "Diameter: 24 cm ✓"
+    With "Accept" and "Measure Again" buttons.
+    If RANSAC error > 5%: "Move closer to the tree and try again."
+    If result < 5cm or > 200cm: "This seems unusual. Please measure again."
+  After accepted: diameter shown below camera with green checkmark.
+
+Height measurement flow (shown only if gedi_available=false for this zone):
+  Tap "Measure Height" → farmer taps base of tree on screen → farmer tilts
+  phone to tap top of tree → AR anchors calculate vertical distance.
+  Result: "Height: 8.3 m ✓"
+
+--------------------------------------------------------------------------------
+SCREEN 18: ManualMeasureScreen (Tier 3 only)
+--------------------------------------------------------------------------------
+File:       src/features/ar-audit/screens/ManualMeasureScreen.tsx
+Header:     "Manual Measurement", back arrow (goes back to ARCameraScreen)
+Back:       Yes — goes back to ARCameraScreen
+
+What farmer sees:
+  Diagram illustration: string wrapped around tree trunk.
+  Instruction: "Wrap a string or cloth around the tree at chest height.
+  Mark where the string meets itself. Lay it flat and measure its length."
+  Number input field: "Length in centimetres" (numeric keyboard)
+  After entering value: Preview text shows: "Diameter: [calculated]cm
+  (calculated from [input]cm circumference)"
+  "Confirm Measurement" primary button.
+
+On confirm:
+  Navigate back to ARCameraScreen with the diameter value pre-filled.
+
+--------------------------------------------------------------------------------
+SCREEN 19: TreeResultScreen
+--------------------------------------------------------------------------------
+File:       src/features/ar-audit/screens/TreeResultScreen.tsx
+Header:     "Tree Scan Result", back arrow (goes back to ARCameraScreen)
+Back:       Yes — goes back to ARCameraScreen (farmer can rescan)
+
+What farmer sees:
+  Summary card:
+    Species: "Teak (Tectona grandis)"
+    Diameter: "24 cm"
+    Precision badge: High Precision / Standard Precision / Manual Measurement
+    Height: "From GEDI Satellite" OR "AR Measured: 8.3 m"
+    GPS: "18.5460°N, 73.9820°E" (readable format)
+    Evidence photo thumbnail (auto-captured by app at moment of measurement)
+
+  Two buttons:
+    "Confirm and Save Tree" (primary, green)
+    "Rescan This Tree" (secondary outline)
+
+On "Confirm and Save Tree":
+  - Save tree data to Redux audit.scannedTrees.
+  - Write to MMKV immediately (synchronous).
+  - Compute SHA-256 hash of evidence photo (via native HashModule).
+  - Update progress counter.
+  - Haptic vibration (success).
+  - Show Lottie scan_success.json for 1.5 seconds.
+  - Navigate back to ARCameraScreen.
+  - If this was the minimum required tree for the zone:
+    Navigate back to ZoneNavigationScreen with "Zone complete" bottom sheet.
+  - If this was the last zone's minimum tree:
+    Show "All zones complete! Ready to submit." bottom sheet with
+    "Review and Submit" button → navigate to AuditCompleteScreen.
+
+--------------------------------------------------------------------------------
+SCREEN 20: AuditCompleteScreen
+--------------------------------------------------------------------------------
+File:       src/features/ar-audit/screens/AuditCompleteScreen.tsx
+Header:     "Audit Summary"
+Back:       None (cannot go back after review — would re-open camera)
+            Android back: show confirmation "You cannot go back once submitted.
+            Cancel to exit without submitting."
+
+What farmer sees:
+  Summary stats:
+    Total trees scanned: [N]
+    Zones completed: [N] of [N]
+    Preliminary carbon estimate (rough, labelled clearly):
+      "Estimated credits: approximately [X] CTT"
+      "(Final number is calculated using satellite data after submission)"
+
+  Tree list (scrollable, collapsible per zone):
+    Zone A: 4 trees
+      Tree 1: Teak, 24cm diameter, High Precision
+      Tree 2: Neem, 18cm diameter, Standard Precision
+      ...
+    Zone B: 3 trees
+    Zone C: 5 trees
+
+  Important note: "After submission, satellite analysis runs automatically.
+  You will be notified when your credits are ready."
+
+  "Submit for Satellite Verification" large green button.
+  (Disabled if minimum trees per zone not met — show warning in red.)
+
+On Submit:
+  - Disable the button immediately to prevent double-submission.
+  - Show loading state: spinning_leaf.json + "Uploading your scan data..."
+  - Upload all tree data + evidence photos via POST /api/v1/audit/submit-samples.
+  - Re-sending the same audit_id is safe but must not create duplicate jobs.
+  - Handle upload errors with retry prompt.
+  - On success: navigate to AuditStatusScreen (replace — cannot go back to this screen).
+
+COMPLETE_NO_CREDITS handling:
+  If final status is COMPLETE_NO_CREDITS:
+    AuditStatusScreen shows summary with reason string.
+    No minting animation. No transaction hash.
+    This is a SUCCESS state, not an error. (Per FDD Appendix item 5.)
+
+--------------------------------------------------------------------------------
+SCREEN 21: AuditStatusScreen
+--------------------------------------------------------------------------------
+File:       src/features/ar-audit/screens/AuditStatusScreen.tsx
+Header:     "Processing Your Credits"
+Back:       None (cannot interrupt processing — Android back minimises app)
+
+Purpose:
+  Polls GET /api/v1/audit/result/{audit_id} every 5 seconds until terminal state.
+  Shows the farmer what is happening during the satellite computation.
+
+What farmer sees while status is PROCESSING / CALCULATING / READY_TO_MINT:
+  - Lottie spinning_leaf.json centred
+  - Phase-appropriate status text (for example: "Calculating your carbon credits...")
+  - Step indicators (animated, current backend phase lights up):
+      ✓ Scan data received
+      ⟳ Running satellite analysis (Sentinel-2, GEDI, Sentinel-1)
+      ○ Calculating carbon credits
+      ○ Minting tokens to your wallet
+  - "This takes about 30-60 seconds. You can leave this screen."
+  - "Go to Home" link (grey, small) — navigates to HomeScreen.
+    App continues polling in background via background-fetch.
+
+What farmer sees when status = MINTED:
+  - Lottie credit_earned.json (celebration animation)
+  - "🎉 Carbon Credits Earned!"
+  - "+[X.X] CTT" in large green text (48sp Bold)
+  - "Added to your wallet"
+  - Transaction hash (truncated): "Tx: 0xabcd...1234" → tappable → PolygonScan
+  - "View Certificate" button → opens Pinata gateway URL in browser
+  - "Go to Home" primary button → navigates to HomeScreen (tab navigator, replace)
+
+What farmer sees when status = COMPLETE_NO_CREDITS:
+  - Green checkmark icon (success, not error)
+  - "Audit Complete"
+  - "0 credits issued this audit cycle."
+  - Reason string from API shown: e.g., "Baseline year established; future growth earns credits"
+  - "Go to Home" primary button
+
+What farmer sees when status = FAILED:
+  - Red icon
+  - "Something went wrong"
+  - "Our team has been notified. Please try again later or contact support."
+  - "Contact Support" button (opens email)
+  - "Go to Home" button
+
+Polling:
+  Poll every 5 seconds while status is PROCESSING / CALCULATING / READY_TO_MINT.
+  Stop polling immediately on any terminal state (MINTED / COMPLETE_NO_CREDITS / FAILED).
+  On HTTP 429: back off using Retry-After header. Show "Server busy, retrying..." text.
+  Do NOT restart polling aggressively. (Per FDD Appendix item 12.)
+
+================================================================================
+MAIN APP SCREENS — TAB 3: HISTORY STACK
+================================================================================
+
+TAB 3 root is CreditHistoryScreen. Already fully specified in Section 3 above
+(Screen 9). No additional screens in the History stack.
+
+================================================================================
+MAIN APP SCREENS — TAB 4: PROFILE STACK
+================================================================================
+
+--------------------------------------------------------------------------------
+SCREEN 22: ProfileScreen
+--------------------------------------------------------------------------------
+File:       src/features/profile/screens/ProfileScreen.tsx
+Header:     "My Profile", no back (root tab)
+Back:       None (root tab)
+Tab:        TAB 4 (Profile)
+
+What farmer sees:
+
+  SECTION A — Profile Card:
+    Avatar: Initials-based placeholder avatar (first letter of name, Forest Green circle)
+    Name: [Full Name from KYC]
+    Phone: +91 XXXXXX[last 4 digits] (masked for privacy)
+    KYC status badge: "KYC Verified ✓" (green) or "KYC Pending" (orange)
+
+  SECTION B — Wallet Card:
+    "Your Wallet"
+    Wallet address (truncated): "0xabcd...1234"
+    "Copy Address" small button
+    CTT Balance: "[X.X] CTT" (read from Redux credits.balance)
+    "View on PolygonScan" link (opens browser)
+    If no wallet (edge case): "Setting up your wallet..." with loader.
+
+  SECTION C — Settings List (tappable rows with chevron):
+    Row 1: "Settings" → navigate to SettingsScreen
+    Row 2: "Notifications" → navigate to NotificationsScreen
+    Row 3: "Privacy Policy" → open Anthropic/TerraTrust privacy URL in browser
+    Row 4: "Help & Support" → open email or support URL in browser
+    Row 5: "About TerraTrust" → small bottom sheet with app version, contact info
+
+  SECTION D — Danger Zone:
+    Row: "Wallet Recovery" (red text) → navigate to WalletRecoveryScreen
+         Sub-text: "Only use this if you changed your phone"
+    Row: "Log Out" (red text) → show logout confirmation dialog
+
+  Logout confirmation dialog:
+    "Are you sure you want to log out?"
+    "All your scan data will remain saved on our servers."
+    Two buttons: "Log Out" (red) and "Cancel" (grey)
+    On "Log Out":
+      Call Firebase auth().signOut().
+      Clear Redux state (dispatch resetAllSlices or similar).
+      Clear MMKV persisted state (except onboarding_complete key — keep that).
+      Navigate to LoginScreen (replace all navigation — no going back).
+
+--------------------------------------------------------------------------------
+SCREEN 23: SettingsScreen
+--------------------------------------------------------------------------------
+File:       src/features/profile/screens/SettingsScreen.tsx
+Header:     "Settings", back arrow
+Back:       Yes — goes back to ProfileScreen
+
+What farmer sees (toggle rows):
+  "Notifications" toggle (on/off) — enables/disables push notifications from
+    react-native-background-fetch success events.
+  "GPS High Accuracy Mode" toggle — enables/disables high accuracy GPS drain.
+    Default: on. Sub-text: "Uses more battery but improves zone arrival detection."
+  "Offline Mode" read-only info row:
+    "Scanning and GPS navigation work without internet. Document upload and
+    audit submission require an internet connection."
+
+  Separator: "Data"
+  "Clear Cached Satellite Images" row — shows storage size, tap to clear GEE
+    PNG cache from MMKV (forces re-download next time land cards load).
+  "App Version" row — shows version number (e.g. 1.0.0 build 12). Non-tappable.
+
+  No dangerous data deletion here. That belongs in ProfileScreen's danger zone.
+
+--------------------------------------------------------------------------------
+SCREEN 24: WalletRecoveryScreen
+--------------------------------------------------------------------------------
+File:       src/features/profile/screens/WalletRecoveryScreen.tsx
+Header:     "Wallet Recovery", back arrow
+Back:       Yes — goes back to ProfileScreen
+
+What farmer sees:
+  Warning card (orange):
+    "Only use this if you have a new phone and your old wallet no longer works."
+    "Future TerraTrust credits move to the new wallet only after approval."
+    "Already-issued on-chain tokens stay at the original wallet in v3.1."
+
+  If GET /api/v1/auth/me returns wallet_recovery_status='PENDING':
+    Show pending badge + submitted time.
+    Disable "Start Recovery Process" until the request is reviewed.
+
+  Steps explained to farmer in plain language:
+    Step 1: "We will verify your identity again with a new OTP."
+    Step 2: "A new wallet will be created on this phone."
+    Step 3: "After approval, future TerraTrust credits will go to the new wallet."
+
+  "Start Recovery Process" primary button.
+
+  On tap:
+    Re-run OTP flow (re-authenticate with Firebase phone auth for the same number).
+    On OTP success:
+      Create new wallet locally (same as silent wallet creation flow).
+      POST /api/v1/auth/recover-wallet with { new_wallet_address: string }
+      Show success: "Recovery request submitted. Our team will process this
+      within 24 hours and notify you."
+    Navigate back to ProfileScreen.
+
+================================================================================
+MODAL AND OVERLAY SCREENS
+================================================================================
+
+--------------------------------------------------------------------------------
+SCREEN 25: NotificationsScreen
+--------------------------------------------------------------------------------
+File:       src/features/notifications/screens/NotificationsScreen.tsx
+Header:     "Notifications", close (✕) on left
+Back:       Close returns to wherever the farmer was (modal dismiss)
+Access:     Bell icon on HomeScreen header, or Profile tab row
+
+What farmer sees:
+  List of notification entries (newest first):
+    Each entry:
+      Icon (green leaf for credits, orange for reminders, red for failures)
+      Title text
+      Timestamp ("2 hours ago" / "Yesterday" / date)
+      Tappable: leads to relevant screen
+
+  Notification types:
+    "Your credits are ready! +12.4 CTT earned from North Field." →
+      Tap → navigate to AuditStatusScreen or HomeScreen
+    "Audit submitted successfully. Processing in progress." →
+      Tap → navigate to AuditStatusScreen with audit_id
+    "Audit upload failed. Please retry." →
+      Tap → navigate to HomeScreen with retry option
+    "Audit due for North Field." →
+      Tap → navigate to LandDetailScreen for that parcel
+    "Your land registration is complete." →
+      Tap → navigate to LandListScreen
+
+  Empty state:
+    "No notifications yet."
+    Sub-text: "Audit updates and credit alerts will appear here."
+
+  Mark all as read:
+    "Mark all as read" link at top right of list.
+    Unread entries have a green left border or dot indicator.
+
+  Storage:
+    Notifications stored in MMKV under 'notifications' key as a JSON array.
+    Max 50 entries. Oldest pruned automatically.
+    Generated locally from background-fetch events and API polling results.
+
+--------------------------------------------------------------------------------
+SCREEN 26: MaintenanceScreen
+--------------------------------------------------------------------------------
+File:       src/common/screens/MaintenanceScreen.tsx
+Header:     None
+Back:       None (blocks all navigation)
+Trigger:    Backend returns a maintenance flag in any API response, or a
+            farmer-facing endpoint short-circuits with the same payload as
+            GET /api/v1/status.
+
+What farmer sees:
+  TerraTrust logo.
+  Wrench/tool icon in orange.
+  "We're making TerraTrust better"
+  "The app will be back shortly. Your data is safe."
+  "Check for updates" button (opens Play Store listing).
+  Version number at bottom.
+
+This screen is pushed on the RootNavigator above everything else when detected.
+It cannot be dismissed by the farmer.
+While visible, the app polls GET /api/v1/status every 10 seconds.
+When the backend recovers and maintenance=false is returned, the app removes
+the maintenance screen automatically.
+
+================================================================================
+SECTION 4: COMPLETE NAVIGATION FLOW DIAGRAMS
+================================================================================
+
+4.1 FIRST-TIME USER (NEW REGISTRATION)
+---------------------------------------
+
+App Launch
+  └── SplashScreen
+        └── [No Firebase session] → LoginScreen
+              └── [Phone entered] → OTPScreen
+                    └── [OTP verified] → [wallet created silently]
+                          └── [GET /auth/me: kyc=false] → KYCScreen
+                                └── [KYC submitted] → OnboardingScreen
+                                      └── [Swipe through / Skip] → HomeScreen (Tab 1)
+                                            └── [Tap "Register First Land"]
+                                                  └── DocumentUploadScreen (modal)
+                                                        ├── [OCR success + name match]
+                                                        │     └── BoundaryConfirmScreen (modal)
+                                                        │           └── [Confirm] → LandRegistrationSuccessScreen
+                                                        │                 └── [Go to My Lands] → LandListScreen (Tab 2)
+                                                        └── [All API layers fail]
+                                                              └── ManualUploadGuideScreen (modal)
+                                                                    └── [Upload + process] → BoundaryConfirmScreen
+
+
+4.2 RETURNING USER (DAILY APP OPEN)
+-------------------------------------
+
+App Launch
+  └── SplashScreen
+        └── [Firebase session valid + KYC done + onboarding done] → HomeScreen (Tab 1)
+              ├── Tab 1 (Home) — balance, lands preview, history preview
+              ├── Tab 2 (My Lands) — full land list
+              ├── Tab 3 (History) — full credit history with chart
+              └── Tab 4 (Profile) — profile, settings, logout
+
+
+4.3 ANNUAL AUDIT FLOW
+----------------------
+
+HomeScreen or LandListScreen or LandDetailScreen
+  └── [Tap "Start Audit"] → AuditStartScreen (full-screen modal, tab bar hidden)
+        └── [GET /audit/zones success] → ZoneNavigationScreen
+              └── [Arrive within 10m of Zone A] → [tap "Start Scanning"] → ARCameraScreen
+                    ├── [Tier 3 phone: tap "Measure Diameter"] → ManualMeasureScreen
+                    │     └── [Enter string length] → ARCameraScreen (back, diameter pre-filled)
+                    └── [Species + Diameter both collected] → [tap "Save This Tree"] → TreeResultScreen
+                          ├── [Confirm] → ARCameraScreen (back, progress +1)
+                          └── [Rescan] → ARCameraScreen (back, no save)
+                (Repeat scan loop for 3-5 trees per zone)
+              └── [Zone A minimum met] → ZoneNavigationScreen (zone B now target)
+              └── [Zone B scan] → ZoneNavigationScreen (zone C now target)
+              └── [All zones complete] → AuditCompleteScreen
+                    └── [Submit] → AuditStatusScreen
+                          ├── [MINTED] → HomeScreen (Tab 1, updated balance)
+                          ├── [COMPLETE_NO_CREDITS] → HomeScreen (Tab 1)
+                          └── [FAILED] → HomeScreen (Tab 1, with error + contact support)
+
+
+4.4 PROFILE / SETTINGS / LOGOUT FLOW
+---------------------------------------
+
+Profile Tab (Tab 4)
+  └── ProfileScreen
+        ├── [Tap "Settings"] → SettingsScreen (push)
+        ├── [Tap "Notifications"] → NotificationsScreen (modal)
+        ├── [Tap "Wallet Recovery"] → WalletRecoveryScreen (push)
+        │     └── [OTP verified + new wallet] → ProfileScreen (back)
+        ├── [Tap "Privacy Policy"] → System browser (external)
+        ├── [Tap "Help & Support"] → System browser / email (external)
+        └── [Tap "Log Out"] → Confirmation dialog
+              └── [Confirm] → Firebase signOut + Redux clear → LoginScreen (replace all)
+
+
+4.5 LARGE FARM MULTI-DAY AUDIT (above 10 acres)
+--------------------------------------------------
+
+Day 1:
+  AuditStartScreen → ZoneNavigationScreen → ARCamera → ... → [First session zones done]
+  → AuditCompleteScreen shows "Session 1 saved. Return tomorrow for Session 2."
+  → "Done for Today" button → HomeScreen (audit remains in PROCESSING state in Redux + MMKV)
+
+Day 2:
+  HomeScreen → [Tap "Resume Audit" on land card] → ZoneNavigationScreen
+  → App loads from Redux/MMKV (currentZoneIndex = saved next zone index,
+    scannedTrees = Day 1 data intact)
+  → [Zones D, E, F done] → AuditCompleteScreen → Submit → AuditStatusScreen → HomeScreen
+
+
+================================================================================
+SECTION 5: BACK NAVIGATION RULES (COMPLETE)
+================================================================================
+
+Rule 1: Stack screens always have a back button.
+Rule 2: Root tab screens (HomeScreen, LandListScreen, CreditHistoryScreen,
+        ProfileScreen) have NO back button. Android physical back exits app
+        (show "Press back again to exit" snackbar on first press).
+Rule 3: Modal flows (land registration, audit) have a CLOSE (✕) button that
+        discards the flow and returns to the tab that launched it.
+Rule 4: KYCScreen has NO back — farmer must complete KYC.
+Rule 5: AuditCompleteScreen has NO back — cannot return to scanning after review.
+Rule 6: AuditStatusScreen has NO back while status is PROCESSING /
+        CALCULATING / READY_TO_MINT — Android back minimises app.
+        Back is available only after a terminal state is shown
+        (MINTED / COMPLETE_NO_CREDITS / FAILED).
+Rule 7: OnboardingScreen has no back. Farmer can skip.
+Rule 8: MaintenanceScreen blocks all navigation. No back possible.
+Rule 9: DocumentUploadScreen close (✕) cancels the entire land registration flow.
+        Within the flow: BoundaryConfirmScreen back → DocumentUploadScreen.
+        ManualUploadGuideScreen back → DocumentUploadScreen.
+
+================================================================================
+SECTION 6: DEEP LINK AND NOTIFICATION ROUTING
+================================================================================
+
+When a background-fetch upload completes while the app is in the background,
+a local push notification is shown. On tapping the notification:
+
+  "Credits ready" notification → open app → navigate to AuditStatusScreen
+    (using the stored audit_id from MMKV 'pending_upload' or 'last_audit_id')
+
+  "Audit failed" notification → open app → navigate to HomeScreen with
+    error banner visible.
+
+  "Audit due" reminder notification → open app → navigate to LandListScreen.
+
+Deep link format (if using React Navigation linking config):
+  terratrust://audit/{audit_id} → AuditStatusScreen
+  terratrust://land/{land_id} → LandDetailScreen
+  terratrust://history → CreditHistoryScreen (History tab)
+
+================================================================================
+SECTION 7: EMPTY STATES AND ERROR STATES
+================================================================================
+
+Every list screen and data screen must define empty and error states.
+
+HomeScreen — no lands:
+  Card: "Register your first land parcel to get started."
+  Button: "Add Land" → opens DocumentUploadScreen
+
+HomeScreen — no credit history:
+  Row: "Complete your first audit to earn carbon credits."
+
+LandListScreen — no lands:
+  Centred illustration + "Register your first land" button.
+
+CreditHistoryScreen — no history:
+  Illustration + "No credits yet. Complete your first audit."
+
+All screens — network error on initial load:
+  Error card: "Could not load data. Check your connection."
+  "Try Again" button (re-triggers the API call).
+  If cached data exists: show cached data with "Showing offline data" banner.
+
+All screens — 429 rate limit:
+  Banner: "Too many requests. Please wait a moment."
+  Respect Retry-After header. No aggressive retry loop.
+
+All screens — 500 server error:
+  Banner: "Server issue. Please try again in a few minutes."
+  (Already handled by Axios interceptor in api.ts)
+
+All screens — 401 token expired:
+  Firebase signOut. Navigate to LoginScreen.
+  (Already handled by Axios interceptor in api.ts)
+
+================================================================================
+SECTION 8: REDUX STATE — ADDITIONS NEEDED FOR NEW SCREENS
+================================================================================
+
+Add these slices / fields to the existing Redux store:
+
+notifications slice:
+  {
+    notifications: NotificationEntry[],  // persisted in MMKV
+    unreadCount: number
+  }
+
+profile slice (or extend auth slice):
+  {
+    settingsNotificationsEnabled: boolean,  // persisted
+    settingsHighAccuracyGPS: boolean,       // persisted
+    onboardingComplete: boolean             // persisted
+  }
+
+audit slice — add:
+  {
+    ...existing fields...,
+    lastAuditId: string | null,  // persisted — for notification routing
+    maintenanceMode: boolean     // NOT persisted — reset on launch
+  }
+
+================================================================================
+SECTION 9: FILE STRUCTURE REFERENCE
+================================================================================
+
+The following files and slices make up the consolidated frontend structure
+after aligning this navigation spec with FDD Section 2:
+
+src/features/
+  ├── auth/
+  │   └── screens/
+  │       └── OnboardingScreen.tsx
+  │
+  ├── land/
+  │   └── screens/
+  │       ├── LandDetailScreen.tsx
+  │       ├── EditLandNameScreen.tsx
+  │       └── LandRegistrationSuccessScreen.tsx
+  │
+  ├── ar-audit/
+  │   └── screens/
+  │       └── AuditStatusScreen.tsx
+  │
+  ├── profile/
+  │   ├── screens/
+  │   │   ├── ProfileScreen.tsx
+  │   │   ├── SettingsScreen.tsx
+  │   │   └── WalletRecoveryScreen.tsx
+  │   └── store/
+  │       └── profileSlice.ts
+  │
+  └── notifications/
+      ├── screens/
+      │   └── NotificationsScreen.tsx
+      └── store/
+          └── notificationsSlice.ts
+
+src/common/
+  └── screens/
+      └── MaintenanceScreen.tsx
+
+src/app/
+  └── App.tsx                              [Update to host the tab navigator and routes]
+
+================================================================================
+SECTION 10: BOTTOM TAB ICONS — RECOMMENDED LIBRARY ICONS
+================================================================================
+
+Using react-native-vector-icons (MaterialCommunityIcons recommended):
+
+  TAB 1 Home:        icon="home"             active="home"
+  TAB 2 My Lands:    icon="leaf-circle-outline"  active="leaf-circle"
+  TAB 3 History:     icon="chart-bar"        active="chart-bar"
+  TAB 4 Profile:     icon="account-circle-outline" active="account-circle"
+
+Badge on Profile tab: red dot when wallet recovery is pending.
+Badge on Home tab: red dot when there are unread notifications.
+
+================================================================================
+SECTION 11: BACKEND API CLARIFICATIONS USED BY THIS SPEC
+================================================================================
+
+The following backend contracts are the canonical interfaces used by this
+navigation spec. PATCH /api/v1/land/{land_id} and
+POST /api/v1/auth/recover-wallet already exist in the SRS/BSDD and are
+retained here for clarity. POST /api/v1/land/fetch-boundary is the manual-map
+processing variant of the boundary endpoint. GET /api/v1/status is the
+maintenance-mode probe; /health remains the infrastructure liveness endpoint.
+
+  PATCH /api/v1/land/{land_id}
+    Purpose: Update farm name (editable by farmer).
+    Sends:   { farm_name: string }
+    Returns: { status: 'success', land_id: UUID, farm_name: string }
+
+  POST /api/v1/auth/recover-wallet
+    Purpose: Submit wallet recovery request (SRS Appendix item 9).
+    Sends:   { new_wallet_address: string }
+    Returns: { status: 'pending', message: string }
+
+  POST /api/v1/land/fetch-boundary
+    Purpose: Process a farmer-uploaded government parcel map in the manual
+             fallback flow.
+    Sends:   multipart/form-data with map_image, survey_number, district,
+             taluka, village, state
+    Returns: Standard boundary success payload with boundary_source: 'MANUAL'
+
+  GET /api/v1/status
+    Purpose: Maintenance mode detection and app bootstrap status.
+    Returns: { maintenance: boolean, message: string | null }
+    Called:  By SplashScreen on boot to check if maintenance banner is needed.
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+
+Summary of detailed screen specs consolidated here:
+  1.  OnboardingScreen        — first-time user tutorial
+  2.  LandDetailScreen        — per-parcel detail hub
+  3.  EditLandNameScreen      — rename a farm parcel
+  4.  LandRegistrationSuccessScreen — post-registration celebration
+  5.  AuditStatusScreen       — polling screen after audit submission
+  6.  ProfileScreen           — farmer profile, wallet, logout
+  7.  SettingsScreen          — notification and GPS settings
+  8.  WalletRecoveryScreen    — new phone wallet recovery
+  9.  NotificationsScreen     — in-app notification centre
+  10. MaintenanceScreen       — backend maintenance blocker
+
+Navigation structure detailed here:
+  - 4-tab bottom tab navigator defined with explicit stacks per tab
+  - All modal flows defined with tab bar hide/show rules
+  - Complete back navigation rules for every screen
+  - Header bar specifications for every screen
+
+================================================================================

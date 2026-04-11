@@ -15,10 +15,10 @@ DEMO_UID_PLACEHOLDER = "PASTE_UID_HERE"
 #   4. Paste the 4 printed UIDs into this dict below
 # -------------------------------------------------------------------------
 DEMO_FIREBASE_UIDS: dict[str, str] = {
-    "+919000000001": DEMO_UID_PLACEHOLDER,
-    "+919000000002": DEMO_UID_PLACEHOLDER,
-    "+919000000003": DEMO_UID_PLACEHOLDER,
-    "+919000000004": DEMO_UID_PLACEHOLDER,
+    "+919000000001": "Z8h7Q6kSuhRmyiUkdvVBUpY1eTm2",
+    "+919000000002": "r2QgvU8oxqdvXtKjaDinqq95XQj2",
+    "+919000000003": "icMsVBjtdOda5prqI540bn3KTj02",
+    "+919000000004": "KhBSyGEVU8SkMWIXmN8qkrLNwYk1",
 }
 
 DEMO_ACCOUNT_BLUEPRINTS: dict[str, dict[str, object]] = {

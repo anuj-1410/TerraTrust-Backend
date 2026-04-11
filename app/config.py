@@ -65,6 +65,7 @@ class Settings(BaseSettings):
 
     # --- App ----------------------------------------------------------------
     ENVIRONMENT: Literal["development", "production"] = "development"
+    ENABLE_DEMO_ACCOUNTS: bool = False
     WEB_CORS_ORIGINS: str = ""
     MAINTENANCE_MODE: bool = False
     MAINTENANCE_MESSAGE: Optional[str] = None
@@ -106,8 +107,8 @@ settings = Settings()  # type: ignore[call-arg]
 
 # -- Demo account production safety guard ------------------------------
 if (
-    os.getenv("ENVIRONMENT", "development") == "production"
-    and os.getenv("ENABLE_DEMO_ACCOUNTS", "false").lower() == "true"
+    settings.ENVIRONMENT == "production"
+    and settings.ENABLE_DEMO_ACCOUNTS
 ):
     raise RuntimeError(
         "\n\nCRITICAL SECURITY ERROR:\n"
