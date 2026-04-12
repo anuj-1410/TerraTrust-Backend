@@ -7,11 +7,14 @@ Uses Redis as both broker and result backend.
 from celery import Celery
 
 from app.config import settings
+from app.redis_utils import secure_redis_url
+
+_CELERY_REDIS_URL = secure_redis_url(settings.REDIS_URL)
 
 celery_app = Celery(
     "terratrust",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
+    broker=_CELERY_REDIS_URL,
+    backend=_CELERY_REDIS_URL,
     include=[
         "tasks.fusion_task",
         "tasks.minting_task",

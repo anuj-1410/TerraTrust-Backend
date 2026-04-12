@@ -109,6 +109,43 @@ def _ensure_owner_name_matches_kyc(owner_name: str, current_user: Dict[str, Any]
         )
 
 
+def _summarise_current_audit(current_audit: Dict[str, Any] | None) -> Dict[str, Any]:
+    """Map raw audit rows into land-list status fields that better match UI state."""
+    if not current_audit:
+        return {
+            "id": None,
+            "status": None,
+            "backend_status": None,
+            "phase": None,
+            "can_resume_scanning": None,
+        }
+
+    backend_status = current_audit.get("status")
+    trees_scanned_count = current_audit.get("trees_scanned_count")
+    error = current_audit.get("error")
+
+    display_status = backend_status
+    phase = backend_status
+    can_resume_scanning = False if backend_status else None
+
+    if backend_status == "PROCESSING":
+        can_resume_scanning = True
+        if error:
+            display_status = "RETRY_SUBMISSION"
+            phase = "RETRY_SUBMISSION"
+        elif not trees_scanned_count:
+            display_status = "AWAITING_SAMPLES"
+            phase = "AWAITING_SAMPLES"
+
+    return {
+        "id": current_audit.get("id"),
+        "status": display_status,
+        "backend_status": backend_status,
+        "phase": phase,
+        "can_resume_scanning": can_resume_scanning,
+    }
+
+
 def _ensure_pending_context_matches(
     label: str,
     expected_value: str | None,
@@ -674,7 +711,7 @@ async def list_lands(
                 await run_in_threadpool(
                     lambda parcel_id=parcel["id"]: (
                         supabase_client.table("carbon_audits")
-                        .select("id, status, audit_year, created_at")
+                        .select("id, status, audit_year, created_at, trees_scanned_count, error")
                         .eq("land_id", parcel_id)
                         .order("audit_year", desc=True)
                         .execute()
@@ -694,6 +731,7 @@ async def list_lands(
                 (audit for audit in audit_rows if audit.get("audit_year") == current_year),
                 None,
             )
+            current_audit_summary = _summarise_current_audit(current_audit)
 
             thumbnail_url = None
             try:
@@ -721,8 +759,11 @@ async def list_lands(
                     boundary_source=parcel.get("boundary_source"),
                     registered_at=parcel.get("registered_at"),
                     last_audit_year=last_audit_year,
-                    current_audit_id=current_audit.get("id") if current_audit else None,
-                    current_audit_status=current_audit.get("status") if current_audit else None,
+                    current_audit_id=current_audit_summary["id"],
+                    current_audit_status=current_audit_summary["status"],
+                    current_audit_backend_status=current_audit_summary["backend_status"],
+                    current_audit_phase=current_audit_summary["phase"],
+                    current_audit_can_resume_scanning=current_audit_summary["can_resume_scanning"],
                     thumbnail_url=thumbnail_url,
                 )
             )

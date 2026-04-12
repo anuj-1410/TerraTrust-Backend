@@ -72,6 +72,9 @@ class LandListItem(BaseModel):
     last_audit_year: int | None = None
     current_audit_id: str | None = None
     current_audit_status: str | None = None
+    current_audit_backend_status: str | None = None
+    current_audit_phase: str | None = None
+    current_audit_can_resume_scanning: bool | None = None
     thumbnail_url: str | None = None
 
     @field_validator("id", "current_audit_id", mode="before")

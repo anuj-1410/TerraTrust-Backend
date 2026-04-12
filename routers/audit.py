@@ -39,6 +39,16 @@ from services import zone_generation_service
 from services.fusion_engine import normalise_species_name, wood_density_for_species
 from services.ipfs_service import to_gateway_url
 
+try:
+    from demo.config import is_demo_uid
+    from demo.middleware import invalidate_demo_session
+except Exception:  # pragma: no cover - demo tooling is optional outside demo-enabled environments.
+    def is_demo_uid(_firebase_uid: str) -> bool:
+        return False
+
+    def invalidate_demo_session(_firebase_uid: str) -> None:
+        return None
+
 logger = logging.getLogger("terratrust.audit")
 
 router = APIRouter()
@@ -222,6 +232,13 @@ def _build_processing_result_payload(
         }
     )
     return payload
+
+
+def _maybe_invalidate_demo_checkpoint(current_user: Dict[str, Any]) -> None:
+    """Allow demo accounts to reset back to their baseline after an in-progress audit."""
+    firebase_uid = str(current_user.get("firebase_uid") or "")
+    if firebase_uid and is_demo_uid(firebase_uid):
+        invalidate_demo_session(firebase_uid)
 
 def _normalise_species_name(species: str) -> str:
     """Return the canonical supported species name or fail clearly."""
@@ -412,6 +429,7 @@ async def get_audit_zones(
         if existing_status == "PROCESSING":
             existing_zones = await list_sampling_zones_for_audit(existing_audit["id"])
             if existing_zones:
+                _maybe_invalidate_demo_checkpoint(current_user)
                 logger.info(
                     "Resuming existing audit %s for land %s with %d persisted zones.",
                     existing_audit["id"],
@@ -484,6 +502,7 @@ async def get_audit_zones(
         )
 
     await insert_sampling_zone_records(land_id=land_id, audit_id=audit_id, zones=zones)
+    _maybe_invalidate_demo_checkpoint(current_user)
     return _build_audit_zones_response(audit_id, zones)
 
 

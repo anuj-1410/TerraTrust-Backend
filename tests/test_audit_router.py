@@ -46,6 +46,14 @@ def _install_fastapi_stub():
 
 
 def _install_supporting_stubs(stores, land_record, zones, tree_scans):
+    starlette_stub = types.ModuleType("starlette.concurrency")
+
+    async def _run_in_threadpool(func, *args, **kwargs):
+        return func(*args, **kwargs)
+
+    starlette_stub.run_in_threadpool = _run_in_threadpool
+    sys.modules["starlette.concurrency"] = starlette_stub
+
     audit_models_stub = types.ModuleType("models.audit")
 
     class _SimpleModel:

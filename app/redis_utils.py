@@ -50,6 +50,45 @@ def normalise_redis_url(redis_url: str) -> str:
     )
 
 
+def secure_redis_url(redis_url: str) -> str:
+    """Force TLS-enabled Redis URLs to validate certificates by default."""
+    if not redis_url:
+        return redis_url
+
+    normalised_url = normalise_redis_url(redis_url)
+    parts = urlsplit(normalised_url)
+    if parts.scheme != "rediss":
+        return normalised_url
+
+    changed = False
+    saw_ssl_cert_reqs = False
+    query_pairs = []
+    for key, value in parse_qsl(parts.query, keep_blank_values=True):
+        if key == "ssl_cert_reqs":
+            saw_ssl_cert_reqs = True
+            if value != "required":
+                value = "required"
+                changed = True
+        query_pairs.append((key, value))
+
+    if not saw_ssl_cert_reqs:
+        query_pairs.append(("ssl_cert_reqs", "required"))
+        changed = True
+
+    if not changed:
+        return normalised_url
+
+    return urlunsplit(
+        (
+            parts.scheme,
+            parts.netloc,
+            parts.path,
+            urlencode(query_pairs, doseq=True),
+            parts.fragment,
+        )
+    )
+
+
 def redis_from_url(redis_url: str, **kwargs) -> Redis:
     """Create a Redis client after normalising URL compatibility quirks."""
     from redis import Redis

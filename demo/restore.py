@@ -14,14 +14,14 @@ from demo.config import get_demo_account, is_resettable_demo
 logger = logging.getLogger("terratrust.demo.restore")
 
 
-async def restore_to_checkpoint(firebase_uid: str) -> bool:
+async def restore_to_checkpoint(firebase_uid: str, allow_persistent: bool = False) -> bool:
     """Restore a resettable demo account to its checkpoint state.
 
     Runs in a single database transaction. Any failure rolls back all changes
     and is logged, but never raised, so ``GET /api/v1/auth/me`` can continue.
     Returns ``True`` only when the checkpoint restore completed successfully.
     """
-    if not is_resettable_demo(firebase_uid):
+    if not allow_persistent and not is_resettable_demo(firebase_uid):
         return False
 
     config = get_demo_account(firebase_uid)
@@ -122,8 +122,10 @@ async def restore_to_checkpoint(firebase_uid: str) -> bool:
             )
             new_user_id = str(insert_user_result.scalar_one())
 
+            land_ids_by_key: dict[str, str] = {}
+
             for land in checkpoint.get("land_parcels", []):
-                await conn.execute(
+                land_result = await conn.execute(
                     text(
                         """
                         INSERT INTO land_parcels (
@@ -151,9 +153,104 @@ async def restore_to_checkpoint(firebase_uid: str) -> bool:
                             :boundary_source,
                             :ocr_owner_name
                         )
+                        RETURNING id
                         """
                     ),
                     {**land, "user_id": new_user_id},
+                )
+                land_id = str(land_result.scalar_one())
+                land_key = str(land.get("key") or land.get("survey_number") or land_id)
+                land_ids_by_key[land_key] = land_id
+
+            for audit in checkpoint.get("carbon_audits", []):
+                land_key = str(audit.get("land_key") or "")
+                land_id = land_ids_by_key.get(land_key)
+                if not land_id:
+                    logger.warning("[DEMO] Missing land mapping for audit land key %s.", land_key)
+                    continue
+
+                await conn.execute(
+                    text(
+                        """
+                        INSERT INTO carbon_audits (
+                            land_id,
+                            user_id,
+                            audit_year,
+                            status,
+                            s1_vh_mean_db,
+                            s1_vv_mean_db,
+                            s2_ndvi_mean,
+                            s2_evi_mean,
+                            gedi_height_mean,
+                            srtm_elevation_mean,
+                            nisar_used,
+                            xgboost_model_version,
+                            features_count,
+                            trees_scanned_count,
+                            total_biomass_tonnes,
+                            prev_year_biomass,
+                            delta_biomass,
+                            carbon_tonnes,
+                            co2_equivalent,
+                            credits_issued,
+                            ipfs_metadata_cid,
+                            tx_hash,
+                            token_id,
+                            minted_at
+                        ) VALUES (
+                            :land_id,
+                            :user_id,
+                            :audit_year,
+                            :status,
+                            :s1_vh_mean_db,
+                            :s1_vv_mean_db,
+                            :s2_ndvi_mean,
+                            :s2_evi_mean,
+                            :gedi_height_mean,
+                            :srtm_elevation_mean,
+                            :nisar_used,
+                            :xgboost_model_version,
+                            :features_count,
+                            :trees_scanned_count,
+                            :total_biomass_tonnes,
+                            :prev_year_biomass,
+                            :delta_biomass,
+                            :carbon_tonnes,
+                            :co2_equivalent,
+                            :credits_issued,
+                            :ipfs_metadata_cid,
+                            :tx_hash,
+                            :token_id,
+                            :minted_at
+                        )
+                        """
+                    ),
+                    {
+                        "land_id": land_id,
+                        "user_id": new_user_id,
+                        "audit_year": audit.get("audit_year"),
+                        "status": audit.get("status"),
+                        "s1_vh_mean_db": audit.get("s1_vh_mean_db"),
+                        "s1_vv_mean_db": audit.get("s1_vv_mean_db"),
+                        "s2_ndvi_mean": audit.get("s2_ndvi_mean"),
+                        "s2_evi_mean": audit.get("s2_evi_mean"),
+                        "gedi_height_mean": audit.get("gedi_height_mean"),
+                        "srtm_elevation_mean": audit.get("srtm_elevation_mean"),
+                        "nisar_used": audit.get("nisar_used", False),
+                        "xgboost_model_version": audit.get("xgboost_model_version"),
+                        "features_count": audit.get("features_count"),
+                        "trees_scanned_count": audit.get("trees_scanned_count"),
+                        "total_biomass_tonnes": audit.get("total_biomass_tonnes"),
+                        "prev_year_biomass": audit.get("prev_year_biomass"),
+                        "delta_biomass": audit.get("delta_biomass"),
+                        "carbon_tonnes": audit.get("carbon_tonnes"),
+                        "co2_equivalent": audit.get("co2_equivalent"),
+                        "credits_issued": audit.get("credits_issued"),
+                        "ipfs_metadata_cid": audit.get("ipfs_metadata_cid"),
+                        "tx_hash": audit.get("tx_hash"),
+                        "token_id": audit.get("token_id"),
+                        "minted_at": audit.get("minted_at"),
+                    },
                 )
 
         _cleanup_storage(user_id_for_cleanup, audit_ids_for_cleanup, evidence_paths_for_cleanup)

@@ -14,7 +14,7 @@ from demo.restore import restore_to_checkpoint
 
 logger = logging.getLogger("terratrust.demo.middleware")
 
-# Only 3 UIDs can ever enter this set (accounts 1-3).
+# At most 4 configured demo UIDs can enter this set.
 _reset_done_this_session: set[str] = set()
 
 

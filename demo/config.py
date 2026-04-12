@@ -39,8 +39,8 @@ DEMO_ACCOUNT_BLUEPRINTS: dict[str, dict[str, object]] = {
     },
     "+919000000004": {
         "checkpoint": "FULL",
-        "persistent": True,
-        "description": "Full persistent account with 2024 audit history",
+        "persistent": False,
+        "description": "Full demo account with 2024 audit history; resets on next login",
     },
 }
 

@@ -200,6 +200,19 @@ async def health_check():
     }
 
 
+@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
+async def root_status():
+    """Return a lightweight root payload for platform probes and browsers."""
+    return {
+        "service": "TerraTrust-AR API",
+        "status": "ok",
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "api_status_url": "/api/v1/status",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @app.get("/api/v1/status", tags=["Health"])
 async def application_status():
     """Return the documented farmer-facing maintenance status payload."""

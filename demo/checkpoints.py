@@ -120,8 +120,67 @@ def checkpoint_land_verified(firebase_uid: str) -> dict[str, object]:
     }
 
 
+def checkpoint_full(firebase_uid: str) -> dict[str, object]:
+    """Return the FULL persistent checkpoint for account 4."""
+    phone = _phone_for_uid(firebase_uid)
+    return {
+        "user": {
+            "firebase_uid": firebase_uid,
+            "phone_number": phone,
+            "full_name": "Suresh Kumar Demo",
+            "aadhaar_hash": _h("999900000004"),
+            "wallet_address": DEMO_WALLET_ADDRESSES[phone],
+            "kyc_completed": True,
+            "role": "FARMER",
+        },
+        "land_parcels": [
+            {
+                "key": "main_demo_farm",
+                "farm_name": "Main Demo Farm",
+                "survey_number": "DEMO-004-47",
+                "district": "Pune",
+                "taluka": "Haveli",
+                "village": "Kharadi",
+                "state": "Maharashtra",
+                "geom_geojson": json.dumps(DEMO_POLYGON_ACCOUNT4),
+                "is_verified": True,
+                "boundary_source": "WMS_AUTO",
+                "ocr_owner_name": "Suresh Kumar Demo",
+            }
+        ],
+        "carbon_audits": [
+            {
+                "land_key": "main_demo_farm",
+                "audit_year": 2024,
+                "status": "MINTED",
+                "s1_vh_mean_db": -13.2,
+                "s1_vv_mean_db": -11.8,
+                "s2_ndvi_mean": 0.64,
+                "s2_evi_mean": 0.58,
+                "gedi_height_mean": 13.4,
+                "srtm_elevation_mean": 541.0,
+                "nisar_used": False,
+                "xgboost_model_version": "v3.1.0",
+                "features_count": 9,
+                "trees_scanned_count": 11,
+                "total_biomass_tonnes": 12.4,
+                "prev_year_biomass": 0.0,
+                "delta_biomass": 12.4,
+                "carbon_tonnes": 5.828,
+                "co2_equivalent": 21.38,
+                "credits_issued": 21.38,
+                "ipfs_metadata_cid": "QmDemoAcct4Baseline2024FakeIPFSHashXXXXXXXXXX",
+                "tx_hash": "0x" + ("a" * 64),
+                "token_id": 4001,
+                "minted_at": "2024-11-15T10:00:00Z",
+            }
+        ],
+    }
+
+
 CHECKPOINT_BUILDERS: dict[str, object] = {
     "FRESH": checkpoint_fresh,
     "KYC_DONE": checkpoint_kyc_done,
     "LAND_VERIFIED": checkpoint_land_verified,
+    "FULL": checkpoint_full,
 }
