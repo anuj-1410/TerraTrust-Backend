@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import logging
 from typing import Any
 
@@ -12,6 +13,39 @@ from demo.checkpoints import CHECKPOINT_BUILDERS
 from demo.config import get_demo_account, is_resettable_demo
 
 logger = logging.getLogger("terratrust.demo.restore")
+
+
+_AUDIT_CHECKPOINT_TIMESTAMP_FIELDS = {
+    "created_at",
+    "calculated_at",
+    "minted_at",
+}
+
+
+def _coerce_checkpoint_timestamp(value: Any) -> Any:
+    """Convert ISO timestamp strings into native datetimes for asyncpg inserts."""
+    if value is None or isinstance(value, datetime):
+        return value
+
+    if isinstance(value, str):
+        candidate = value.strip()
+        if not candidate:
+            return None
+        try:
+            return datetime.fromisoformat(candidate.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(f"Unsupported checkpoint timestamp '{value}'.") from exc
+
+    return value
+
+
+def _normalise_checkpoint_audit(audit: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalise checkpoint audit payloads before inserting them through SQLAlchemy."""
+    normalised = dict(audit)
+    for field in _AUDIT_CHECKPOINT_TIMESTAMP_FIELDS:
+        if field in normalised:
+            normalised[field] = _coerce_checkpoint_timestamp(normalised.get(field))
+    return normalised
 
 
 async def restore_to_checkpoint(firebase_uid: str, allow_persistent: bool = False) -> bool:
@@ -163,7 +197,8 @@ async def restore_to_checkpoint(firebase_uid: str, allow_persistent: bool = Fals
                 land_ids_by_key[land_key] = land_id
 
             for audit in checkpoint.get("carbon_audits", []):
-                land_key = str(audit.get("land_key") or "")
+                normalised_audit = _normalise_checkpoint_audit(audit)
+                land_key = str(normalised_audit.get("land_key") or "")
                 land_id = land_ids_by_key.get(land_key)
                 if not land_id:
                     logger.warning("[DEMO] Missing land mapping for audit land key %s.", land_key)
@@ -228,28 +263,28 @@ async def restore_to_checkpoint(firebase_uid: str, allow_persistent: bool = Fals
                     {
                         "land_id": land_id,
                         "user_id": new_user_id,
-                        "audit_year": audit.get("audit_year"),
-                        "status": audit.get("status"),
-                        "s1_vh_mean_db": audit.get("s1_vh_mean_db"),
-                        "s1_vv_mean_db": audit.get("s1_vv_mean_db"),
-                        "s2_ndvi_mean": audit.get("s2_ndvi_mean"),
-                        "s2_evi_mean": audit.get("s2_evi_mean"),
-                        "gedi_height_mean": audit.get("gedi_height_mean"),
-                        "srtm_elevation_mean": audit.get("srtm_elevation_mean"),
-                        "nisar_used": audit.get("nisar_used", False),
-                        "xgboost_model_version": audit.get("xgboost_model_version"),
-                        "features_count": audit.get("features_count"),
-                        "trees_scanned_count": audit.get("trees_scanned_count"),
-                        "total_biomass_tonnes": audit.get("total_biomass_tonnes"),
-                        "prev_year_biomass": audit.get("prev_year_biomass"),
-                        "delta_biomass": audit.get("delta_biomass"),
-                        "carbon_tonnes": audit.get("carbon_tonnes"),
-                        "co2_equivalent": audit.get("co2_equivalent"),
-                        "credits_issued": audit.get("credits_issued"),
-                        "ipfs_metadata_cid": audit.get("ipfs_metadata_cid"),
-                        "tx_hash": audit.get("tx_hash"),
-                        "token_id": audit.get("token_id"),
-                        "minted_at": audit.get("minted_at"),
+                        "audit_year": normalised_audit.get("audit_year"),
+                        "status": normalised_audit.get("status"),
+                        "s1_vh_mean_db": normalised_audit.get("s1_vh_mean_db"),
+                        "s1_vv_mean_db": normalised_audit.get("s1_vv_mean_db"),
+                        "s2_ndvi_mean": normalised_audit.get("s2_ndvi_mean"),
+                        "s2_evi_mean": normalised_audit.get("s2_evi_mean"),
+                        "gedi_height_mean": normalised_audit.get("gedi_height_mean"),
+                        "srtm_elevation_mean": normalised_audit.get("srtm_elevation_mean"),
+                        "nisar_used": normalised_audit.get("nisar_used", False),
+                        "xgboost_model_version": normalised_audit.get("xgboost_model_version"),
+                        "features_count": normalised_audit.get("features_count"),
+                        "trees_scanned_count": normalised_audit.get("trees_scanned_count"),
+                        "total_biomass_tonnes": normalised_audit.get("total_biomass_tonnes"),
+                        "prev_year_biomass": normalised_audit.get("prev_year_biomass"),
+                        "delta_biomass": normalised_audit.get("delta_biomass"),
+                        "carbon_tonnes": normalised_audit.get("carbon_tonnes"),
+                        "co2_equivalent": normalised_audit.get("co2_equivalent"),
+                        "credits_issued": normalised_audit.get("credits_issued"),
+                        "ipfs_metadata_cid": normalised_audit.get("ipfs_metadata_cid"),
+                        "tx_hash": normalised_audit.get("tx_hash"),
+                        "token_id": normalised_audit.get("token_id"),
+                        "minted_at": normalised_audit.get("minted_at"),
                     },
                 )
 

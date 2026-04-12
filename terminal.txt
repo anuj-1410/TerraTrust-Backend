@@ -1,300 +1,250 @@
-2026-04-12T19:33:37.222302396Z 19:33:37 web.1    | 2026-04-12 19:33:37,221 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=audit_year%2Cstatus%2Ccredits_issued%2Cland_id%2Ctx_hash%2Cipfs_metadata_cid%2Cipfs_url%2Cminted_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T19:33:37.223234123Z 19:33:37 web.1    | 2026-04-12 19:33:37,222 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-04-12T19:33:37.223293784Z 19:33:37 web.1    | 2026-04-12 19:33:37,222 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-2026-04-12T19:33:37.224082019Z 19:33:37 web.1    | 2026-04-12 19:33:37,222 INFO sqlalchemy.engine.Engine 
-2026-04-12T19:33:37.224102439Z 19:33:37 web.1    |         SELECT
-2026-04-12T19:33:37.224184911Z 19:33:37 web.1    |             id,
-2026-04-12T19:33:37.224260212Z 19:33:37 web.1    |             farm_name,
-2026-04-12T19:33:37.224297322Z 19:33:37 web.1    |             survey_number,
-2026-04-12T19:33:37.224351263Z 19:33:37 web.1    |             district,
-2026-04-12T19:33:37.224446465Z 19:33:37 web.1    |             taluka,
-2026-04-12T19:33:37.224534477Z 19:33:37 web.1    |             village,
-2026-04-12T19:33:37.224565887Z 19:33:37 web.1    |             state,
-2026-04-12T19:33:37.224656329Z 19:33:37 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:33:37.22470302Z 19:33:37 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:33:37.224783622Z 19:33:37 web.1    |             boundary_source,
-2026-04-12T19:33:37.224821722Z 19:33:37 web.1    |             created_at AS registered_at,
-2026-04-12T19:33:37.224952985Z 19:33:37 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:33:37.225002386Z 19:33:37 web.1    |         FROM land_parcels
-2026-04-12T19:33:37.225074507Z 19:33:37 web.1    |         WHERE user_id = $1
-2026-04-12T19:33:37.225139588Z 19:33:37 web.1    |         ORDER BY registered_at DESC
-2026-04-12T19:33:37.225185589Z 19:33:37 web.1    |         
-2026-04-12T19:33:37.22524462Z 19:33:37 web.1    | 2026-04-12 19:33:37,222 | INFO     | sqlalchemy.engine.Engine | 
-2026-04-12T19:33:37.225367182Z 19:33:37 web.1    |         SELECT
-2026-04-12T19:33:37.225371902Z 19:33:37 web.1    |             id,
-2026-04-12T19:33:37.225378062Z 19:33:37 web.1    |             farm_name,
-2026-04-12T19:33:37.225452554Z 19:33:37 web.1    |             survey_number,
-2026-04-12T19:33:37.225488155Z 19:33:37 web.1    |             district,
-2026-04-12T19:33:37.225589216Z 19:33:37 web.1    |             taluka,
-2026-04-12T19:33:37.225599866Z 19:33:37 web.1    |             village,
-2026-04-12T19:33:37.225675918Z 19:33:37 web.1    |             state,
-2026-04-12T19:33:37.225738469Z 19:33:37 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:33:37.22579526Z 19:33:37 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:33:37.225901572Z 19:33:37 web.1    |             boundary_source,
-2026-04-12T19:33:37.225947633Z 19:33:37 web.1    |             created_at AS registered_at,
-2026-04-12T19:33:37.226009174Z 19:33:37 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:33:37.226073095Z 19:33:37 web.1    |         FROM land_parcels
-2026-04-12T19:33:37.226116346Z 19:33:37 web.1    |         WHERE user_id = $1
-2026-04-12T19:33:37.226165247Z 19:33:37 web.1    |         ORDER BY registered_at DESC
-2026-04-12T19:33:37.226227138Z 19:33:37 web.1    |         
-2026-04-12T19:33:37.226241628Z 19:33:37 web.1    | 2026-04-12 19:33:37,222 INFO sqlalchemy.engine.Engine [cached since 806.1s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
-2026-04-12T19:33:37.22633233Z 19:33:37 web.1    | 2026-04-12 19:33:37,222 | INFO     | sqlalchemy.engine.Engine | [cached since 806.1s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
-2026-04-12T19:33:37.227897749Z 19:33:37 web.1    | 2026-04-12 19:33:37,227 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-04-12T19:33:37.227944709Z 19:33:37 web.1    | 2026-04-12 19:33:37,227 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-2026-04-12T19:33:37.25956055Z 19:33:37 web.1    | 2026-04-12 19:33:37,258 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/land_parcels?select=farm_name&id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d "HTTP/2 200 OK"
-2026-04-12T19:33:37.286529066Z 19:33:37 web.1    | 2026-04-12 19:33:37,284 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at&land_id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T19:33:38.283176393Z 19:33:38 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/credits/balance?page=1&limit=2 HTTP/1.1" 200 OK
-2026-04-12T19:33:43.076894389Z 19:33:43 web.1    | 2026-04-12 19:33:43,076 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/68d68828680bc6d6535314d804b07545-f2c08e29e0ba2c3d654856e4a88204af:getPixels "HTTP/1.1 200 OK"
-2026-04-12T19:33:43.1645841Z 19:33:43 web.1    | 2026-04-12 19:33:43,163 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 400 Bad Request"
-2026-04-12T19:33:43.20545675Z 19:33:43 web.1    | 2026-04-12 19:33:43,204 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 200 OK"
-2026-04-12T19:33:43.206442259Z 19:33:43 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/land/list?page=1&limit=3 HTTP/1.1" 200 OK
-2026-04-12T19:43:47.762074529Z 19:43:47 web.1    |                             $9,
-2026-04-12T19:43:47.76213619Z 19:43:47 web.1    |                             $10,
-2026-04-12T19:43:47.762257943Z 19:43:47 web.1    |                             $11
-2026-04-12T19:43:47.762264593Z 19:43:47 web.1    |                         )
-2026-04-12T19:43:47.762334464Z 19:43:47 web.1    |                         
-2026-04-12T19:43:47.762342024Z 19:43:47 web.1    | 2026-04-12 19:43:47,711 INFO sqlalchemy.engine.Engine [generated in 0.00033s] ('54e70864-4a54-4280-9a3f-3939a94892f1', 'Demo North Field', 'DEMO-003-47', 'Pune', 'Haveli', 'Kharadi', 'Maharashtra', '{"type": "Polygon", "coordinates": [[[73.856, 18.52], [73.858, 18.52], [73.858, 18.522], [73.856, 18.522], [73.856, 18.52]]]}', True, 'WMS_AUTO', 'Ramesh Shankar Patil')
-2026-04-12T19:43:47.762411706Z 19:43:47 web.1    | 2026-04-12 19:43:47,711 | INFO     | sqlalchemy.engine.Engine | [generated in 0.00033s] ('54e70864-4a54-4280-9a3f-3939a94892f1', 'Demo North Field', 'DEMO-003-47', 'Pune', 'Haveli', 'Kharadi', 'Maharashtra', '{"type": "Polygon", "coordinates": [[[73.856, 18.52], [73.858, 18.52], [73.858, 18.522], [73.856, 18.522], [73.856, 18.52]]]}', True, 'WMS_AUTO', 'Ramesh Shankar Patil')
-2026-04-12T19:43:47.856033172Z 19:43:47 web.1    | 2026-04-12 19:43:47,855 INFO sqlalchemy.engine.Engine COMMIT
-2026-04-12T19:43:47.856061162Z 19:43:47 web.1    | 2026-04-12 19:43:47,855 | INFO     | sqlalchemy.engine.Engine | COMMIT
-2026-04-12T19:43:47.95193428Z 19:43:47 web.1    | 2026-04-12 19:43:47,950 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/list/land-documents "HTTP/2 200 OK"
-2026-04-12T19:43:47.95194981Z 19:43:47 web.1    | 2026-04-12 19:43:47,951 | INFO     | terratrust.demo.restore | [DEMO] Restored +919000000003 to 'LAND_VERIFIED'.
-2026-04-12T19:43:48.00046609Z 19:43:48 web.1    | 2026-04-12 19:43:47,999 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.icMsVBjtdOda5prqI540bn3KTj02&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:43:48.032097499Z 19:43:48 web.1    | 2026-04-12 19:43:48,031 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:43:48.033248931Z 19:43:48 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
-2026-04-12T19:43:48.681972844Z 19:43:48 web.1    | 2026-04-12 19:43:48,681 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.icMsVBjtdOda5prqI540bn3KTj02&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:43:48.708058482Z 19:43:48 web.1    | 2026-04-12 19:43:48,707 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:43:48.70905115Z 19:43:48 web.1    | 2026-04-12 19:43:48,708 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-04-12T19:43:48.709225293Z 19:43:48 web.1    | 2026-04-12 19:43:48,708 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-2026-04-12T19:43:48.709275774Z 19:43:48 web.1    | 2026-04-12 19:43:48,708 INFO sqlalchemy.engine.Engine 
-2026-04-12T19:43:48.709363616Z 19:43:48 web.1    |         SELECT
-2026-04-12T19:43:48.709377126Z 19:43:48 web.1    |             id,
-2026-04-12T19:43:48.709464478Z 19:43:48 web.1    |             farm_name,
-2026-04-12T19:43:48.709513449Z 19:43:48 web.1    |             survey_number,
-2026-04-12T19:43:48.70958599Z 19:43:48 web.1    |             district,
-2026-04-12T19:43:48.709638961Z 19:43:48 web.1    |             taluka,
-2026-04-12T19:43:48.709716902Z 19:43:48 web.1    |             village,
-2026-04-12T19:43:48.709767253Z 19:43:48 web.1    |             state,
-2026-04-12T19:43:48.709860875Z 19:43:48 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:43:48.709919756Z 19:43:48 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:43:48.709965777Z 19:43:48 web.1    |             boundary_source,
-2026-04-12T19:43:48.710029218Z 19:43:48 web.1    |             created_at AS registered_at,
-2026-04-12T19:43:48.710081379Z 19:43:48 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:43:48.71014265Z 19:43:48 web.1    |         FROM land_parcels
-2026-04-12T19:43:48.710193821Z 19:43:48 web.1    |         WHERE user_id = $1
-2026-04-12T19:43:48.710241432Z 19:43:48 web.1    |         ORDER BY registered_at DESC
-2026-04-12T19:43:48.710282483Z 19:43:48 web.1    |         
-2026-04-12T19:43:48.710330634Z 19:43:48 web.1    | 2026-04-12 19:43:48,708 | INFO     | sqlalchemy.engine.Engine | 
-2026-04-12T19:43:48.710369874Z 19:43:48 web.1    |         SELECT
-2026-04-12T19:43:48.710420345Z 19:43:48 web.1    |             id,
-2026-04-12T19:43:48.710462426Z 19:43:48 web.1    |             farm_name,
-2026-04-12T19:43:48.710512657Z 19:43:48 web.1    |             survey_number,
-2026-04-12T19:43:48.710553808Z 19:43:48 web.1    |             district,
-2026-04-12T19:43:48.710610419Z 19:43:48 web.1    |             taluka,
-2026-04-12T19:43:48.710646919Z 19:43:48 web.1    |             village,
-2026-04-12T19:43:48.71070502Z 19:43:48 web.1    |             state,
-2026-04-12T19:43:48.710743411Z 19:43:48 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:43:48.710869614Z 19:43:48 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:43:48.710907244Z 19:43:48 web.1    |             boundary_source,
-2026-04-12T19:43:48.710969065Z 19:43:48 web.1    |             created_at AS registered_at,
-2026-04-12T19:43:48.711011636Z 19:43:48 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:43:48.711061627Z 19:43:48 web.1    |         FROM land_parcels
-2026-04-12T19:43:48.711102978Z 19:43:48 web.1    |         WHERE user_id = $1
-2026-04-12T19:43:48.711165769Z 19:43:48 web.1    |         ORDER BY registered_at DESC
-2026-04-12T19:43:48.71120734Z 19:43:48 web.1    |         
-2026-04-12T19:43:48.71125095Z 19:43:48 web.1    | 2026-04-12 19:43:48,708 INFO sqlalchemy.engine.Engine [cached since 1418s ago] ('54e70864-4a54-4280-9a3f-3939a94892f1',)
-2026-04-12T19:43:48.711300602Z 19:43:48 web.1    | 2026-04-12 19:43:48,708 | INFO     | sqlalchemy.engine.Engine | [cached since 1418s ago] ('54e70864-4a54-4280-9a3f-3939a94892f1',)
-2026-04-12T19:43:48.712970022Z 19:43:48 web.1    | 2026-04-12 19:43:48,712 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-04-12T19:43:48.713009933Z 19:43:48 web.1    | 2026-04-12 19:43:48,712 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-2026-04-12T19:43:48.740858293Z 19:43:48 web.1    | 2026-04-12 19:43:48,740 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at&land_id=eq.9d6190ee-6eaf-49c9-87c3-11744a486799&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T19:43:48.759522166Z 19:43:48 web.1    | 2026-04-12 19:43:48,758 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.icMsVBjtdOda5prqI540bn3KTj02&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:43:48.792668373Z 19:43:48 web.1    | 2026-04-12 19:43:48,792 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:43:48.948216095Z 19:43:48 web.1    | 2026-04-12 19:43:48,947 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=audit_year%2Cstatus%2Ccredits_issued%2Cland_id%2Ctx_hash%2Cipfs_metadata_cid%2Cipfs_url%2Cminted_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T19:43:49.741019989Z 19:43:49 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/credits/balance?page=1&limit=2 HTTP/1.1" 200 OK
-2026-04-12T19:43:57.029586443Z 19:43:57 web.1    | 2026-04-12 19:43:57,023 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/6e553ffc1509b3296277040b5ebe7b42-516beb3ece8f32258dee43b29935946d:getPixels "HTTP/1.1 200 OK"
-2026-04-12T19:43:57.10470674Z 19:43:57 web.1    | 2026-04-12 19:43:57,104 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 400 Bad Request"
-2026-04-12T19:43:57.149242526Z 19:43:57 web.1    | 2026-04-12 19:43:57,147 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 200 OK"
-2026-04-12T19:43:57.14996935Z 19:43:57 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/land/list?page=1&limit=3 HTTP/1.1" 200 OK
-2026-04-12T19:44:05.290322652Z 19:44:05 web.1    | 2026-04-12 19:44:05,289 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.icMsVBjtdOda5prqI540bn3KTj02&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:44:05.317408288Z 19:44:05 web.1    | 2026-04-12 19:44:05,316 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:44:05.446330312Z 19:44:05 web.1    | 2026-04-12 19:44:05,445 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-04-12T19:44:05.446517135Z 19:44:05 web.1    | 2026-04-12 19:44:05,445 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-2026-04-12T19:44:05.446538436Z 19:44:05 web.1    | 2026-04-12 19:44:05,445 INFO sqlalchemy.engine.Engine 
-2026-04-12T19:44:05.446696948Z 19:44:05 web.1    |         SELECT
-2026-04-12T19:44:05.446701539Z 19:44:05 web.1    |             id,
-2026-04-12T19:44:05.446713549Z 19:44:05 web.1    |             user_id,
-2026-04-12T19:44:05.446815961Z 19:44:05 web.1    |             farm_name,
-2026-04-12T19:44:05.448377609Z 19:44:05 web.1    |             survey_number,
-2026-04-12T19:44:05.44838889Z 19:44:05 web.1    |             district,
-2026-04-12T19:44:05.44839177Z 19:44:05 web.1    |             taluka,
-2026-04-12T19:44:05.44839451Z 19:44:05 web.1    |             village,
-2026-04-12T19:44:05.44839726Z 19:44:05 web.1    |             state,
-2026-04-12T19:44:05.44840005Z 19:44:05 web.1    |             boundary_source,
-2026-04-12T19:44:05.44840277Z 19:44:05 web.1    |             ocr_owner_name,
-2026-04-12T19:44:05.44840551Z 19:44:05 web.1    |             doc_image_url,
-2026-04-12T19:44:05.44840887Z 19:44:05 web.1    |             lgd_district_code,
-2026-04-12T19:44:05.44841159Z 19:44:05 web.1    |             lgd_taluka_code,
-2026-04-12T19:44:05.44841432Z 19:44:05 web.1    |             lgd_village_code,
-2026-04-12T19:44:05.44841704Z 19:44:05 web.1    |             gis_code,
-2026-04-12T19:44:05.44842012Z 19:44:05 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:44:05.44842341Z 19:44:05 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:44:05.44842609Z 19:44:05 web.1    |             created_at,
-2026-04-12T19:44:05.44842889Z 19:44:05 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:44:05.44843161Z 19:44:05 web.1    |         FROM land_parcels
-2026-04-12T19:44:05.4484343Z 19:44:05 web.1    |         WHERE id = $1
-2026-04-12T19:44:05.44843763Z 19:44:05 web.1    |         
-2026-04-12T19:44:05.44844112Z 19:44:05 web.1    | 2026-04-12 19:44:05,445 | INFO     | sqlalchemy.engine.Engine | 
-2026-04-12T19:44:05.448443811Z 19:44:05 web.1    |         SELECT
-2026-04-12T19:44:05.448446611Z 19:44:05 web.1    |             id,
-2026-04-12T19:44:05.448449411Z 19:44:05 web.1    |             user_id,
-2026-04-12T19:44:05.448452351Z 19:44:05 web.1    |             farm_name,
-2026-04-12T19:44:05.448455751Z 19:44:05 web.1    |             survey_number,
-2026-04-12T19:44:05.448458451Z 19:44:05 web.1    |             district,
-2026-04-12T19:44:05.448461381Z 19:44:05 web.1    |             taluka,
-2026-04-12T19:44:05.448464161Z 19:44:05 web.1    |             village,
-2026-04-12T19:44:05.448497121Z 19:44:05 web.1    |             state,
-2026-04-12T19:44:05.448507232Z 19:44:05 web.1    |             boundary_source,
-2026-04-12T19:44:05.448589563Z 19:44:05 web.1    |             ocr_owner_name,
-2026-04-12T19:44:05.448649444Z 19:44:05 web.1    |             doc_image_url,
-2026-04-12T19:44:05.448712205Z 19:44:05 web.1    |             lgd_district_code,
-2026-04-12T19:44:05.448777237Z 19:44:05 web.1    |             lgd_taluka_code,
-2026-04-12T19:44:05.448853378Z 19:44:05 web.1    |             lgd_village_code,
-2026-04-12T19:44:05.448926789Z 19:44:05 web.1    |             gis_code,
-2026-04-12T19:44:05.449035281Z 19:44:05 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:44:05.449110133Z 19:44:05 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:44:05.449211774Z 19:44:05 web.1    |             created_at,
-2026-04-12T19:44:05.449302026Z 19:44:05 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:44:05.449408598Z 19:44:05 web.1    |         FROM land_parcels
-2026-04-12T19:44:05.449535831Z 19:44:05 web.1    |         WHERE id = $1
-2026-04-12T19:44:05.449671043Z 19:44:05 web.1    |         
-2026-04-12T19:44:05.449881447Z 19:44:05 web.1    | 2026-04-12 19:44:05,446 INFO sqlalchemy.engine.Engine [cached since 117.3s ago] ('9d6190ee-6eaf-49c9-87c3-11744a486799',)
-2026-04-12T19:44:05.449952518Z 19:44:05 web.1    | 2026-04-12 19:44:05,446 | INFO     | sqlalchemy.engine.Engine | [cached since 117.3s ago] ('9d6190ee-6eaf-49c9-87c3-11744a486799',)
-2026-04-12T19:44:05.452659698Z 19:44:05 web.1    | 2026-04-12 19:44:05,452 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-04-12T19:44:05.452724529Z 19:44:05 web.1    | 2026-04-12 19:44:05,452 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-2026-04-12T19:44:05.482291741Z 19:44:05 web.1    | 2026-04-12 19:44:05,481 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus&land_id=eq.9d6190ee-6eaf-49c9-87c3-11744a486799&audit_year=eq.2026&order=created_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:44:44.420999069Z 19:44:44 web.1    | 2026-04-12 19:44:44,420 | INFO     | terratrust.zones | Generated 6 zones for land 9d6190ee-6eaf-49c9-87c3-11744a486799 (area=4.69 ha, radius=11 m)
-2026-04-12T19:44:44.612912798Z 19:44:44 web.1    | 2026-04-12 19:44:44,608 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits "HTTP/2 201 Created"
-2026-04-12T19:44:44.612947409Z 19:44:44 web.1    | 2026-04-12 19:44:44,610 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-04-12T19:44:44.612953619Z 19:44:44 web.1    | 2026-04-12 19:44:44,610 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-2026-04-12T19:44:44.612959229Z 19:44:44 web.1    | 2026-04-12 19:44:44,610 INFO sqlalchemy.engine.Engine 
-2026-04-12T19:44:44.612964679Z 19:44:44 web.1    |         INSERT INTO sampling_zones (
-2026-04-12T19:44:44.612970249Z 19:44:44 web.1    |             id,
-2026-04-12T19:44:44.612975219Z 19:44:44 web.1    |             land_id,
-2026-04-12T19:44:44.612980059Z 19:44:44 web.1    |             audit_id,
-2026-04-12T19:44:44.612985079Z 19:44:44 web.1    |             zone_label,
-2026-04-12T19:44:44.612989719Z 19:44:44 web.1    |             centre_point,
-2026-04-12T19:44:44.61299419Z 19:44:44 web.1    |             radius_metres,
-2026-04-12T19:44:44.61299893Z 19:44:44 web.1    |             zone_type,
-2026-04-12T19:44:44.61300358Z 19:44:44 web.1    |             ndvi_mean,
-2026-04-12T19:44:44.61300875Z 19:44:44 web.1    |             gedi_available,
-2026-04-12T19:44:44.61301308Z 19:44:44 web.1    |             sequence_order,
-2026-04-12T19:44:44.61302888Z 19:44:44 web.1    |             created_at
-2026-04-12T19:44:44.613034Z 19:44:44 web.1    |         )
-2026-04-12T19:44:44.61304602Z 19:44:44 web.1    |         VALUES (
-2026-04-12T19:44:44.613103762Z 19:44:44 web.1    |             $1,
-2026-04-12T19:44:44.613117742Z 19:44:44 web.1    |             $2,
-2026-04-12T19:44:44.613182933Z 19:44:44 web.1    |             $3,
-2026-04-12T19:44:44.613200353Z 19:44:44 web.1    |             $4,
-2026-04-12T19:44:44.613209083Z 19:44:44 web.1    |             ST_SetSRID(ST_MakePoint($5, $6), 4326),
-2026-04-12T19:44:44.613284835Z 19:44:44 web.1    |             $7,
-2026-04-12T19:44:44.613294245Z 19:44:44 web.1    |             $8,
-2026-04-12T19:44:44.613343156Z 19:44:44 web.1    |             $9,
-2026-04-12T19:44:44.613416977Z 19:44:44 web.1    |             $10,
-2026-04-12T19:44:44.613427727Z 19:44:44 web.1    |             $11,
-2026-04-12T19:44:44.613489689Z 19:44:44 web.1    |             COALESCE($12, NOW())
-2026-04-12T19:44:44.613495899Z 19:44:44 web.1    |         )
-2026-04-12T19:44:44.613531489Z 19:44:44 web.1    |         
-2026-04-12T19:44:44.61358179Z 19:44:44 web.1    | 2026-04-12 19:44:44,610 | INFO     | sqlalchemy.engine.Engine | 
-2026-04-12T19:44:44.613815985Z 19:44:44 web.1    |         INSERT INTO sampling_zones (
-2026-04-12T19:44:44.613821255Z 19:44:44 web.1    |             id,
-2026-04-12T19:44:44.613824805Z 19:44:44 web.1    |             land_id,
-2026-04-12T19:44:44.613978458Z 19:44:44 web.1    |             audit_id,
-2026-04-12T19:44:44.614036709Z 19:44:44 web.1    |             zone_label,
-2026-04-12T19:44:44.61411516Z 19:44:44 web.1    |             centre_point,
-2026-04-12T19:44:44.614189701Z 19:44:44 web.1    |             radius_metres,
-2026-04-12T19:44:44.614265463Z 19:44:44 web.1    |             zone_type,
-2026-04-12T19:44:44.614317214Z 19:44:44 web.1    |             ndvi_mean,
-2026-04-12T19:44:44.615157769Z 19:44:44 web.1    |             gedi_available,
-2026-04-12T19:44:44.61516683Z 19:44:44 web.1    |             sequence_order,
-2026-04-12T19:44:44.61517035Z 19:44:44 web.1    |             created_at
-2026-04-12T19:44:44.615173819Z 19:44:44 web.1    |         )
-2026-04-12T19:44:44.61517658Z 19:44:44 web.1    |         VALUES (
-2026-04-12T19:44:44.61517947Z 19:44:44 web.1    |             $1,
-2026-04-12T19:44:44.61518247Z 19:44:44 web.1    |             $2,
-2026-04-12T19:44:44.61518518Z 19:44:44 web.1    |             $3,
-2026-04-12T19:44:44.61520273Z 19:44:44 web.1    |             $4,
-2026-04-12T19:44:44.61520668Z 19:44:44 web.1    |             ST_SetSRID(ST_MakePoint($5, $6), 4326),
-2026-04-12T19:44:44.61520953Z 19:44:44 web.1    |             $7,
-2026-04-12T19:44:44.6152124Z 19:44:44 web.1    |             $8,
-2026-04-12T19:44:44.61521522Z 19:44:44 web.1    |             $9,
-2026-04-12T19:44:44.61521811Z 19:44:44 web.1    |             $10,
-2026-04-12T19:44:44.615220931Z 19:44:44 web.1    |             $11,
-2026-04-12T19:44:44.615224031Z 19:44:44 web.1    |             COALESCE($12, NOW())
-2026-04-12T19:44:44.61522694Z 19:44:44 web.1    |         )
-2026-04-12T19:44:44.615229871Z 19:44:44 web.1    |         
-2026-04-12T19:44:44.615238651Z 19:44:44 web.1    | 2026-04-12 19:44:44,610 INFO sqlalchemy.engine.Engine [cached since 138.1s ago] [('17211504-b738-46d3-a960-5cdaaf342cd4', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'A', 73.85675246065904, 18.521498240991228, 11.0, 'medium_density', 0.1280954926064493, False, 1, None), ('2086e32d-3002-4487-a7c1-854a0275f117', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'B', 73.856225395713, 18.521166662576945, 11.0, 'high_density', 0.3055671829217246, False, 2, None), ('6ff5d168-ee59-4f14-8836-ee9dbaabc4d7', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'C', 73.85687360149949, 18.52012420193507, 11.0, 'low_density', 0.09077201447527142, False, 3, None), ('b134cefe-c4fa-4e34-a53c-f7fcfe0aaf2a', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'D', 73.85707626059909, 18.520234275183338, 11.0, 'medium_density', 0.1771177117711771, False, 4, None), ('f435adac-22f9-4bbf-ae40-2f8656737bda', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'E', 73.85773094550302, 18.520072139285908, 11.0, 'low_density', 0.10951778292655945, True, 5, None), ('ba155cd8-dd87-41a1-8517-3f35c5169453', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'F', 73.85748208720477, 18.521447609779205, 11.0, 'high_density', 0.39193205944798304, False, 6, None)]
-2026-04-12T19:44:44.615242181Z 19:44:44 web.1    | 2026-04-12 19:44:44,610 | INFO     | sqlalchemy.engine.Engine | [cached since 138.1s ago] [('17211504-b738-46d3-a960-5cdaaf342cd4', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'A', 73.85675246065904, 18.521498240991228, 11.0, 'medium_density', 0.1280954926064493, False, 1, None), ('2086e32d-3002-4487-a7c1-854a0275f117', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'B', 73.856225395713, 18.521166662576945, 11.0, 'high_density', 0.3055671829217246, False, 2, None), ('6ff5d168-ee59-4f14-8836-ee9dbaabc4d7', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'C', 73.85687360149949, 18.52012420193507, 11.0, 'low_density', 0.09077201447527142, False, 3, None), ('b134cefe-c4fa-4e34-a53c-f7fcfe0aaf2a', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'D', 73.85707626059909, 18.520234275183338, 11.0, 'medium_density', 0.1771177117711771, False, 4, None), ('f435adac-22f9-4bbf-ae40-2f8656737bda', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'E', 73.85773094550302, 18.520072139285908, 11.0, 'low_density', 0.10951778292655945, True, 5, None), ('ba155cd8-dd87-41a1-8517-3f35c5169453', '9d6190ee-6eaf-49c9-87c3-11744a486799', 'aaa1ea30-769c-49d5-aec3-a2663f4ce2c3', 'F', 73.85748208720477, 18.521447609779205, 11.0, 'high_density', 0.39193205944798304, False, 6, None)]
-2026-04-12T19:44:44.644962856Z 19:44:44 web.1    | 2026-04-12 19:44:44,644 INFO sqlalchemy.engine.Engine COMMIT
-2026-04-12T19:44:44.644999636Z 19:44:44 web.1    | 2026-04-12 19:44:44,644 | INFO     | sqlalchemy.engine.Engine | COMMIT
-2026-04-12T19:44:44.648198835Z 19:44:44 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/audit/zones?land_id=9d6190ee-6eaf-49c9-87c3-11744a486799 HTTP/1.1" 200 OK
-2026-04-12T19:44:58.326890279Z 19:44:58 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-2026-04-12T19:44:58.326923589Z 19:44:58 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-2026-04-12T19:44:58.326928209Z 19:44:58 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-2026-04-12T19:44:58.3269324Z 19:44:58 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-2026-04-12T19:44:58.32693654Z 19:44:58 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-2026-04-12T19:44:58.579579722Z 19:44:58 web.1    | 2026-04-12 19:44:58,576 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.icMsVBjtdOda5prqI540bn3KTj02&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:44:58.638487302Z 19:44:58 web.1    | 2026-04-12 19:44:58,637 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:44:58.639598102Z 19:44:58 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
-2026-04-12T19:45:00.150637988Z 19:45:00 web.1    | 2026-04-12 19:45:00,150 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.icMsVBjtdOda5prqI540bn3KTj02&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:45:00.180444155Z 19:45:00 web.1    | 2026-04-12 19:45:00,179 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:45:00.20255197Z 19:45:00 web.1    | 2026-04-12 19:45:00,198 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.icMsVBjtdOda5prqI540bn3KTj02&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:45:00.202593141Z 19:45:00 web.1    | 2026-04-12 19:45:00,199 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-04-12T19:45:00.202596551Z 19:45:00 web.1    | 2026-04-12 19:45:00,199 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-2026-04-12T19:45:00.202599311Z 19:45:00 web.1    | 2026-04-12 19:45:00,200 INFO sqlalchemy.engine.Engine 
-2026-04-12T19:45:00.202602591Z 19:45:00 web.1    |         SELECT
-2026-04-12T19:45:00.202605081Z 19:45:00 web.1    |             id,
-2026-04-12T19:45:00.202607991Z 19:45:00 web.1    |             farm_name,
-2026-04-12T19:45:00.202610581Z 19:45:00 web.1    |             survey_number,
-2026-04-12T19:45:00.202612991Z 19:45:00 web.1    |             district,
-2026-04-12T19:45:00.202615391Z 19:45:00 web.1    |             taluka,
-2026-04-12T19:45:00.202617811Z 19:45:00 web.1    |             village,
-2026-04-12T19:45:00.202620251Z 19:45:00 web.1    |             state,
-2026-04-12T19:45:00.202622681Z 19:45:00 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:45:00.202625541Z 19:45:00 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:45:00.202627992Z 19:45:00 web.1    |             boundary_source,
-2026-04-12T19:45:00.202630752Z 19:45:00 web.1    |             created_at AS registered_at,
-2026-04-12T19:45:00.202633221Z 19:45:00 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:45:00.202635822Z 19:45:00 web.1    |         FROM land_parcels
-2026-04-12T19:45:00.202638222Z 19:45:00 web.1    |         WHERE user_id = $1
-2026-04-12T19:45:00.202641082Z 19:45:00 web.1    |         ORDER BY registered_at DESC
-2026-04-12T19:45:00.202643732Z 19:45:00 web.1    |         
-2026-04-12T19:45:00.202646342Z 19:45:00 web.1    | 2026-04-12 19:45:00,200 | INFO     | sqlalchemy.engine.Engine | 
-2026-04-12T19:45:00.202648792Z 19:45:00 web.1    |         SELECT
-2026-04-12T19:45:00.202651252Z 19:45:00 web.1    |             id,
-2026-04-12T19:45:00.202653742Z 19:45:00 web.1    |             farm_name,
-2026-04-12T19:45:00.202656152Z 19:45:00 web.1    |             survey_number,
-2026-04-12T19:45:00.202658622Z 19:45:00 web.1    |             district,
-2026-04-12T19:45:00.202661062Z 19:45:00 web.1    |             taluka,
-2026-04-12T19:45:00.202663472Z 19:45:00 web.1    |             village,
-2026-04-12T19:45:00.202665912Z 19:45:00 web.1    |             state,
-2026-04-12T19:45:00.202668342Z 19:45:00 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T19:45:00.202670892Z 19:45:00 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T19:45:00.202673392Z 19:45:00 web.1    |             boundary_source,
-2026-04-12T19:45:00.202675882Z 19:45:00 web.1    |             created_at AS registered_at,
-2026-04-12T19:45:00.202678453Z 19:45:00 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T19:45:00.202680913Z 19:45:00 web.1    |         FROM land_parcels
-2026-04-12T19:45:00.202683302Z 19:45:00 web.1    |         WHERE user_id = $1
-2026-04-12T19:45:00.202685722Z 19:45:00 web.1    |         ORDER BY registered_at DESC
-2026-04-12T19:45:00.202688153Z 19:45:00 web.1    |         
-2026-04-12T19:45:00.202691383Z 19:45:00 web.1    | 2026-04-12 19:45:00,200 INFO sqlalchemy.engine.Engine [cached since 1489s ago] ('54e70864-4a54-4280-9a3f-3939a94892f1',)
-2026-04-12T19:45:00.202696283Z 19:45:00 web.1    | 2026-04-12 19:45:00,200 | INFO     | sqlalchemy.engine.Engine | [cached since 1489s ago] ('54e70864-4a54-4280-9a3f-3939a94892f1',)
-2026-04-12T19:45:00.20636694Z 19:45:00 web.1    | 2026-04-12 19:45:00,205 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-04-12T19:45:00.20638609Z 19:45:00 web.1    | 2026-04-12 19:45:00,205 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-2026-04-12T19:45:00.267193965Z 19:45:00 web.1    | 2026-04-12 19:45:00,266 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T19:45:00.295474414Z 19:45:00 web.1    | 2026-04-12 19:45:00,294 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at&land_id=eq.9d6190ee-6eaf-49c9-87c3-11744a486799&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T19:45:00.424546661Z 19:45:00 web.1    | 2026-04-12 19:45:00,423 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=audit_year%2Cstatus%2Ccredits_issued%2Cland_id%2Ctx_hash%2Cipfs_metadata_cid%2Cipfs_url%2Cminted_at&user_id=eq.54e70864-4a54-4280-9a3f-3939a94892f1&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T19:45:01.235940858Z 19:45:01 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/credits/balance?page=1&limit=2 HTTP/1.1" 200 OK
-2026-04-12T19:45:08.135488337Z 19:45:08 web.1    | 2026-04-12 19:45:08,134 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/6e553ffc1509b3296277040b5ebe7b42-91ee945b1649a13e1f6eb95ced64c857:getPixels "HTTP/1.1 200 OK"
-2026-04-12T19:45:08.238038487Z 19:45:08 web.1    | 2026-04-12 19:45:08,237 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 400 Bad Request"
-2026-04-12T19:45:08.289904468Z 19:45:08 web.1    | 2026-04-12 19:45:08,289 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 200 OK"
-2026-04-12T19:45:08.290869996Z 19:45:08 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/land/list?page=1&limit=3 HTTP/1.1" 200 OK
+2026-04-12T20:07:34.592154983Z 20:07:34 web.1    |                             nisar_used,
+2026-04-12T20:07:34.592186675Z 20:07:34 web.1    |                             xgboost_model_version,
+2026-04-12T20:07:34.592243168Z 20:07:34 web.1    |                             features_count,
+2026-04-12T20:07:34.592285051Z 20:07:34 web.1    |                             trees_scanned_count,
+2026-04-12T20:07:34.592332803Z 20:07:34 web.1    |                             total_biomass_tonnes,
+2026-04-12T20:07:34.592358195Z 20:07:34 web.1    |                             prev_year_biomass,
+2026-04-12T20:07:34.592425699Z 20:07:34 web.1    |                             delta_biomass,
+2026-04-12T20:07:34.592433979Z 20:07:34 web.1    |                             carbon_tonnes,
+2026-04-12T20:07:34.592479322Z 20:07:34 web.1    |                             co2_equivalent,
+2026-04-12T20:07:34.592537335Z 20:07:34 web.1    |                             credits_issued,
+2026-04-12T20:07:34.592545855Z 20:07:34 web.1    |                             ipfs_metadata_cid,
+2026-04-12T20:07:34.686245498Z 20:07:34 web.1    |                             tx_hash,
+2026-04-12T20:07:34.686309032Z 20:07:34 web.1    |                             token_id,
+2026-04-12T20:07:34.686314522Z 20:07:34 web.1    |                             minted_at
+2026-04-12T20:07:34.686318092Z 20:07:34 web.1    |                         ) VALUES (
+2026-04-12T20:07:34.686355174Z 20:07:34 web.1    |                             $1,
+2026-04-12T20:07:34.686426149Z 20:07:34 web.1    |                             $2,
+2026-04-12T20:07:34.686430809Z 20:07:34 web.1    |                             $3,
+2026-04-12T20:07:34.686483502Z 20:07:34 web.1    |                             $4,
+2026-04-12T20:07:34.686514294Z 20:07:34 web.1    |                             $5,
+2026-04-12T20:07:34.686615079Z 20:07:34 web.1    |                             $6,
+2026-04-12T20:07:34.686675933Z 20:07:34 web.1    |                             $7,
+2026-04-12T20:07:34.686680483Z 20:07:34 web.1    |                             $8,
+2026-04-12T20:07:34.686725955Z 20:07:34 web.1    |                             $9,
+2026-04-12T20:07:34.686897475Z 20:07:34 web.1    |                             $10,
+2026-04-12T20:07:34.686910516Z 20:07:34 web.1    |                             $11,
+2026-04-12T20:07:34.686913436Z 20:07:34 web.1    |                             $12,
+2026-04-12T20:07:34.686915886Z 20:07:34 web.1    |                             $13,
+2026-04-12T20:07:34.686953599Z 20:07:34 web.1    |                             $14,
+2026-04-12T20:07:34.686959939Z 20:07:34 web.1    |                             $15,
+2026-04-12T20:07:34.687001001Z 20:07:34 web.1    |                             $16,
+2026-04-12T20:07:34.687067705Z 20:07:34 web.1    |                             $17,
+2026-04-12T20:07:34.687073505Z 20:07:34 web.1    |                             $18,
+2026-04-12T20:07:34.68714933Z 20:07:34 web.1    |                             $19,
+2026-04-12T20:07:34.68715568Z 20:07:34 web.1    |                             $20,
+2026-04-12T20:07:34.687216053Z 20:07:34 web.1    |                             $21,
+2026-04-12T20:07:34.687229464Z 20:07:34 web.1    |                             $22,
+2026-04-12T20:07:34.687269246Z 20:07:34 web.1    |                             $23,
+2026-04-12T20:07:34.687293558Z 20:07:34 web.1    |                             $24
+2026-04-12T20:07:34.687377552Z 20:07:34 web.1    |                         )
+2026-04-12T20:07:34.687414155Z 20:07:34 web.1    |                         ]
+2026-04-12T20:07:34.687449077Z 20:07:34 web.1    | [parameters: ('2a8f35a6-e080-416e-baff-41ac966dd4ba', '570b5dcf-ddd0-439d-929b-cff2e6d72fc9', 2024, 'MINTED', -13.2, -11.8, 0.64, 0.58, 13.4, 541.0, False, 'v3.1.0', 9, 11, 12.4, 0.0, 12.4, 5.828, 21.38, 21.38, 'QmDemoAcct4Baseline2024FakeIPFSHashXXXXXXXXXX', '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 4001, '2024-11-15T10:00:00Z')]
+2026-04-12T20:07:34.687478538Z 20:07:34 web.1    | (Background on this error at: https://sqlalche.me/e/20/dbapi)
+2026-04-12T20:07:34.68751141Z 20:07:34 web.1    | Traceback (most recent call last):
+2026-04-12T20:07:34.687572794Z 20:07:34 web.1    |   File "asyncpg/protocol/prepared_stmt.pyx", line 175, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
+2026-04-12T20:07:34.687639107Z 20:07:34 web.1    |   File "asyncpg/protocol/codecs/base.pyx", line 251, in asyncpg.protocol.protocol.Codec.encode
+2026-04-12T20:07:34.687644208Z 20:07:34 web.1    |   File "asyncpg/protocol/codecs/base.pyx", line 153, in asyncpg.protocol.protocol.Codec.encode_scalar
+2026-04-12T20:07:34.687713772Z 20:07:34 web.1    |   File "asyncpg/pgproto/codecs/datetime.pyx", line 208, in asyncpg.pgproto.pgproto.timestamptz_encode
+2026-04-12T20:07:34.687719602Z 20:07:34 web.1    | TypeError: expected a datetime.date or datetime.datetime instance, got 'str'
+2026-04-12T20:07:34.687778685Z 20:07:34 web.1    | 
+2026-04-12T20:07:34.687783476Z 20:07:34 web.1    | The above exception was the direct cause of the following exception:
+2026-04-12T20:07:34.687837969Z 20:07:34 web.1    | 
+2026-04-12T20:07:34.687842819Z 20:07:34 web.1    | Traceback (most recent call last):
+2026-04-12T20:07:34.687905633Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 550, in _prepare_and_execute
+2026-04-12T20:07:34.688010099Z 20:07:34 web.1    |     self._rows = deque(await prepared_stmt.fetch(*parameters))
+2026-04-12T20:07:34.688015439Z 20:07:34 web.1    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.688022829Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 177, in fetch
+2026-04-12T20:07:34.688153797Z 20:07:34 web.1    |     data = await self.__bind_execute(args, 0, timeout)
+2026-04-12T20:07:34.688159247Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.688162667Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 268, in __bind_execute
+2026-04-12T20:07:34.688245742Z 20:07:34 web.1    |     data, status, _ = await self.__do_execute(
+2026-04-12T20:07:34.688255073Z 20:07:34 web.1    |                       ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.688258513Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 257, in __do_execute
+2026-04-12T20:07:34.688314686Z 20:07:34 web.1    |     return await executor(protocol)
+2026-04-12T20:07:34.688319266Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.6883858Z 20:07:34 web.1    |   File "asyncpg/protocol/protocol.pyx", line 184, in bind_execute
+2026-04-12T20:07:34.688402681Z 20:07:34 web.1    |   File "asyncpg/protocol/prepared_stmt.pyx", line 204, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
+2026-04-12T20:07:34.688462464Z 20:07:34 web.1    | asyncpg.exceptions.DataError: invalid input for query argument $24: '2024-11-15T10:00:00Z' (expected a datetime.date or datetime.datetime instance, got 'str')
+2026-04-12T20:07:34.688486936Z 20:07:34 web.1    | 
+2026-04-12T20:07:34.688525488Z 20:07:34 web.1    | The above exception was the direct cause of the following exception:
+2026-04-12T20:07:34.688529638Z 20:07:34 web.1    | 
+2026-04-12T20:07:34.688593052Z 20:07:34 web.1    | Traceback (most recent call last):
+2026-04-12T20:07:34.688598272Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+2026-04-12T20:07:34.688647415Z 20:07:34 web.1    |     self.dialect.do_execute(
+2026-04-12T20:07:34.688698218Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+2026-04-12T20:07:34.688757301Z 20:07:34 web.1    |     cursor.execute(statement, parameters)
+2026-04-12T20:07:34.688782432Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
+2026-04-12T20:07:34.688790813Z 20:07:34 web.1    |     self._adapt_connection.await_(
+2026-04-12T20:07:34.68891078Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-04-12T20:07:34.688945522Z 20:07:34 web.1    |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-04-12T20:07:34.689022866Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.689050218Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-04-12T20:07:34.689136993Z 20:07:34 web.1    |     value = await result
+2026-04-12T20:07:34.689141623Z 20:07:34 web.1    |             ^^^^^^^^^^^^
+2026-04-12T20:07:34.689148644Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
+2026-04-12T20:07:34.689196466Z 20:07:34 web.1    |     self._handle_exception(error)
+2026-04-12T20:07:34.689240619Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
+2026-04-12T20:07:34.689297892Z 20:07:34 web.1    |     self._adapt_connection._handle_exception(error)
+2026-04-12T20:07:34.689303352Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
+2026-04-12T20:07:34.689356905Z 20:07:34 web.1    |     raise translated_error from error
+2026-04-12T20:07:34.689364196Z 20:07:34 web.1    | sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $24: '2024-11-15T10:00:00Z' (expected a datetime.date or datetime.datetime instance, got 'str')
+2026-04-12T20:07:34.68943674Z 20:07:34 web.1    | 
+2026-04-12T20:07:34.689468872Z 20:07:34 web.1    | The above exception was the direct cause of the following exception:
+2026-04-12T20:07:34.689476762Z 20:07:34 web.1    | 
+2026-04-12T20:07:34.689544396Z 20:07:34 web.1    | Traceback (most recent call last):
+2026-04-12T20:07:34.689623531Z 20:07:34 web.1    |   File "/opt/render/project/src/demo/restore.py", line 172, in restore_to_checkpoint
+2026-04-12T20:07:34.689634831Z 20:07:34 web.1    |     await conn.execute(
+2026-04-12T20:07:34.689714836Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/engine.py", line 659, in execute
+2026-04-12T20:07:34.689719506Z 20:07:34 web.1    |     result = await greenlet_spawn(
+2026-04-12T20:07:34.689727026Z 20:07:34 web.1    |              ^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.689813571Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+2026-04-12T20:07:34.689818802Z 20:07:34 web.1    |     result = context.throw(*sys.exc_info())
+2026-04-12T20:07:34.689825892Z 20:07:34 web.1    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.689915817Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
+2026-04-12T20:07:34.689929638Z 20:07:34 web.1    |     return meth(
+2026-04-12T20:07:34.689987691Z 20:07:34 web.1    |            ^^^^^
+2026-04-12T20:07:34.689992161Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
+2026-04-12T20:07:34.690042974Z 20:07:34 web.1    |     return connection._execute_clauseelement(
+2026-04-12T20:07:34.690111338Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.690119179Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
+2026-04-12T20:07:34.690184272Z 20:07:34 web.1    |     ret = self._execute_context(
+2026-04-12T20:07:34.690221874Z 20:07:34 web.1    |           ^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.690270917Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
+2026-04-12T20:07:34.690304049Z 20:07:34 web.1    |     return self._exec_single_context(
+2026-04-12T20:07:34.690356192Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.690408285Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
+2026-04-12T20:07:34.690453248Z 20:07:34 web.1    |     self._handle_dbapi_exception(
+2026-04-12T20:07:34.690456208Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
+2026-04-12T20:07:34.690567864Z 20:07:34 web.1    |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+2026-04-12T20:07:34.690574085Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
+2026-04-12T20:07:34.690576785Z 20:07:34 web.1    |     self.dialect.do_execute(
+2026-04-12T20:07:34.690603196Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
+2026-04-12T20:07:34.690637908Z 20:07:34 web.1    |     cursor.execute(statement, parameters)
+2026-04-12T20:07:34.690688011Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
+2026-04-12T20:07:34.690715173Z 20:07:34 web.1    |     self._adapt_connection.await_(
+2026-04-12T20:07:34.690767256Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+2026-04-12T20:07:34.690775676Z 20:07:34 web.1    |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+2026-04-12T20:07:34.690824829Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-12T20:07:34.690895213Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+2026-04-12T20:07:34.690920224Z 20:07:34 web.1    |     value = await result
+2026-04-12T20:07:34.690982538Z 20:07:34 web.1    |             ^^^^^^^^^^^^
+2026-04-12T20:07:34.691072693Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
+2026-04-12T20:07:34.691078343Z 20:07:34 web.1    |     self._handle_exception(error)
+2026-04-12T20:07:34.691089444Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
+2026-04-12T20:07:34.691161978Z 20:07:34 web.1    |     self._adapt_connection._handle_exception(error)
+2026-04-12T20:07:34.691224922Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
+2026-04-12T20:07:34.691233752Z 20:07:34 web.1    |     raise translated_error from error
+2026-04-12T20:07:34.691284515Z 20:07:34 web.1    | sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $24: '2024-11-15T10:00:00Z' (expected a datetime.date or datetime.datetime instance, got 'str')
+2026-04-12T20:07:34.691383111Z 20:07:34 web.1    | [SQL: 
+2026-04-12T20:07:34.691388091Z 20:07:34 web.1    |                         INSERT INTO carbon_audits (
+2026-04-12T20:07:34.691390561Z 20:07:34 web.1    |                             land_id,
+2026-04-12T20:07:34.691671167Z 20:07:34 web.1    |                             user_id,
+2026-04-12T20:07:34.691676337Z 20:07:34 web.1    |                             audit_year,
+2026-04-12T20:07:34.691678577Z 20:07:34 web.1    |                             status,
+2026-04-12T20:07:34.691680628Z 20:07:34 web.1    |                             s1_vh_mean_db,
+2026-04-12T20:07:34.691682797Z 20:07:34 web.1    |                             s1_vv_mean_db,
+2026-04-12T20:07:34.691684818Z 20:07:34 web.1    |                             s2_ndvi_mean,
+2026-04-12T20:07:34.691747681Z 20:07:34 web.1    |                             s2_evi_mean,
+2026-04-12T20:07:34.691752752Z 20:07:34 web.1    |                             gedi_height_mean,
+2026-04-12T20:07:34.691812735Z 20:07:34 web.1    |                             srtm_elevation_mean,
+2026-04-12T20:07:34.691860498Z 20:07:34 web.1    |                             nisar_used,
+2026-04-12T20:07:34.691864218Z 20:07:34 web.1    |                             xgboost_model_version,
+2026-04-12T20:07:34.691942072Z 20:07:34 web.1    |                             features_count,
+2026-04-12T20:07:34.691994725Z 20:07:34 web.1    |                             trees_scanned_count,
+2026-04-12T20:07:34.692027797Z 20:07:34 web.1    |                             total_biomass_tonnes,
+2026-04-12T20:07:34.692056929Z 20:07:34 web.1    |                             prev_year_biomass,
+2026-04-12T20:07:34.692103252Z 20:07:34 web.1    |                             delta_biomass,
+2026-04-12T20:07:34.692144554Z 20:07:34 web.1    |                             carbon_tonnes,
+2026-04-12T20:07:34.692168785Z 20:07:34 web.1    |                             co2_equivalent,
+2026-04-12T20:07:34.692219718Z 20:07:34 web.1    |                             credits_issued,
+2026-04-12T20:07:34.692262241Z 20:07:34 web.1    |                             ipfs_metadata_cid,
+2026-04-12T20:07:34.692277142Z 20:07:34 web.1    |                             tx_hash,
+2026-04-12T20:07:34.692335255Z 20:07:34 web.1    |                             token_id,
+2026-04-12T20:07:34.692343875Z 20:07:34 web.1    |                             minted_at
+2026-04-12T20:07:34.692394988Z 20:07:34 web.1    |                         ) VALUES (
+2026-04-12T20:07:34.69243206Z 20:07:34 web.1    |                             $1,
+2026-04-12T20:07:34.692466062Z 20:07:34 web.1    |                             $2,
+2026-04-12T20:07:34.692508275Z 20:07:34 web.1    |                             $3,
+2026-04-12T20:07:34.692536906Z 20:07:34 web.1    |                             $4,
+2026-04-12T20:07:34.692583459Z 20:07:34 web.1    |                             $5,
+2026-04-12T20:07:34.692636782Z 20:07:34 web.1    |                             $6,
+2026-04-12T20:07:34.692676744Z 20:07:34 web.1    |                             $7,
+2026-04-12T20:07:34.692710356Z 20:07:34 web.1    |                             $8,
+2026-04-12T20:07:34.692754519Z 20:07:34 web.1    |                             $9,
+2026-04-12T20:07:34.692758159Z 20:07:34 web.1    |                             $10,
+2026-04-12T20:07:34.692830753Z 20:07:34 web.1    |                             $11,
+2026-04-12T20:07:34.692842824Z 20:07:34 web.1    |                             $12,
+2026-04-12T20:07:34.69294384Z 20:07:34 web.1    |                             $13,
+2026-04-12T20:07:34.69295982Z 20:07:34 web.1    |                             $14,
+2026-04-12T20:07:34.693040255Z 20:07:34 web.1    |                             $15,
+2026-04-12T20:07:34.693084188Z 20:07:34 web.1    |                             $16,
+2026-04-12T20:07:34.693163942Z 20:07:34 web.1    |                             $17,
+2026-04-12T20:07:34.693172893Z 20:07:34 web.1    |                             $18,
+2026-04-12T20:07:34.693222015Z 20:07:34 web.1    |                             $19,
+2026-04-12T20:07:34.693271678Z 20:07:34 web.1    |                             $20,
+2026-04-12T20:07:34.69330599Z 20:07:34 web.1    |                             $21,
+2026-04-12T20:07:34.693351453Z 20:07:34 web.1    |                             $22,
+2026-04-12T20:07:34.693398345Z 20:07:34 web.1    |                             $23,
+2026-04-12T20:07:34.693401286Z 20:07:34 web.1    |                             $24
+2026-04-12T20:07:34.693457819Z 20:07:34 web.1    |                         )
+2026-04-12T20:07:34.69347929Z 20:07:34 web.1    |                         ]
+2026-04-12T20:07:34.693534023Z 20:07:34 web.1    | [parameters: ('2a8f35a6-e080-416e-baff-41ac966dd4ba', '570b5dcf-ddd0-439d-929b-cff2e6d72fc9', 2024, 'MINTED', -13.2, -11.8, 0.64, 0.58, 13.4, 541.0, False, 'v3.1.0', 9, 11, 12.4, 0.0, 12.4, 5.828, 21.38, 21.38, 'QmDemoAcct4Baseline2024FakeIPFSHashXXXXXXXXXX', '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 4001, '2024-11-15T10:00:00Z')]
+2026-04-12T20:07:34.693583586Z 20:07:34 web.1    | (Background on this error at: https://sqlalche.me/e/20/dbapi)
+2026-04-12T20:07:34.838675923Z 20:07:34 web.1    | 2026-04-12 20:07:34,837 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+2026-04-12T20:07:34.88360698Z 20:07:34 web.1    | 2026-04-12 20:07:34,883 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+2026-04-12T20:07:34.885271375Z 20:07:34 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
+2026-04-12T20:07:36.406420437Z 20:07:36 web.1    | 2026-04-12 20:07:36,405 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+2026-04-12T20:07:36.437706097Z 20:07:36 web.1    | 2026-04-12 20:07:36,436 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+2026-04-12T20:07:36.513544253Z 20:07:36 web.1    | 2026-04-12 20:07:36,512 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+2026-04-12T20:07:36.550931071Z 20:07:36 web.1    | 2026-04-12 20:07:36,550 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+2026-04-12T20:07:36.551952619Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-12T20:07:36.552079976Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-12T20:07:36.552121429Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 INFO sqlalchemy.engine.Engine 
+2026-04-12T20:07:36.552251496Z 20:07:36 web.1    |         SELECT
+2026-04-12T20:07:36.552266627Z 20:07:36 web.1    |             id,
+2026-04-12T20:07:36.552408035Z 20:07:36 web.1    |             farm_name,
+2026-04-12T20:07:36.552480659Z 20:07:36 web.1    |             survey_number,
+2026-04-12T20:07:36.552502561Z 20:07:36 web.1    |             district,
+2026-04-12T20:07:36.552540053Z 20:07:36 web.1    |             taluka,
+2026-04-12T20:07:36.552593596Z 20:07:36 web.1    |             village,
+2026-04-12T20:07:36.55265912Z 20:07:36 web.1    |             state,
+2026-04-12T20:07:36.552703432Z 20:07:36 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+2026-04-12T20:07:36.552780647Z 20:07:36 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+2026-04-12T20:07:36.552834779Z 20:07:36 web.1    |             boundary_source,
+2026-04-12T20:07:36.552861781Z 20:07:36 web.1    |             created_at AS registered_at,
+2026-04-12T20:07:36.552954536Z 20:07:36 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+2026-04-12T20:07:36.55300846Z 20:07:36 web.1    |         FROM land_parcels
+2026-04-12T20:07:36.553079244Z 20:07:36 web.1    |         WHERE user_id = $1
+2026-04-12T20:07:36.553131736Z 20:07:36 web.1    |         ORDER BY registered_at DESC
+2026-04-12T20:07:36.553186339Z 20:07:36 web.1    |         
+2026-04-12T20:07:36.553247603Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 | INFO     | sqlalchemy.engine.Engine | 
+2026-04-12T20:07:36.553307637Z 20:07:36 web.1    |         SELECT
+2026-04-12T20:07:36.553353129Z 20:07:36 web.1    |             id,
+2026-04-12T20:07:36.553410552Z 20:07:36 web.1    |             farm_name,
+2026-04-12T20:07:36.553466455Z 20:07:36 web.1    |             survey_number,
+2026-04-12T20:07:36.553529839Z 20:07:36 web.1    |             district,
+2026-04-12T20:07:36.553568631Z 20:07:36 web.1    |             taluka,
+2026-04-12T20:07:36.553643205Z 20:07:36 web.1    |             village,
+2026-04-12T20:07:36.553708759Z 20:07:36 web.1    |             state,
+2026-04-12T20:07:36.553754082Z 20:07:36 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+2026-04-12T20:07:36.553816466Z 20:07:36 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+2026-04-12T20:07:36.55389663Z 20:07:36 web.1    |             boundary_source,
+2026-04-12T20:07:36.554236659Z 20:07:36 web.1    |             created_at AS registered_at,
+2026-04-12T20:07:36.554289632Z 20:07:36 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+2026-04-12T20:07:36.554294403Z 20:07:36 web.1    |         FROM land_parcels
+2026-04-12T20:07:36.554296643Z 20:07:36 web.1    |         WHERE user_id = $1
+2026-04-12T20:07:36.554298783Z 20:07:36 web.1    |         ORDER BY registered_at DESC
+2026-04-12T20:07:36.554301493Z 20:07:36 web.1    |         
+2026-04-12T20:07:36.554307603Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 INFO sqlalchemy.engine.Engine [cached since 45.31s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
+2026-04-12T20:07:36.554398188Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 | INFO     | sqlalchemy.engine.Engine | [cached since 45.31s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
+2026-04-12T20:07:36.557691276Z 20:07:36 web.1    | 2026-04-12 20:07:36,557 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-12T20:07:36.55775526Z 20:07:36 web.1    | 2026-04-12 20:07:36,557 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-12T20:07:36.60643646Z 20:07:36 web.1    | 2026-04-12 20:07:36,605 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at%2Ctrees_scanned_count%2Cerror&land_id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d&order=audit_year.desc "HTTP/2 200 OK"
+2026-04-12T20:07:36.606658703Z 20:07:36 web.1    | 2026-04-12 20:07:36,606 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=audit_year%2Cstatus%2Ccredits_issued%2Cland_id%2Ctx_hash%2Cipfs_metadata_cid%2Cipfs_url%2Cminted_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=audit_year.desc "HTTP/2 200 OK"
+2026-04-12T20:07:36.638776091Z 20:07:36 web.1    | 2026-04-12 20:07:36,638 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/land_parcels?select=farm_name&id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d "HTTP/2 200 OK"
+2026-04-12T20:07:37.49305977Z 20:07:37 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/credits/balance?page=1&limit=2 HTTP/1.1" 200 OK
+2026-04-12T20:07:39.115023229Z 20:07:39 web.1    | 2026-04-12 20:07:39,114 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/68d68828680bc6d6535314d804b07545-650db252d7f22978d3135ce70605b25c:getPixels "HTTP/1.1 200 OK"
+2026-04-12T20:07:39.191609188Z 20:07:39 web.1    | 2026-04-12 20:07:39,191 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 400 Bad Request"
+2026-04-12T20:07:39.237394134Z 20:07:39 web.1    | 2026-04-12 20:07:39,236 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 200 OK"
+2026-04-12T20:07:39.238297295Z 20:07:39 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/land/list?page=1&limit=3 HTTP/1.1" 200 OK
