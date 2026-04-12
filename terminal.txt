@@ -1,151 +1,114 @@
-03:38:17 web.1    |         
-03:38:17 web.1    | 2026-04-11 03:38:17,626 | INFO     | sqlalchemy.engine.Engine | 
-03:38:17 web.1    |         SELECT
-03:38:17 web.1    |             id,
-Menu
-03:38:17 web.1    |             farm_name,
-03:38:17 web.1    |             survey_number,
-03:38:17 web.1    |             district,
-03:38:17 web.1    |             taluka,
-03:38:17 web.1    |             village,
-03:38:17 web.1    |             state,
-03:38:17 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-03:38:17 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-03:38:17 web.1    |             boundary_source,
-03:38:17 web.1    |             created_at AS registered_at,
-03:38:17 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-03:38:17 web.1    |         FROM land_parcels
-03:38:17 web.1    |         WHERE user_id = $1
-03:38:17 web.1    |         ORDER BY registered_at DESC
-03:38:17 web.1    |         
-03:38:17 web.1    | 2026-04-11 03:38:17,626 INFO sqlalchemy.engine.Engine [cached since 8.927s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
-03:38:17 web.1    | 2026-04-11 03:38:17,626 | INFO     | sqlalchemy.engine.Engine | [cached since 8.927s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
-03:38:17 web.1    | 2026-04-11 03:38:17,631 INFO sqlalchemy.engine.Engine ROLLBACK
-03:38:17 web.1    | 2026-04-11 03:38:17,631 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-03:38:17 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/land/list?page=2&limit=10 HTTP/1.1" 200 OK
-03:38:17 web.1    | 2026-04-11 03:38:17,808 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-03:38:17 web.1    | 2026-04-11 03:38:17,808 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-03:38:17 web.1    | 2026-04-11 03:38:17,808 INFO sqlalchemy.engine.Engine 
-03:38:17 web.1    |         SELECT
-03:38:17 web.1    |             id,
-03:38:17 web.1    |             farm_name,
-03:38:17 web.1    |             survey_number,
-03:38:17 web.1    |             district,
-03:38:17 web.1    |             taluka,
-03:38:17 web.1    |             village,
-03:38:17 web.1    |             state,
-03:38:17 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-03:38:17 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-03:38:17 web.1    |             boundary_source,
-03:38:17 web.1    |             created_at AS registered_at,
-03:38:17 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-03:38:17 web.1    |         FROM land_parcels
-03:38:17 web.1    |         WHERE user_id = $1
-03:38:17 web.1    |         ORDER BY registered_at DESC
-03:38:17 web.1    |         
-03:38:17 web.1    | 2026-04-11 03:38:17,808 | INFO     | sqlalchemy.engine.Engine | 
-03:38:17 web.1    |         SELECT
-03:38:17 web.1    |             id,
-03:38:17 web.1    |             farm_name,
-03:38:17 web.1    |             survey_number,
-03:38:17 web.1    |             district,
-03:38:17 web.1    |             taluka,
-03:38:17 web.1    |             village,
-03:38:17 web.1    |             state,
-03:38:17 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-03:38:17 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-03:38:17 web.1    |             boundary_source,
-03:38:17 web.1    |             created_at AS registered_at,
-03:38:17 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-03:38:17 web.1    |         FROM land_parcels
-03:38:17 web.1    |         WHERE user_id = $1
-03:38:17 web.1    |         ORDER BY registered_at DESC
-03:38:17 web.1    |         
-03:38:17 web.1    | 2026-04-11 03:38:17,808 INFO sqlalchemy.engine.Engine [cached since 9.109s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
-03:38:17 web.1    | 2026-04-11 03:38:17,808 | INFO     | sqlalchemy.engine.Engine | [cached since 9.109s ago] ('9631eb0d-7699-45c4-ac75-282ecb3def35',)
-03:38:17 web.1    | 2026-04-11 03:38:17,951 INFO sqlalchemy.engine.Engine ROLLBACK
-03:38:17 web.1    | 2026-04-11 03:38:17,951 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-03:38:17 web.1    | 2026-04-11 03:38:17,998 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at&land_id=eq.359a9c8d-8c67-4941-9f29-bf7d3995ca68&order=audit_year.desc "HTTP/2 200 OK"
-03:38:20 web.1    | 2026-04-11 03:38:20,693 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/ce014e5ecd534c9a0e065a96f149aa89-396474d0645f76808d26d67c13b8fb2f:getPixels "HTTP/1.1 200 OK"
-03:38:20 web.1    | 2026-04-11 03:38:20,757 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 400 Bad Request"
-03:38:20 web.1    | 2026-04-11 03:38:20,822 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/f1f677ccf88924eba9561c016f4c5c59ddde4e0794e77970e7a6fa32c2214732-512.png "HTTP/2 200 OK"
-03:38:20 web.1    | 2026-04-11 03:38:20,823 | ERROR    | terratrust.land | Failed to list lands for user 9631eb0d-7699-45c4-ac75-282ecb3def35: 2 validation errors for LandListItem
-03:38:20 web.1    | id
-03:38:20 web.1    |   Input should be a valid string [type=string_type, input_value=UUID('359a9c8d-8c67-4941-9f29-bf7d3995ca68'), input_type=UUID]
-03:38:20 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
-03:38:20 web.1    | registered_at
-03:38:20 web.1    |   Input should be a valid string [type=string_type, input_value=datetime.datetime(2026, 4...o=datetime.timezone.utc), input_type=datetime]
-03:38:20 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
-03:38:20 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/land/list?page=1&limit=10 HTTP/1.1" 500 Internal Server Error
-03:38:28 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-03:38:53 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-03:39:12 web.1    | 2026-04-11 03:39:12,070 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
-03:39:12 web.1    | 2026-04-11 03:39:12,119 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-03:39:12 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
-03:39:13 web.1    | 2026-04-11 03:39:13,238 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
-03:39:13 web.1    | 2026-04-11 03:39:13,258 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
-03:39:13 web.1    | 2026-04-11 03:39:13,317 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-03:39:13 web.1    | 2026-04-11 03:39:13,318 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-03:39:13 web.1    | 2026-04-11 03:39:13,319 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-03:39:13 web.1    | 2026-04-11 03:39:13,319 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-03:39:13 web.1    | 2026-04-11 03:39:13,319 INFO sqlalchemy.engine.Engine 
-03:39:13 web.1    |         SELECT
-03:39:13 web.1    |             id,
-03:39:13 web.1    |             farm_name,
-03:39:13 web.1    |             survey_number,
-03:39:13 web.1    |             district,
-03:39:13 web.1    |             taluka,
-03:39:13 web.1    |             village,
-03:39:13 web.1    |             state,
-03:39:13 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-03:39:13 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-03:39:13 web.1    |             boundary_source,
-03:39:13 web.1    |             created_at AS registered_at,
-03:39:13 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-03:39:13 web.1    |         FROM land_parcels
-03:39:13 web.1    |         WHERE user_id = $1
-03:39:13 web.1    |         ORDER BY registered_at DESC
-03:39:13 web.1    |         
-03:39:13 web.1    | 2026-04-11 03:39:13,319 | INFO     | sqlalchemy.engine.Engine | 
-03:39:13 web.1    |         SELECT
-03:39:13 web.1    |             id,
-03:39:13 web.1    |             farm_name,
-03:39:13 web.1    |             survey_number,
-03:39:13 web.1    |             district,
-03:39:13 web.1    |             taluka,
-03:39:13 web.1    |             village,
-03:39:13 web.1    |             state,
-03:39:13 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-03:39:13 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-03:39:13 web.1    |             boundary_source,
-03:39:13 web.1    |             created_at AS registered_at,
-03:39:13 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-03:39:13 web.1    |         FROM land_parcels
-03:39:13 web.1    |         WHERE user_id = $1
-03:39:13 web.1    |         ORDER BY registered_at DESC
-03:39:13 web.1    |         
-03:39:13 web.1    | 2026-04-11 03:39:13,320 INFO sqlalchemy.engine.Engine [cached since 64.62s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
-03:39:13 web.1    | 2026-04-11 03:39:13,320 | INFO     | sqlalchemy.engine.Engine | [cached since 64.62s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
-03:39:13 web.1    | 2026-04-11 03:39:13,326 INFO sqlalchemy.engine.Engine ROLLBACK
-03:39:13 web.1    | 2026-04-11 03:39:13,326 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-03:39:13 web.1    | 2026-04-11 03:39:13,393 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=audit_year%2Cstatus%2Ccredits_issued%2Cland_id%2Ctx_hash%2Cipfs_metadata_cid%2Cipfs_url%2Cminted_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=audit_year.desc "HTTP/2 200 OK"
-03:39:13 web.1    | 2026-04-11 03:39:13,393 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at&land_id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d&order=audit_year.desc "HTTP/2 200 OK"
-03:39:13 web.1    | 2026-04-11 03:39:13,468 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/land_parcels?select=farm_name&id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d "HTTP/2 200 OK"
-03:39:14 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/credits/balance?page=1&limit=2 HTTP/1.1" 200 OK
-03:39:21 web.1    | 2026-04-11 03:39:21,557 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/546ee511b30da3b090b28fe15628e871-706fb543b62b23c8ee028fe61115fef2:getPixels "HTTP/1.1 200 OK"
-03:39:21 web.1    | 2026-04-11 03:39:21,689 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 200 OK"
-03:39:21 web.1    | 2026-04-11 03:39:21,747 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 200 OK"
-03:39:21 web.1    | 2026-04-11 03:39:21,748 | ERROR    | terratrust.land | Failed to list lands for user 7220e9f4-0776-41d8-9cb6-663ba2f0786a: 2 validation errors for LandListItem
-03:39:21 web.1    | id
-03:39:21 web.1    |   Input should be a valid string [type=string_type, input_value=UUID('47be6017-f030-487e-b36f-7242f0cc2b2d'), input_type=UUID]
-03:39:21 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
-03:39:21 web.1    | registered_at
-03:39:21 web.1    |   Input should be a valid string [type=string_type, input_value=datetime.datetime(2026, 4...o=datetime.timezone.utc), input_type=datetime]
-03:39:21 web.1    |     For further information visit https://errors.pydantic.dev/2.12/v/string_type
-03:39:21 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/land/list?page=1&limit=3 HTTP/1.1" 500 Internal Server Error
-03:39:21 web.1    | INFO:     117.99.246.247:0 - "GET /api/v1/status HTTP/1.1" 200 OK
-03:39:30 web.1    | INFO:     117.99.246.247:0 - "GET / HTTP/1.1" 404 Not Found
+2026-04-12T17:59:56.817284632Z 17:59:56 web.1    | 2026-04-12 17:59:56,815 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+2026-04-12T17:59:56.855566533Z 17:59:56 web.1    | 2026-04-12 17:59:56,854 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+2026-04-12T17:59:56.856458558Z 17:59:56 web.1    | 2026-04-12 17:59:56,856 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-12T17:59:56.85652771Z 17:59:56 web.1    | 2026-04-12 17:59:56,856 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-12T17:59:56.856734508Z 17:59:56 web.1    | 2026-04-12 17:59:56,856 INFO sqlalchemy.engine.Engine 
+2026-04-12T17:59:56.85676726Z 17:59:56 web.1    |         SELECT
+2026-04-12T17:59:56.85702992Z 17:59:56 web.1    |             id,
+2026-04-12T17:59:56.857043551Z 17:59:56 web.1    |             user_id,
+2026-04-12T17:59:56.857049791Z 17:59:56 web.1    |             farm_name,
+2026-04-12T17:59:56.857062941Z 17:59:56 web.1    |             survey_number,
+2026-04-12T17:59:56.857152735Z 17:59:56 web.1    |             district,
+2026-04-12T17:59:56.857174536Z 17:59:56 web.1    |             taluka,
+2026-04-12T17:59:56.85728689Z 17:59:56 web.1    |             village,
+2026-04-12T17:59:56.857320312Z 17:59:56 web.1    |             state,
+2026-04-12T17:59:56.857394835Z 17:59:56 web.1    |             boundary_source,
+2026-04-12T17:59:56.857463747Z 17:59:56 web.1    |             ocr_owner_name,
+2026-04-12T17:59:56.8575254Z 17:59:56 web.1    |             doc_image_url,
+2026-04-12T17:59:56.857595333Z 17:59:56 web.1    |             lgd_district_code,
+2026-04-12T17:59:56.857651155Z 17:59:56 web.1    |             lgd_taluka_code,
+2026-04-12T17:59:56.857720478Z 17:59:56 web.1    |             lgd_village_code,
+2026-04-12T17:59:56.85779208Z 17:59:56 web.1    |             gis_code,
+2026-04-12T17:59:56.857849463Z 17:59:56 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+2026-04-12T17:59:56.857922075Z 17:59:56 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+2026-04-12T17:59:56.858004359Z 17:59:56 web.1    |             created_at,
+2026-04-12T17:59:56.858052001Z 17:59:56 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+2026-04-12T17:59:56.858130384Z 17:59:56 web.1    |         FROM land_parcels
+2026-04-12T17:59:56.858194816Z 17:59:56 web.1    |         WHERE id = $1
+2026-04-12T17:59:56.858261429Z 17:59:56 web.1    |         
+2026-04-12T17:59:56.858337512Z 17:59:56 web.1    | 2026-04-12 17:59:56,856 | INFO     | sqlalchemy.engine.Engine | 
+2026-04-12T17:59:56.858393354Z 17:59:56 web.1    |         SELECT
+2026-04-12T17:59:56.858560901Z 17:59:56 web.1    |             id,
+2026-04-12T17:59:56.858568911Z 17:59:56 web.1    |             user_id,
+2026-04-12T17:59:56.858579921Z 17:59:56 web.1    |             farm_name,
+2026-04-12T17:59:56.858630154Z 17:59:56 web.1    |             survey_number,
+2026-04-12T17:59:56.858706977Z 17:59:56 web.1    |             district,
+2026-04-12T17:59:56.858731998Z 17:59:56 web.1    |             taluka,
+2026-04-12T17:59:56.8587986Z 17:59:56 web.1    |             village,
+2026-04-12T17:59:56.858849272Z 17:59:56 web.1    |             state,
+2026-04-12T17:59:56.858970537Z 17:59:56 web.1    |             boundary_source,
+2026-04-12T17:59:56.858985537Z 17:59:56 web.1    |             ocr_owner_name,
+2026-04-12T17:59:56.859074311Z 17:59:56 web.1    |             doc_image_url,
+2026-04-12T17:59:56.859122643Z 17:59:56 web.1    |             lgd_district_code,
+2026-04-12T17:59:56.859189256Z 17:59:56 web.1    |             lgd_taluka_code,
+2026-04-12T17:59:56.859266868Z 17:59:56 web.1    |             lgd_village_code,
+2026-04-12T17:59:56.85930171Z 17:59:56 web.1    |             gis_code,
+2026-04-12T17:59:56.859333231Z 17:59:56 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+2026-04-12T17:59:56.859379213Z 17:59:56 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+2026-04-12T17:59:56.859405524Z 17:59:56 web.1    |             created_at,
+2026-04-12T17:59:56.859488247Z 17:59:56 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+2026-04-12T17:59:56.859537059Z 17:59:56 web.1    |         FROM land_parcels
+2026-04-12T17:59:56.859580811Z 17:59:56 web.1    |         WHERE id = $1
+2026-04-12T17:59:56.859645483Z 17:59:56 web.1    |         
+2026-04-12T17:59:56.859699785Z 17:59:56 web.1    | 2026-04-12 17:59:56,856 INFO sqlalchemy.engine.Engine [cached since 64.37s ago] ('47be6017-f030-487e-b36f-7242f0cc2b2d',)
+2026-04-12T17:59:56.859784409Z 17:59:56 web.1    | 2026-04-12 17:59:56,856 | INFO     | sqlalchemy.engine.Engine | [cached since 64.37s ago] ('47be6017-f030-487e-b36f-7242f0cc2b2d',)
+2026-04-12T17:59:56.860431825Z 17:59:56 web.1    | 2026-04-12 17:59:56,860 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-12T17:59:56.860484496Z 17:59:56 web.1    | 2026-04-12 17:59:56,860 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-12T17:59:56.862580549Z 17:59:56 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/audit/zones?land_id=47be6017-f030-487e-b36f-7242f0cc2b2d HTTP/1.1" 403 Forbidden
+2026-04-12T17:59:58.667542553Z 17:59:58 web.1    | 2026-04-12 17:59:58,666 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
+2026-04-12T17:59:58.707819093Z 17:59:58 web.1    | 2026-04-12 17:59:58,707 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
+2026-04-12T17:59:58.708670706Z 17:59:58 web.1    | 2026-04-12 17:59:58,708 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2026-04-12T17:59:58.708957627Z 17:59:58 web.1    | 2026-04-12 17:59:58,708 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
+2026-04-12T17:59:58.709035961Z 17:59:58 web.1    | 2026-04-12 17:59:58,708 INFO sqlalchemy.engine.Engine 
+2026-04-12T17:59:58.709111013Z 17:59:58 web.1    |         SELECT
+2026-04-12T17:59:58.709166436Z 17:59:58 web.1    |             id,
+2026-04-12T17:59:58.709259449Z 17:59:58 web.1    |             user_id,
+2026-04-12T17:59:58.709996408Z 17:59:58 web.1    |             farm_name,
+2026-04-12T17:59:58.710007379Z 17:59:58 web.1    |             survey_number,
+2026-04-12T17:59:58.710009889Z 17:59:58 web.1    |             district,
+2026-04-12T17:59:58.710012639Z 17:59:58 web.1    |             taluka,
+2026-04-12T17:59:58.710015519Z 17:59:58 web.1    |             village,
+2026-04-12T17:59:58.710019119Z 17:59:58 web.1    |             state,
+2026-04-12T17:59:58.710022329Z 17:59:58 web.1    |             boundary_source,
+2026-04-12T17:59:58.7100256Z 17:59:58 web.1    |             ocr_owner_name,
+2026-04-12T17:59:58.71002855Z 17:59:58 web.1    |             doc_image_url,
+2026-04-12T17:59:58.71003228Z 17:59:58 web.1    |             lgd_district_code,
+2026-04-12T17:59:58.71004568Z 17:59:58 web.1    |             lgd_taluka_code,
+2026-04-12T17:59:58.710049181Z 17:59:58 web.1    |             lgd_village_code,
+2026-04-12T17:59:58.71005219Z 17:59:58 web.1    |             gis_code,
+2026-04-12T17:59:58.710055741Z 17:59:58 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+2026-04-12T17:59:58.710059331Z 17:59:58 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+2026-04-12T17:59:58.710063361Z 17:59:58 web.1    |             created_at,
+2026-04-12T17:59:58.710066701Z 17:59:58 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+2026-04-12T17:59:58.710069841Z 17:59:58 web.1    |         FROM land_parcels
+2026-04-12T17:59:58.710071771Z 17:59:58 web.1    |         WHERE id = $1
+2026-04-12T17:59:58.710074322Z 17:59:58 web.1    |         
+2026-04-12T17:59:58.710077062Z 17:59:58 web.1    | 2026-04-12 17:59:58,708 | INFO     | sqlalchemy.engine.Engine | 
+2026-04-12T17:59:58.710090422Z 17:59:58 web.1    |         SELECT
+2026-04-12T17:59:58.710137504Z 17:59:58 web.1    |             id,
+2026-04-12T17:59:58.710204617Z 17:59:58 web.1    |             user_id,
+2026-04-12T17:59:58.710240328Z 17:59:58 web.1    |             farm_name,
+2026-04-12T17:59:58.710336042Z 17:59:58 web.1    |             survey_number,
+2026-04-12T17:59:58.710376443Z 17:59:58 web.1    |             district,
+2026-04-12T17:59:58.710423005Z 17:59:58 web.1    |             taluka,
+2026-04-12T17:59:58.710494578Z 17:59:58 web.1    |             village,
+2026-04-12T17:59:58.71055773Z 17:59:58 web.1    |             state,
+2026-04-12T17:59:58.710617503Z 17:59:58 web.1    |             boundary_source,
+2026-04-12T17:59:58.710689246Z 17:59:58 web.1    |             ocr_owner_name,
+2026-04-12T17:59:58.710751558Z 17:59:58 web.1    |             doc_image_url,
+2026-04-12T17:59:58.710818101Z 17:59:58 web.1    |             lgd_district_code,
+2026-04-12T17:59:58.710881473Z 17:59:58 web.1    |             lgd_taluka_code,
+2026-04-12T17:59:58.710955156Z 17:59:58 web.1    |             lgd_village_code,
+2026-04-12T17:59:58.711014328Z 17:59:58 web.1    |             gis_code,
+2026-04-12T17:59:58.711090302Z 17:59:58 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
+2026-04-12T17:59:58.711144544Z 17:59:58 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
+2026-04-12T17:59:58.711228737Z 17:59:58 web.1    |             created_at,
+2026-04-12T17:59:58.711272339Z 17:59:58 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
+2026-04-12T17:59:58.711337401Z 17:59:58 web.1    |         FROM land_parcels
+2026-04-12T17:59:58.711386523Z 17:59:58 web.1    |         WHERE id = $1
+2026-04-12T17:59:58.711443656Z 17:59:58 web.1    |         
+2026-04-12T17:59:58.711497928Z 17:59:58 web.1    | 2026-04-12 17:59:58,708 INFO sqlalchemy.engine.Engine [cached since 66.23s ago] ('47be6017-f030-487e-b36f-7242f0cc2b2d',)
+2026-04-12T17:59:58.71155706Z 17:59:58 web.1    | 2026-04-12 17:59:58,708 | INFO     | sqlalchemy.engine.Engine | [cached since 66.23s ago] ('47be6017-f030-487e-b36f-7242f0cc2b2d',)
+2026-04-12T17:59:58.712587991Z 17:59:58 web.1    | 2026-04-12 17:59:58,712 INFO sqlalchemy.engine.Engine ROLLBACK
+2026-04-12T17:59:58.712633583Z 17:59:58 web.1    | 2026-04-12 17:59:58,712 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
+2026-04-12T17:59:58.714625431Z 17:59:58 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/audit/zones?land_id=47be6017-f030-487e-b36f-7242f0cc2b2d HTTP/1.1" 403 Forbidden

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 import json
 import logging
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -63,6 +65,24 @@ def _decode_json_value(value: Any) -> Any:
     return value
 
 
+def _normalise_db_value(value: Any) -> Any:
+    """Convert direct SQLAlchemy values into API-friendly Python primitives."""
+    if isinstance(value, UUID):
+        return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: _normalise_db_value(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalise_db_value(item) for item in value]
+    return value
+
+
+def _normalise_db_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply scalar normalisation to a row returned from direct PostgreSQL queries."""
+    return {key: _normalise_db_value(value) for key, value in record.items()}
+
+
 async def analyse_boundary_geojson(boundary_geojson: Dict[str, Any]) -> Dict[str, Any]:
     """Validate and measure a boundary geometry using PostGIS."""
     engine = _require_async_engine()
@@ -87,7 +107,7 @@ async def analyse_boundary_geojson(boundary_geojson: Dict[str, Any]) -> Dict[str
         )
         row = result.mappings().one()
 
-    data = dict(row)
+    data = _normalise_db_record(dict(row))
     data["normalized_geojson"] = _decode_json_value(data.get("normalized_geojson"))
     return data
 
@@ -129,7 +149,7 @@ async def fetch_land_parcel_record(land_id: str) -> Dict[str, Any]:
     if row is None:
         raise LookupError(f"Land parcel '{land_id}' was not found.")
 
-    data = dict(row)
+    data = _normalise_db_record(dict(row))
     data["boundary_geojson"] = _decode_json_value(data.get("boundary_geojson"))
     data["geojson"] = data.get("boundary_geojson")
     return data
@@ -235,7 +255,7 @@ async def insert_land_parcel_record(land_record: Dict[str, Any]) -> Dict[str, An
         result = await conn.execute(query, params)
         row = result.mappings().one()
 
-    return dict(row)
+    return _normalise_db_record(dict(row))
 
 
 async def list_land_parcels_for_user(user_id: str) -> List[Dict[str, Any]]:
@@ -268,7 +288,7 @@ async def list_land_parcels_for_user(user_id: str) -> List[Dict[str, Any]]:
 
     items: List[Dict[str, Any]] = []
     for row in rows:
-        item = dict(row)
+        item = _normalise_db_record(dict(row))
         item["boundary_geojson"] = _decode_json_value(item.get("boundary_geojson"))
         item["geojson"] = item.get("boundary_geojson")
         items.append(item)
@@ -366,7 +386,7 @@ async def list_sampling_zones_for_audit(audit_id: str) -> List[Dict[str, Any]]:
 
     zones: List[Dict[str, Any]] = []
     for row in rows:
-        zone = dict(row)
+        zone = _normalise_db_record(dict(row))
         zone["centre_gps"] = {
             "lat": zone.pop("lat"),
             "lng": zone.pop("lng"),
@@ -499,7 +519,7 @@ async def list_tree_scans_for_audit(audit_id: str) -> List[Dict[str, Any]]:
 
     scans: List[Dict[str, Any]] = []
     for row in rows:
-        scan = dict(row)
+        scan = _normalise_db_record(dict(row))
         scan["gps"] = {
             "lat": scan.pop("lat"),
             "lng": scan.pop("lng"),
