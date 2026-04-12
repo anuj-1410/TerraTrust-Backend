@@ -11,6 +11,7 @@ from fastapi import HTTPException, status
 from redis import Redis
 
 from app.config import settings
+from app.redis_utils import redis_from_url
 
 logger = logging.getLogger("terratrust.rate_limit")
 
@@ -40,7 +41,7 @@ def _get_redis_client() -> Redis | None:
 
     _redis_initialised = True
     try:
-        _redis_client = Redis.from_url(
+        _redis_client = redis_from_url(
             settings.REDIS_URL,
             decode_responses=True,
             socket_connect_timeout=2,

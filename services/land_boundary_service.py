@@ -22,6 +22,7 @@ except ImportError:  # pragma: no cover - optional fallback dependency
 
 from app.config import settings
 from app.database import analyse_boundary_geojson
+from app.redis_utils import redis_from_url
 from services import ocr_service, satellite_service
 
 logger = logging.getLogger("terratrust.land_boundary")
@@ -128,7 +129,7 @@ def _get_redis_client() -> Redis | None:
 
     _redis_initialised = True
     try:
-        _redis_client = Redis.from_url(
+        _redis_client = redis_from_url(
             settings.REDIS_URL,
             decode_responses=True,
             socket_connect_timeout=2,

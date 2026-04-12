@@ -59,6 +59,18 @@ class AuditResultProcessingResponse(BaseModel):
     """Non-terminal audit status payload returned to the polling client."""
 
     status: Literal["PROCESSING", "CALCULATING", "READY_TO_MINT"]
+    phase: Literal[
+        "AWAITING_SAMPLES",
+        "RETRY_SUBMISSION",
+        "CALCULATING",
+        "READY_TO_MINT",
+    ]
+    trees_submitted: int | None = None
+    min_trees_required: int | None = None
+    zones_total: int | None = None
+    zones_completed: int | None = None
+    can_resume_scanning: bool | None = None
+    message: str | None = None
 
 
 class AuditResultMintedResponse(BaseModel):

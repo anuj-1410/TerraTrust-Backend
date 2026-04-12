@@ -21,6 +21,7 @@ from app.database import (
     insert_tree_scan_record,
     land_contains_point,
     list_sampling_zones_for_audit,
+    list_tree_scans_for_audit,
     supabase_client,
 )
 from app.dependencies import get_current_user
@@ -72,6 +73,155 @@ def _processing_submit_response(audit_id: str) -> AuditSubmitResponse:
         estimated_seconds=60,
         message="Satellite verification in progress",
     )
+
+
+def _zone_id_from_record(zone: Dict[str, Any]) -> str:
+    """Return the canonical zone identifier for generated or persisted zone rows."""
+    return str(zone.get("zone_id") or zone.get("id") or "")
+
+
+def _zone_label_from_record(zone: Dict[str, Any]) -> str:
+    """Return the human-facing zone label for generated or persisted zone rows."""
+    return str(zone.get("label") or zone.get("zone_label") or "")
+
+
+def _build_zone_responses(zones: List[Dict[str, Any]]) -> List[ZoneResponse]:
+    """Convert generated or persisted zone rows into API response models."""
+    return [
+        ZoneResponse(
+            zone_id=_zone_id_from_record(zone),
+            label=_zone_label_from_record(zone),
+            centre_gps=zone["centre_gps"],
+            radius_metres=zone["radius_metres"],
+            zone_type=zone["zone_type"],
+            sequence_order=zone["sequence_order"],
+            gedi_available=zone["gedi_available"],
+        )
+        for zone in zones
+    ]
+
+
+def _walking_path_metres_for_zones(zones: List[Dict[str, Any]]) -> float:
+    """Recompute walking-path distance from the stored zone ordering."""
+    if len(zones) < 2:
+        return 0.0
+
+    ordered_zones = sorted(
+        zones,
+        key=lambda zone: (zone.get("sequence_order") or 0, _zone_id_from_record(zone)),
+    )
+
+    total_walk = 0.0
+    for index in range(len(ordered_zones) - 1):
+        first_centre = ordered_zones[index]["centre_gps"]
+        second_centre = ordered_zones[index + 1]["centre_gps"]
+        total_walk += _distance_metres(
+            float(first_centre["lat"]),
+            float(first_centre["lng"]),
+            float(second_centre["lat"]),
+            float(second_centre["lng"]),
+        )
+
+    return round(total_walk, 1)
+
+
+def _build_audit_zones_response(audit_id: str, zones: List[Dict[str, Any]]) -> AuditZonesResponse:
+    """Build a stable zones payload for new or resumed audits."""
+    zone_responses = _build_zone_responses(zones)
+    return AuditZonesResponse(
+        audit_id=audit_id,
+        zones=zone_responses,
+        walking_path_metres=_walking_path_metres_for_zones(zones),
+        min_trees_required=len(zone_responses) * 3,
+    )
+
+
+def _count_completed_zones(
+    zones: List[Dict[str, Any]],
+    tree_scans: List[Dict[str, Any]],
+) -> int:
+    """Count how many zones already have the documented minimum three samples."""
+    if not zones or not tree_scans:
+        return 0
+
+    scan_counts = Counter(
+        str(scan.get("zone_id"))
+        for scan in tree_scans
+        if scan.get("zone_id")
+    )
+    return sum(1 for zone in zones if scan_counts.get(_zone_id_from_record(zone), 0) >= 3)
+
+
+def _build_processing_result_payload(
+    current_status: str,
+    audit: Dict[str, Any],
+    zones: List[Dict[str, Any]],
+    tree_scans: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    """Expose the real non-terminal audit phase so mobile clients can resume cleanly."""
+    zones_total = len(zones)
+    min_trees_required = zones_total * 3 if zones_total else None
+    trees_scanned_count = audit.get("trees_scanned_count")
+    trees_submitted = int(trees_scanned_count) if trees_scanned_count is not None else len(tree_scans)
+    zones_completed = _count_completed_zones(zones, tree_scans)
+
+    payload: Dict[str, Any] = {
+        "status": current_status,
+        "trees_submitted": trees_submitted,
+        "min_trees_required": min_trees_required,
+        "zones_total": zones_total,
+        "zones_completed": zones_completed,
+        "can_resume_scanning": current_status == "PROCESSING",
+    }
+
+    if current_status == "PROCESSING":
+        if audit.get("error"):
+            payload.update(
+                {
+                    "phase": "RETRY_SUBMISSION",
+                    "message": audit["error"],
+                }
+            )
+            return payload
+
+        if zones_total and trees_submitted == 0:
+            payload.update(
+                {
+                    "phase": "AWAITING_SAMPLES",
+                    "message": (
+                        "Sampling zones are ready. Resume scanning and submit at least "
+                        f"{min_trees_required} trees to continue this audit."
+                    ),
+                }
+            )
+            return payload
+
+        payload.update(
+            {
+                "phase": "AWAITING_SAMPLES",
+                "message": "Resume scanning and resubmit the required tree samples to continue this audit.",
+            }
+        )
+        return payload
+
+    if current_status == "CALCULATING":
+        payload.update(
+            {
+                "phase": "CALCULATING",
+                "message": "Tree samples submitted. Satellite verification is running.",
+                "can_resume_scanning": False,
+            }
+        )
+        return payload
+
+    payload.update(
+        {
+            "phase": "READY_TO_MINT",
+            "message": "Audit calculation is complete. Final credit minting is pending.",
+            "can_resume_scanning": False,
+        }
+    )
+    return payload
 
 def _normalise_species_name(species: str) -> str:
     """Return the canonical supported species name or fail clearly."""
@@ -259,7 +409,18 @@ async def get_audit_zones(
                 detail=f"A carbon audit for {audit_year} has already been completed for this land.",
             )
 
-        if existing_status in {"PROCESSING", "CALCULATING", "READY_TO_MINT"}:
+        if existing_status == "PROCESSING":
+            existing_zones = await list_sampling_zones_for_audit(existing_audit["id"])
+            if existing_zones:
+                logger.info(
+                    "Resuming existing audit %s for land %s with %d persisted zones.",
+                    existing_audit["id"],
+                    land_id,
+                    len(existing_zones),
+                )
+                return _build_audit_zones_response(existing_audit["id"], existing_zones)
+
+        if existing_status in {"CALCULATING", "READY_TO_MINT"}:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={
@@ -304,8 +465,6 @@ async def get_audit_zones(
         ) from exc
 
     # Create or refresh the audit record
-    walking_path = zones[0].get("walking_path_metres", 0) if zones else 0
-
     if not existing_audit:
         await run_in_threadpool(
             lambda: (
@@ -325,27 +484,7 @@ async def get_audit_zones(
         )
 
     await insert_sampling_zone_records(land_id=land_id, audit_id=audit_id, zones=zones)
-
-    # Build response
-    zone_responses = [
-        ZoneResponse(
-            zone_id=z["zone_id"],
-            label=z["label"],
-            centre_gps=z["centre_gps"],
-            radius_metres=z["radius_metres"],
-            zone_type=z["zone_type"],
-            sequence_order=z["sequence_order"],
-            gedi_available=z["gedi_available"],
-        )
-        for z in zones
-    ]
-
-    return AuditZonesResponse(
-        audit_id=audit_id,
-        zones=zone_responses,
-        walking_path_metres=walking_path,
-        min_trees_required=len(zone_responses) * 3,
-    )
+    return _build_audit_zones_response(audit_id, zones)
 
 
 # ---------------------------------------------------------------------------
@@ -669,7 +808,7 @@ async def submit_samples(
     response_model=AuditResultResponse,
     response_model_exclude_none=True,
 )
-def get_audit_result(
+async def get_audit_result(
     audit_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
@@ -735,7 +874,17 @@ def get_audit_result(
         }
 
     if current_status in ("CALCULATING", "PROCESSING", "READY_TO_MINT"):
-        return {"status": current_status}
+        try:
+            zones = await list_sampling_zones_for_audit(audit_id)
+            tree_scans = await list_tree_scans_for_audit(audit_id)
+        except Exception as exc:
+            logger.error("Failed to load audit progress details for %s: %s", audit_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to load audit progress.",
+            ) from exc
+
+        return _build_processing_result_payload(current_status, audit, zones, tree_scans)
 
     if current_status == "FAILED":
         return {

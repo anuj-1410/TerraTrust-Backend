@@ -25,6 +25,7 @@ from app.database import (
 )
 from app.dependencies import get_current_user
 from app.rate_limit import RateLimitSpec, enforce_rate_limit
+from app.redis_utils import redis_from_url
 from models.land import (
     BoundaryFetchResponse,
     DocumentUploadResponse,
@@ -174,7 +175,7 @@ def _get_pending_land_context_client() -> Redis | None:
 
     _pending_land_context_initialised = True
     try:
-        _pending_land_context_client = Redis.from_url(
+        _pending_land_context_client = redis_from_url(
             settings.REDIS_URL,
             decode_responses=True,
             socket_connect_timeout=2,
