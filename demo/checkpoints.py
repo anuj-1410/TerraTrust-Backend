@@ -7,30 +7,30 @@ import json
 
 from demo.config import DEMO_UID_TO_PHONE
 
-# Pre-seeded fake polygon - small area near Pune, Maharashtra (~0.49 ha)
+# Pre-seeded polygon for demo account 3 near Nagpur, Maharashtra.
 DEMO_POLYGON_ACCOUNT3 = {
     "type": "Polygon",
     "coordinates": [
         [
-            [73.856, 18.520],
-            [73.858, 18.520],
-            [73.858, 18.522],
-            [73.856, 18.522],
-            [73.856, 18.520],
+            [79.0606772, 21.1767646],
+            [79.06155, 21.1765489],
+            [79.0619188, 21.1777446],
+            [79.0608155, 21.1779247],
+            [79.0606772, 21.1767646],
         ]
     ],
 }
 
-# Different polygon for account 4 so survey numbers never conflict.
+# Pre-seeded polygon for demo account 4 near Nagpur, Maharashtra.
 DEMO_POLYGON_ACCOUNT4 = {
     "type": "Polygon",
     "coordinates": [
         [
-            [73.859, 18.523],
-            [73.861, 18.523],
-            [73.861, 18.525],
-            [73.859, 18.525],
-            [73.859, 18.523],
+            [79.0180875, 21.1172026],
+            [79.0191093, 21.1176373],
+            [79.0187391, 21.1183364],
+            [79.01772, 21.1178611],
+            [79.0180875, 21.1172026],
         ]
     ],
 }
@@ -93,11 +93,13 @@ def checkpoint_kyc_done(firebase_uid: str) -> dict[str, object]:
 def checkpoint_land_verified(firebase_uid: str) -> dict[str, object]:
     """Return the LAND_VERIFIED checkpoint for account 3."""
     phone = _phone_for_uid(firebase_uid)
+    full_name = "Ramesh Shankar Patil"
+    survey_number = "DEMO-003-47"
     return {
         "user": {
             "firebase_uid": firebase_uid,
             "phone_number": phone,
-            "full_name": "Ramesh Shankar Patil",
+            "full_name": full_name,
             "aadhaar_hash": _h("999900000003"),
             "wallet_address": DEMO_WALLET_ADDRESSES[phone],
             "kyc_completed": True,
@@ -105,16 +107,16 @@ def checkpoint_land_verified(firebase_uid: str) -> dict[str, object]:
         },
         "land_parcels": [
             {
-                "farm_name": "Demo North Field",
-                "survey_number": "DEMO-003-47",
-                "district": "Pune",
-                "taluka": "Haveli",
-                "village": "Kharadi",
+                "farm_name": "Ramdeobaba College",
+                "survey_number": survey_number,
+                "district": "Nagpur",
+                "taluka": "Nagpur (Urban)",
+                "village": "Borgaon",
                 "state": "Maharashtra",
                 "geom_geojson": json.dumps(DEMO_POLYGON_ACCOUNT3),
                 "is_verified": True,
                 "boundary_source": "WMS_AUTO",
-                "ocr_owner_name": "Ramesh Shankar Patil",
+                "ocr_owner_name": full_name,
             }
         ],
     }
@@ -123,11 +125,13 @@ def checkpoint_land_verified(firebase_uid: str) -> dict[str, object]:
 def checkpoint_full(firebase_uid: str) -> dict[str, object]:
     """Return the FULL persistent checkpoint for account 4."""
     phone = _phone_for_uid(firebase_uid)
+    full_name = "Suresh Kumar Demo"
+    survey_number = "DEMO-004-47"
     return {
         "user": {
             "firebase_uid": firebase_uid,
             "phone_number": phone,
-            "full_name": "Suresh Kumar Demo",
+            "full_name": full_name,
             "aadhaar_hash": _h("999900000004"),
             "wallet_address": DEMO_WALLET_ADDRESSES[phone],
             "kyc_completed": True,
@@ -136,16 +140,16 @@ def checkpoint_full(firebase_uid: str) -> dict[str, object]:
         "land_parcels": [
             {
                 "key": "main_demo_farm",
-                "farm_name": "Main Demo Farm",
-                "survey_number": "DEMO-004-47",
-                "district": "Pune",
-                "taluka": "Haveli",
-                "village": "Kharadi",
+                "farm_name": "Vasudev Nagar",
+                "survey_number": survey_number,
+                "district": "Nagpur",
+                "taluka": "Nagpur (Urban)",
+                "village": "Jaitala",
                 "state": "Maharashtra",
                 "geom_geojson": json.dumps(DEMO_POLYGON_ACCOUNT4),
                 "is_verified": True,
                 "boundary_source": "WMS_AUTO",
-                "ocr_owner_name": "Suresh Kumar Demo",
+                "ocr_owner_name": full_name,
             }
         ],
         "carbon_audits": [

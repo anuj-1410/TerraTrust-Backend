@@ -1,250 +1,37 @@
-2026-04-12T20:07:34.592154983Z 20:07:34 web.1    |                             nisar_used,
-2026-04-12T20:07:34.592186675Z 20:07:34 web.1    |                             xgboost_model_version,
-2026-04-12T20:07:34.592243168Z 20:07:34 web.1    |                             features_count,
-2026-04-12T20:07:34.592285051Z 20:07:34 web.1    |                             trees_scanned_count,
-2026-04-12T20:07:34.592332803Z 20:07:34 web.1    |                             total_biomass_tonnes,
-2026-04-12T20:07:34.592358195Z 20:07:34 web.1    |                             prev_year_biomass,
-2026-04-12T20:07:34.592425699Z 20:07:34 web.1    |                             delta_biomass,
-2026-04-12T20:07:34.592433979Z 20:07:34 web.1    |                             carbon_tonnes,
-2026-04-12T20:07:34.592479322Z 20:07:34 web.1    |                             co2_equivalent,
-2026-04-12T20:07:34.592537335Z 20:07:34 web.1    |                             credits_issued,
-2026-04-12T20:07:34.592545855Z 20:07:34 web.1    |                             ipfs_metadata_cid,
-2026-04-12T20:07:34.686245498Z 20:07:34 web.1    |                             tx_hash,
-2026-04-12T20:07:34.686309032Z 20:07:34 web.1    |                             token_id,
-2026-04-12T20:07:34.686314522Z 20:07:34 web.1    |                             minted_at
-2026-04-12T20:07:34.686318092Z 20:07:34 web.1    |                         ) VALUES (
-2026-04-12T20:07:34.686355174Z 20:07:34 web.1    |                             $1,
-2026-04-12T20:07:34.686426149Z 20:07:34 web.1    |                             $2,
-2026-04-12T20:07:34.686430809Z 20:07:34 web.1    |                             $3,
-2026-04-12T20:07:34.686483502Z 20:07:34 web.1    |                             $4,
-2026-04-12T20:07:34.686514294Z 20:07:34 web.1    |                             $5,
-2026-04-12T20:07:34.686615079Z 20:07:34 web.1    |                             $6,
-2026-04-12T20:07:34.686675933Z 20:07:34 web.1    |                             $7,
-2026-04-12T20:07:34.686680483Z 20:07:34 web.1    |                             $8,
-2026-04-12T20:07:34.686725955Z 20:07:34 web.1    |                             $9,
-2026-04-12T20:07:34.686897475Z 20:07:34 web.1    |                             $10,
-2026-04-12T20:07:34.686910516Z 20:07:34 web.1    |                             $11,
-2026-04-12T20:07:34.686913436Z 20:07:34 web.1    |                             $12,
-2026-04-12T20:07:34.686915886Z 20:07:34 web.1    |                             $13,
-2026-04-12T20:07:34.686953599Z 20:07:34 web.1    |                             $14,
-2026-04-12T20:07:34.686959939Z 20:07:34 web.1    |                             $15,
-2026-04-12T20:07:34.687001001Z 20:07:34 web.1    |                             $16,
-2026-04-12T20:07:34.687067705Z 20:07:34 web.1    |                             $17,
-2026-04-12T20:07:34.687073505Z 20:07:34 web.1    |                             $18,
-2026-04-12T20:07:34.68714933Z 20:07:34 web.1    |                             $19,
-2026-04-12T20:07:34.68715568Z 20:07:34 web.1    |                             $20,
-2026-04-12T20:07:34.687216053Z 20:07:34 web.1    |                             $21,
-2026-04-12T20:07:34.687229464Z 20:07:34 web.1    |                             $22,
-2026-04-12T20:07:34.687269246Z 20:07:34 web.1    |                             $23,
-2026-04-12T20:07:34.687293558Z 20:07:34 web.1    |                             $24
-2026-04-12T20:07:34.687377552Z 20:07:34 web.1    |                         )
-2026-04-12T20:07:34.687414155Z 20:07:34 web.1    |                         ]
-2026-04-12T20:07:34.687449077Z 20:07:34 web.1    | [parameters: ('2a8f35a6-e080-416e-baff-41ac966dd4ba', '570b5dcf-ddd0-439d-929b-cff2e6d72fc9', 2024, 'MINTED', -13.2, -11.8, 0.64, 0.58, 13.4, 541.0, False, 'v3.1.0', 9, 11, 12.4, 0.0, 12.4, 5.828, 21.38, 21.38, 'QmDemoAcct4Baseline2024FakeIPFSHashXXXXXXXXXX', '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 4001, '2024-11-15T10:00:00Z')]
-2026-04-12T20:07:34.687478538Z 20:07:34 web.1    | (Background on this error at: https://sqlalche.me/e/20/dbapi)
-2026-04-12T20:07:34.68751141Z 20:07:34 web.1    | Traceback (most recent call last):
-2026-04-12T20:07:34.687572794Z 20:07:34 web.1    |   File "asyncpg/protocol/prepared_stmt.pyx", line 175, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
-2026-04-12T20:07:34.687639107Z 20:07:34 web.1    |   File "asyncpg/protocol/codecs/base.pyx", line 251, in asyncpg.protocol.protocol.Codec.encode
-2026-04-12T20:07:34.687644208Z 20:07:34 web.1    |   File "asyncpg/protocol/codecs/base.pyx", line 153, in asyncpg.protocol.protocol.Codec.encode_scalar
-2026-04-12T20:07:34.687713772Z 20:07:34 web.1    |   File "asyncpg/pgproto/codecs/datetime.pyx", line 208, in asyncpg.pgproto.pgproto.timestamptz_encode
-2026-04-12T20:07:34.687719602Z 20:07:34 web.1    | TypeError: expected a datetime.date or datetime.datetime instance, got 'str'
-2026-04-12T20:07:34.687778685Z 20:07:34 web.1    | 
-2026-04-12T20:07:34.687783476Z 20:07:34 web.1    | The above exception was the direct cause of the following exception:
-2026-04-12T20:07:34.687837969Z 20:07:34 web.1    | 
-2026-04-12T20:07:34.687842819Z 20:07:34 web.1    | Traceback (most recent call last):
-2026-04-12T20:07:34.687905633Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 550, in _prepare_and_execute
-2026-04-12T20:07:34.688010099Z 20:07:34 web.1    |     self._rows = deque(await prepared_stmt.fetch(*parameters))
-2026-04-12T20:07:34.688015439Z 20:07:34 web.1    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.688022829Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 177, in fetch
-2026-04-12T20:07:34.688153797Z 20:07:34 web.1    |     data = await self.__bind_execute(args, 0, timeout)
-2026-04-12T20:07:34.688159247Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.688162667Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 268, in __bind_execute
-2026-04-12T20:07:34.688245742Z 20:07:34 web.1    |     data, status, _ = await self.__do_execute(
-2026-04-12T20:07:34.688255073Z 20:07:34 web.1    |                       ^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.688258513Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/asyncpg/prepared_stmt.py", line 257, in __do_execute
-2026-04-12T20:07:34.688314686Z 20:07:34 web.1    |     return await executor(protocol)
-2026-04-12T20:07:34.688319266Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.6883858Z 20:07:34 web.1    |   File "asyncpg/protocol/protocol.pyx", line 184, in bind_execute
-2026-04-12T20:07:34.688402681Z 20:07:34 web.1    |   File "asyncpg/protocol/prepared_stmt.pyx", line 204, in asyncpg.protocol.protocol.PreparedStatementState._encode_bind_msg
-2026-04-12T20:07:34.688462464Z 20:07:34 web.1    | asyncpg.exceptions.DataError: invalid input for query argument $24: '2024-11-15T10:00:00Z' (expected a datetime.date or datetime.datetime instance, got 'str')
-2026-04-12T20:07:34.688486936Z 20:07:34 web.1    | 
-2026-04-12T20:07:34.688525488Z 20:07:34 web.1    | The above exception was the direct cause of the following exception:
-2026-04-12T20:07:34.688529638Z 20:07:34 web.1    | 
-2026-04-12T20:07:34.688593052Z 20:07:34 web.1    | Traceback (most recent call last):
-2026-04-12T20:07:34.688598272Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
-2026-04-12T20:07:34.688647415Z 20:07:34 web.1    |     self.dialect.do_execute(
-2026-04-12T20:07:34.688698218Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
-2026-04-12T20:07:34.688757301Z 20:07:34 web.1    |     cursor.execute(statement, parameters)
-2026-04-12T20:07:34.688782432Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
-2026-04-12T20:07:34.688790813Z 20:07:34 web.1    |     self._adapt_connection.await_(
-2026-04-12T20:07:34.68891078Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
-2026-04-12T20:07:34.688945522Z 20:07:34 web.1    |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-2026-04-12T20:07:34.689022866Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.689050218Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
-2026-04-12T20:07:34.689136993Z 20:07:34 web.1    |     value = await result
-2026-04-12T20:07:34.689141623Z 20:07:34 web.1    |             ^^^^^^^^^^^^
-2026-04-12T20:07:34.689148644Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
-2026-04-12T20:07:34.689196466Z 20:07:34 web.1    |     self._handle_exception(error)
-2026-04-12T20:07:34.689240619Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
-2026-04-12T20:07:34.689297892Z 20:07:34 web.1    |     self._adapt_connection._handle_exception(error)
-2026-04-12T20:07:34.689303352Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
-2026-04-12T20:07:34.689356905Z 20:07:34 web.1    |     raise translated_error from error
-2026-04-12T20:07:34.689364196Z 20:07:34 web.1    | sqlalchemy.dialects.postgresql.asyncpg.AsyncAdapt_asyncpg_dbapi.Error: <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $24: '2024-11-15T10:00:00Z' (expected a datetime.date or datetime.datetime instance, got 'str')
-2026-04-12T20:07:34.68943674Z 20:07:34 web.1    | 
-2026-04-12T20:07:34.689468872Z 20:07:34 web.1    | The above exception was the direct cause of the following exception:
-2026-04-12T20:07:34.689476762Z 20:07:34 web.1    | 
-2026-04-12T20:07:34.689544396Z 20:07:34 web.1    | Traceback (most recent call last):
-2026-04-12T20:07:34.689623531Z 20:07:34 web.1    |   File "/opt/render/project/src/demo/restore.py", line 172, in restore_to_checkpoint
-2026-04-12T20:07:34.689634831Z 20:07:34 web.1    |     await conn.execute(
-2026-04-12T20:07:34.689714836Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/engine.py", line 659, in execute
-2026-04-12T20:07:34.689719506Z 20:07:34 web.1    |     result = await greenlet_spawn(
-2026-04-12T20:07:34.689727026Z 20:07:34 web.1    |              ^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.689813571Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
-2026-04-12T20:07:34.689818802Z 20:07:34 web.1    |     result = context.throw(*sys.exc_info())
-2026-04-12T20:07:34.689825892Z 20:07:34 web.1    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.689915817Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1419, in execute
-2026-04-12T20:07:34.689929638Z 20:07:34 web.1    |     return meth(
-2026-04-12T20:07:34.689987691Z 20:07:34 web.1    |            ^^^^^
-2026-04-12T20:07:34.689992161Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py", line 527, in _execute_on_connection
-2026-04-12T20:07:34.690042974Z 20:07:34 web.1    |     return connection._execute_clauseelement(
-2026-04-12T20:07:34.690111338Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.690119179Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1641, in _execute_clauseelement
-2026-04-12T20:07:34.690184272Z 20:07:34 web.1    |     ret = self._execute_context(
-2026-04-12T20:07:34.690221874Z 20:07:34 web.1    |           ^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.690270917Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1846, in _execute_context
-2026-04-12T20:07:34.690304049Z 20:07:34 web.1    |     return self._exec_single_context(
-2026-04-12T20:07:34.690356192Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.690408285Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1986, in _exec_single_context
-2026-04-12T20:07:34.690453248Z 20:07:34 web.1    |     self._handle_dbapi_exception(
-2026-04-12T20:07:34.690456208Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 2363, in _handle_dbapi_exception
-2026-04-12T20:07:34.690567864Z 20:07:34 web.1    |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-2026-04-12T20:07:34.690574085Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py", line 1967, in _exec_single_context
-2026-04-12T20:07:34.690576785Z 20:07:34 web.1    |     self.dialect.do_execute(
-2026-04-12T20:07:34.690603196Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py", line 952, in do_execute
-2026-04-12T20:07:34.690637908Z 20:07:34 web.1    |     cursor.execute(statement, parameters)
-2026-04-12T20:07:34.690688011Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 585, in execute
-2026-04-12T20:07:34.690715173Z 20:07:34 web.1    |     self._adapt_connection.await_(
-2026-04-12T20:07:34.690767256Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
-2026-04-12T20:07:34.690775676Z 20:07:34 web.1    |     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
-2026-04-12T20:07:34.690824829Z 20:07:34 web.1    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-2026-04-12T20:07:34.690895213Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
-2026-04-12T20:07:34.690920224Z 20:07:34 web.1    |     value = await result
-2026-04-12T20:07:34.690982538Z 20:07:34 web.1    |             ^^^^^^^^^^^^
-2026-04-12T20:07:34.691072693Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 563, in _prepare_and_execute
-2026-04-12T20:07:34.691078343Z 20:07:34 web.1    |     self._handle_exception(error)
-2026-04-12T20:07:34.691089444Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 513, in _handle_exception
-2026-04-12T20:07:34.691161978Z 20:07:34 web.1    |     self._adapt_connection._handle_exception(error)
-2026-04-12T20:07:34.691224922Z 20:07:34 web.1    |   File "/opt/render/project/src/.venv/lib/python3.12/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 797, in _handle_exception
-2026-04-12T20:07:34.691233752Z 20:07:34 web.1    |     raise translated_error from error
-2026-04-12T20:07:34.691284515Z 20:07:34 web.1    | sqlalchemy.exc.DBAPIError: (sqlalchemy.dialects.postgresql.asyncpg.Error) <class 'asyncpg.exceptions.DataError'>: invalid input for query argument $24: '2024-11-15T10:00:00Z' (expected a datetime.date or datetime.datetime instance, got 'str')
-2026-04-12T20:07:34.691383111Z 20:07:34 web.1    | [SQL: 
-2026-04-12T20:07:34.691388091Z 20:07:34 web.1    |                         INSERT INTO carbon_audits (
-2026-04-12T20:07:34.691390561Z 20:07:34 web.1    |                             land_id,
-2026-04-12T20:07:34.691671167Z 20:07:34 web.1    |                             user_id,
-2026-04-12T20:07:34.691676337Z 20:07:34 web.1    |                             audit_year,
-2026-04-12T20:07:34.691678577Z 20:07:34 web.1    |                             status,
-2026-04-12T20:07:34.691680628Z 20:07:34 web.1    |                             s1_vh_mean_db,
-2026-04-12T20:07:34.691682797Z 20:07:34 web.1    |                             s1_vv_mean_db,
-2026-04-12T20:07:34.691684818Z 20:07:34 web.1    |                             s2_ndvi_mean,
-2026-04-12T20:07:34.691747681Z 20:07:34 web.1    |                             s2_evi_mean,
-2026-04-12T20:07:34.691752752Z 20:07:34 web.1    |                             gedi_height_mean,
-2026-04-12T20:07:34.691812735Z 20:07:34 web.1    |                             srtm_elevation_mean,
-2026-04-12T20:07:34.691860498Z 20:07:34 web.1    |                             nisar_used,
-2026-04-12T20:07:34.691864218Z 20:07:34 web.1    |                             xgboost_model_version,
-2026-04-12T20:07:34.691942072Z 20:07:34 web.1    |                             features_count,
-2026-04-12T20:07:34.691994725Z 20:07:34 web.1    |                             trees_scanned_count,
-2026-04-12T20:07:34.692027797Z 20:07:34 web.1    |                             total_biomass_tonnes,
-2026-04-12T20:07:34.692056929Z 20:07:34 web.1    |                             prev_year_biomass,
-2026-04-12T20:07:34.692103252Z 20:07:34 web.1    |                             delta_biomass,
-2026-04-12T20:07:34.692144554Z 20:07:34 web.1    |                             carbon_tonnes,
-2026-04-12T20:07:34.692168785Z 20:07:34 web.1    |                             co2_equivalent,
-2026-04-12T20:07:34.692219718Z 20:07:34 web.1    |                             credits_issued,
-2026-04-12T20:07:34.692262241Z 20:07:34 web.1    |                             ipfs_metadata_cid,
-2026-04-12T20:07:34.692277142Z 20:07:34 web.1    |                             tx_hash,
-2026-04-12T20:07:34.692335255Z 20:07:34 web.1    |                             token_id,
-2026-04-12T20:07:34.692343875Z 20:07:34 web.1    |                             minted_at
-2026-04-12T20:07:34.692394988Z 20:07:34 web.1    |                         ) VALUES (
-2026-04-12T20:07:34.69243206Z 20:07:34 web.1    |                             $1,
-2026-04-12T20:07:34.692466062Z 20:07:34 web.1    |                             $2,
-2026-04-12T20:07:34.692508275Z 20:07:34 web.1    |                             $3,
-2026-04-12T20:07:34.692536906Z 20:07:34 web.1    |                             $4,
-2026-04-12T20:07:34.692583459Z 20:07:34 web.1    |                             $5,
-2026-04-12T20:07:34.692636782Z 20:07:34 web.1    |                             $6,
-2026-04-12T20:07:34.692676744Z 20:07:34 web.1    |                             $7,
-2026-04-12T20:07:34.692710356Z 20:07:34 web.1    |                             $8,
-2026-04-12T20:07:34.692754519Z 20:07:34 web.1    |                             $9,
-2026-04-12T20:07:34.692758159Z 20:07:34 web.1    |                             $10,
-2026-04-12T20:07:34.692830753Z 20:07:34 web.1    |                             $11,
-2026-04-12T20:07:34.692842824Z 20:07:34 web.1    |                             $12,
-2026-04-12T20:07:34.69294384Z 20:07:34 web.1    |                             $13,
-2026-04-12T20:07:34.69295982Z 20:07:34 web.1    |                             $14,
-2026-04-12T20:07:34.693040255Z 20:07:34 web.1    |                             $15,
-2026-04-12T20:07:34.693084188Z 20:07:34 web.1    |                             $16,
-2026-04-12T20:07:34.693163942Z 20:07:34 web.1    |                             $17,
-2026-04-12T20:07:34.693172893Z 20:07:34 web.1    |                             $18,
-2026-04-12T20:07:34.693222015Z 20:07:34 web.1    |                             $19,
-2026-04-12T20:07:34.693271678Z 20:07:34 web.1    |                             $20,
-2026-04-12T20:07:34.69330599Z 20:07:34 web.1    |                             $21,
-2026-04-12T20:07:34.693351453Z 20:07:34 web.1    |                             $22,
-2026-04-12T20:07:34.693398345Z 20:07:34 web.1    |                             $23,
-2026-04-12T20:07:34.693401286Z 20:07:34 web.1    |                             $24
-2026-04-12T20:07:34.693457819Z 20:07:34 web.1    |                         )
-2026-04-12T20:07:34.69347929Z 20:07:34 web.1    |                         ]
-2026-04-12T20:07:34.693534023Z 20:07:34 web.1    | [parameters: ('2a8f35a6-e080-416e-baff-41ac966dd4ba', '570b5dcf-ddd0-439d-929b-cff2e6d72fc9', 2024, 'MINTED', -13.2, -11.8, 0.64, 0.58, 13.4, 541.0, False, 'v3.1.0', 9, 11, 12.4, 0.0, 12.4, 5.828, 21.38, 21.38, 'QmDemoAcct4Baseline2024FakeIPFSHashXXXXXXXXXX', '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 4001, '2024-11-15T10:00:00Z')]
-2026-04-12T20:07:34.693583586Z 20:07:34 web.1    | (Background on this error at: https://sqlalche.me/e/20/dbapi)
-2026-04-12T20:07:34.838675923Z 20:07:34 web.1    | 2026-04-12 20:07:34,837 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
-2026-04-12T20:07:34.88360698Z 20:07:34 web.1    | 2026-04-12 20:07:34,883 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T20:07:34.885271375Z 20:07:34 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/auth/me HTTP/1.1" 200 OK
-2026-04-12T20:07:36.406420437Z 20:07:36 web.1    | 2026-04-12 20:07:36,405 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
-2026-04-12T20:07:36.437706097Z 20:07:36 web.1    | 2026-04-12 20:07:36,436 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T20:07:36.513544253Z 20:07:36 web.1    | 2026-04-12 20:07:36,512 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/users?select=id%2Cfirebase_uid%2Cphone_number%2Cfull_name%2Ckyc_completed%2Cwallet_address&firebase_uid=eq.KhBSyGEVU8SkMWIXmN8qkrLNwYk1&limit=1 "HTTP/2 200 OK"
-2026-04-12T20:07:36.550931071Z 20:07:36 web.1    | 2026-04-12 20:07:36,550 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/wallet_recovery_requests?select=status%2Crequested_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=requested_at.desc&limit=1 "HTTP/2 200 OK"
-2026-04-12T20:07:36.551952619Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 INFO sqlalchemy.engine.Engine BEGIN (implicit)
-2026-04-12T20:07:36.552079976Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 | INFO     | sqlalchemy.engine.Engine | BEGIN (implicit)
-2026-04-12T20:07:36.552121429Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 INFO sqlalchemy.engine.Engine 
-2026-04-12T20:07:36.552251496Z 20:07:36 web.1    |         SELECT
-2026-04-12T20:07:36.552266627Z 20:07:36 web.1    |             id,
-2026-04-12T20:07:36.552408035Z 20:07:36 web.1    |             farm_name,
-2026-04-12T20:07:36.552480659Z 20:07:36 web.1    |             survey_number,
-2026-04-12T20:07:36.552502561Z 20:07:36 web.1    |             district,
-2026-04-12T20:07:36.552540053Z 20:07:36 web.1    |             taluka,
-2026-04-12T20:07:36.552593596Z 20:07:36 web.1    |             village,
-2026-04-12T20:07:36.55265912Z 20:07:36 web.1    |             state,
-2026-04-12T20:07:36.552703432Z 20:07:36 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T20:07:36.552780647Z 20:07:36 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T20:07:36.552834779Z 20:07:36 web.1    |             boundary_source,
-2026-04-12T20:07:36.552861781Z 20:07:36 web.1    |             created_at AS registered_at,
-2026-04-12T20:07:36.552954536Z 20:07:36 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T20:07:36.55300846Z 20:07:36 web.1    |         FROM land_parcels
-2026-04-12T20:07:36.553079244Z 20:07:36 web.1    |         WHERE user_id = $1
-2026-04-12T20:07:36.553131736Z 20:07:36 web.1    |         ORDER BY registered_at DESC
-2026-04-12T20:07:36.553186339Z 20:07:36 web.1    |         
-2026-04-12T20:07:36.553247603Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 | INFO     | sqlalchemy.engine.Engine | 
-2026-04-12T20:07:36.553307637Z 20:07:36 web.1    |         SELECT
-2026-04-12T20:07:36.553353129Z 20:07:36 web.1    |             id,
-2026-04-12T20:07:36.553410552Z 20:07:36 web.1    |             farm_name,
-2026-04-12T20:07:36.553466455Z 20:07:36 web.1    |             survey_number,
-2026-04-12T20:07:36.553529839Z 20:07:36 web.1    |             district,
-2026-04-12T20:07:36.553568631Z 20:07:36 web.1    |             taluka,
-2026-04-12T20:07:36.553643205Z 20:07:36 web.1    |             village,
-2026-04-12T20:07:36.553708759Z 20:07:36 web.1    |             state,
-2026-04-12T20:07:36.553754082Z 20:07:36 web.1    |             COALESCE(area_hectares, ST_Area(geom::geography) / 10000.0) AS area_hectares,
-2026-04-12T20:07:36.553816466Z 20:07:36 web.1    |             COALESCE(is_verified, FALSE) AS is_verified,
-2026-04-12T20:07:36.55389663Z 20:07:36 web.1    |             boundary_source,
-2026-04-12T20:07:36.554236659Z 20:07:36 web.1    |             created_at AS registered_at,
-2026-04-12T20:07:36.554289632Z 20:07:36 web.1    |             ST_AsGeoJSON(geom) AS boundary_geojson
-2026-04-12T20:07:36.554294403Z 20:07:36 web.1    |         FROM land_parcels
-2026-04-12T20:07:36.554296643Z 20:07:36 web.1    |         WHERE user_id = $1
-2026-04-12T20:07:36.554298783Z 20:07:36 web.1    |         ORDER BY registered_at DESC
-2026-04-12T20:07:36.554301493Z 20:07:36 web.1    |         
-2026-04-12T20:07:36.554307603Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 INFO sqlalchemy.engine.Engine [cached since 45.31s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
-2026-04-12T20:07:36.554398188Z 20:07:36 web.1    | 2026-04-12 20:07:36,551 | INFO     | sqlalchemy.engine.Engine | [cached since 45.31s ago] ('7220e9f4-0776-41d8-9cb6-663ba2f0786a',)
-2026-04-12T20:07:36.557691276Z 20:07:36 web.1    | 2026-04-12 20:07:36,557 INFO sqlalchemy.engine.Engine ROLLBACK
-2026-04-12T20:07:36.55775526Z 20:07:36 web.1    | 2026-04-12 20:07:36,557 | INFO     | sqlalchemy.engine.Engine | ROLLBACK
-2026-04-12T20:07:36.60643646Z 20:07:36 web.1    | 2026-04-12 20:07:36,605 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=id%2Cstatus%2Caudit_year%2Ccreated_at%2Ctrees_scanned_count%2Cerror&land_id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T20:07:36.606658703Z 20:07:36 web.1    | 2026-04-12 20:07:36,606 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/carbon_audits?select=audit_year%2Cstatus%2Ccredits_issued%2Cland_id%2Ctx_hash%2Cipfs_metadata_cid%2Cipfs_url%2Cminted_at&user_id=eq.7220e9f4-0776-41d8-9cb6-663ba2f0786a&order=audit_year.desc "HTTP/2 200 OK"
-2026-04-12T20:07:36.638776091Z 20:07:36 web.1    | 2026-04-12 20:07:36,638 | INFO     | httpx | HTTP Request: GET https://yqwjzpsidruvariebcch.supabase.co/rest/v1/land_parcels?select=farm_name&id=eq.47be6017-f030-487e-b36f-7242f0cc2b2d "HTTP/2 200 OK"
-2026-04-12T20:07:37.49305977Z 20:07:37 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/credits/balance?page=1&limit=2 HTTP/1.1" 200 OK
-2026-04-12T20:07:39.115023229Z 20:07:39 web.1    | 2026-04-12 20:07:39,114 | INFO     | httpx | HTTP Request: GET https://earthengine.googleapis.com/v1/projects/terratrust-489419/thumbnails/68d68828680bc6d6535314d804b07545-650db252d7f22978d3135ce70605b25c:getPixels "HTTP/1.1 200 OK"
-2026-04-12T20:07:39.191609188Z 20:07:39 web.1    | 2026-04-12 20:07:39,191 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 400 Bad Request"
-2026-04-12T20:07:39.237394134Z 20:07:39 web.1    | 2026-04-12 20:07:39,236 | INFO     | httpx | HTTP Request: POST https://yqwjzpsidruvariebcch.supabase.co/storage/v1/object/sign/land-documents/thumbnails/a75629b7793927851c7eb8f4722c6d6433e4f478b3e34037618e91c328e4a391-512.png "HTTP/2 200 OK"
-2026-04-12T20:07:39.238297295Z 20:07:39 web.1    | INFO:     106.193.215.27:0 - "GET /api/v1/land/list?page=1&limit=3 HTTP/1.1" 200 OK
+ACCOUNT 3
+
+Farm name: Ramdeobaba College
+Survey number: Same as account details
+District: Nagpur
+Taluka: Nagpur (Urban)
+Village: Borgaon
+State: Maharashtra
+Owner name on land: Same as account details
+Verified: yes
+Boundary source: WMS_AUTO
+
+Boundary data:
+79.0606772,21.1767646
+79.06155,21.1765489
+79.0619188,21.1777446
+79.0608155,21.1779247
+79.0606772,21.1767646
+
+ACCOUNT 4
+
+Farm name: Vasudev Nagar
+Survey number: Same as account details
+District: Nagpur
+Taluka: Nagpur (Urban)
+Village: Jaitala
+State: Maharashtra
+Owner name on land: Same as account details
+Verified: yes
+Boundary source: WMS_AUTO
+
+Boundary data:
+79.0180875,21.1172026
+79.0191093,21.1176373
+79.0187391,21.1183364
+79.01772,21.1178611
+79.0180875,21.1172026
