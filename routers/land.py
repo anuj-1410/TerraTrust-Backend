@@ -218,7 +218,6 @@ def _get_pending_land_context_client() -> Redis | None:
             socket_connect_timeout=2,
             socket_timeout=2,
         )
-        _pending_land_context_client.ping()
     except Exception as exc:
         logger.warning("Redis unavailable for pending land context caching: %s", exc)
         _pending_land_context_client = None

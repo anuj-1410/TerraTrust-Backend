@@ -135,7 +135,6 @@ def _get_redis_client() -> Redis | None:
             socket_connect_timeout=2,
             socket_timeout=2,
         )
-        _redis_client.ping()
     except Exception as exc:
         logger.warning("Redis unavailable for LGD caching: %s", exc)
         _redis_client = None

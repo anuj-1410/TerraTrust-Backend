@@ -79,7 +79,7 @@ Important variables:
 | `PINATA_GATEWAY_URL` | Pinata gateway domain used for certificate URLs |
 | `POLYGONSCAN_API_KEY` | PolygonScan API key for verification |
 | `LGD_API_BASE` | Government LGD API base URL |
-| `REDIS_URL` | Redis broker/result backend URL |
+| `REDIS_URL` | Redis broker URL for Celery and optional runtime caches |
 
 ## 4. Configure Google secret files
 

@@ -27,19 +27,37 @@ class RateLimitSpec:
 
 
 _redis_client: Redis | None = None
-_redis_initialised = False
+_redis_unavailable_until = 0.0
 _memory_lock = threading.Lock()
 _memory_counters: dict[str, tuple[int, float]] = {}
+_REDIS_FAILURE_COOLDOWN_SECONDS = 60
+_RATE_LIMIT_SCRIPT = """
+local current = redis.call('INCR', KEYS[1])
+if current == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  return { current, tonumber(ARGV[1]) }
+end
+
+local ttl = redis.call('TTL', KEYS[1])
+if ttl < 0 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+  ttl = tonumber(ARGV[1])
+end
+
+return { current, ttl }
+"""
 
 
 def _get_redis_client() -> Redis | None:
-    """Return a cached Redis client, falling back to in-memory counters when unavailable."""
-    global _redis_client, _redis_initialised
+    """Return a cached Redis client without issuing an eager network command."""
+    global _redis_client
 
-    if _redis_initialised:
+    if _redis_unavailable_until > time.time():
+        return None
+
+    if _redis_client is not None:
         return _redis_client
 
-    _redis_initialised = True
     try:
         _redis_client = redis_from_url(
             settings.REDIS_URL,
@@ -47,12 +65,24 @@ def _get_redis_client() -> Redis | None:
             socket_connect_timeout=2,
             socket_timeout=2,
         )
-        _redis_client.ping()
     except Exception as exc:
         logger.warning("Redis unavailable for rate limiting: %s", exc)
         _redis_client = None
 
     return _redis_client
+
+
+def _mark_redis_unavailable(exc: Exception) -> None:
+    """Temporarily stop trying Redis after a command failure."""
+    global _redis_client, _redis_unavailable_until
+
+    logger.warning(
+        "Redis rate-limit backend failed; using memory fallback for %ds: %s",
+        _REDIS_FAILURE_COOLDOWN_SECONDS,
+        exc,
+    )
+    _redis_client = None
+    _redis_unavailable_until = time.time() + _REDIS_FAILURE_COOLDOWN_SECONDS
 
 
 def _consume_memory_window(key: str, window_seconds: int) -> tuple[int, int]:
@@ -78,16 +108,8 @@ def _consume_redis_window(key: str, window_seconds: int) -> tuple[int, int]:
     if redis_client is None:
         return _consume_memory_window(key, window_seconds)
 
-    count = int(redis_client.incr(key))
-    if count == 1:
-        redis_client.expire(key, window_seconds)
-        return count, window_seconds
-
-    ttl = int(redis_client.ttl(key))
-    if ttl < 0:
-        redis_client.expire(key, window_seconds)
-        ttl = window_seconds
-
+    result = redis_client.eval(_RATE_LIMIT_SCRIPT, 1, key, int(window_seconds))
+    count, ttl = int(result[0]), int(result[1])
     return count, max(1, ttl)
 
 
@@ -98,12 +120,7 @@ def enforce_rate_limit(user_id: str, spec: RateLimitSpec) -> None:
     try:
         count, retry_after = _consume_redis_window(cache_key, spec.window_seconds)
     except Exception as exc:
-        logger.warning(
-            "Rate-limit counter backend failed for scope %s and user %s: %s",
-            spec.scope,
-            user_id,
-            exc,
-        )
+        _mark_redis_unavailable(exc)
         count, retry_after = _consume_memory_window(cache_key, spec.window_seconds)
 
     if count <= spec.limit:
