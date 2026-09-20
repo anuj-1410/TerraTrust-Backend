@@ -7,10 +7,8 @@ import logging
 import re
 from typing import Any, Dict
 
-import cv2
 from google.cloud import vision
 from google.oauth2 import service_account
-import numpy as np
 from PIL import Image, ImageOps
 
 from app.google_credentials import resolve_google_credentials_path as resolve_service_credentials_path
@@ -19,6 +17,18 @@ logger = logging.getLogger("terratrust.ocr")
 
 _vision_client: vision.ImageAnnotatorClient | None = None
 COORDINATE_TOKEN_RE = re.compile(r"(?<!\d)(\d{1,3}(?:\.\d{2,8}))(?!\d)")
+
+
+def _load_image_processing_modules() -> tuple[Any, Any]:
+    """Load OpenCV and NumPy only for local image preprocessing."""
+    try:
+        import cv2
+        import numpy as np
+    except ImportError as exc:
+        raise RuntimeError(
+            "OpenCV image preprocessing requires opencv-python-headless and numpy."
+        ) from exc
+    return cv2, np
 
 
 def resolve_google_credentials_path():
@@ -78,6 +88,8 @@ DISTRICT_RE = re.compile(
 
 def preprocess_document_image(image_bytes: bytes) -> bytes:
     """Pre-process a raw document image for better Cloud Vision accuracy."""
+    cv2, np = _load_image_processing_modules()
+
     try:
         with Image.open(io.BytesIO(image_bytes)) as image:
             upright_image = ImageOps.exif_transpose(image).convert("RGB")

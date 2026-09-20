@@ -13,6 +13,10 @@ logger = logging.getLogger("terratrust.dependencies")
 USER_SELECT = "id, firebase_uid, phone_number, full_name, kyc_completed, wallet_address"
 
 
+class UserIdentityConflict(RuntimeError):
+    """Raised when verified Firebase identity claims conflict with stored users."""
+
+
 def _attach_wallet_recovery_state(user: Dict[str, Any]) -> Dict[str, Any]:
     """Attach the latest wallet-recovery request status for UI bootstrap flows."""
     enriched_user = dict(user)
@@ -83,6 +87,11 @@ def _provision_user(firebase_uid: str, phone_number: str) -> Dict[str, Any]:
     user = _fetch_user_by("firebase_uid", firebase_uid)
     if user:
         if user.get("phone_number") != phone_number:
+            phone_user = _fetch_user_by("phone_number", phone_number)
+            if phone_user and phone_user.get("id") != user["id"]:
+                raise UserIdentityConflict(
+                    "Verified phone number is already linked to another Firebase user."
+                )
             supabase_client.table("users").update({"phone_number": phone_number}).eq(
                 "id", user["id"]
             ).execute()
@@ -91,6 +100,11 @@ def _provision_user(firebase_uid: str, phone_number: str) -> Dict[str, Any]:
 
     user = _fetch_user_by("phone_number", phone_number)
     if user:
+        existing_uid = user.get("firebase_uid")
+        if existing_uid and existing_uid != firebase_uid:
+            raise UserIdentityConflict(
+                "Verified phone number is already linked to another Firebase user."
+            )
         supabase_client.table("users").update(
             {
                 "firebase_uid": firebase_uid,
@@ -158,6 +172,12 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, A
 
     try:
         return _provision_user(firebase_uid=firebase_uid, phone_number=phone_number)
+    except UserIdentityConflict as exc:
+        logger.warning("User provisioning conflict for Firebase uid %s: %s", firebase_uid, exc)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Authenticated phone number is already linked to another user.",
+        ) from exc
     except Exception as exc:
         logger.error("User provisioning failed for Firebase uid %s: %s", firebase_uid, exc)
         raise HTTPException(

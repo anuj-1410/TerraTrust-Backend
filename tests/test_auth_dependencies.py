@@ -297,6 +297,26 @@ def test_provision_user_refetches_row_after_update(monkeypatch):
     assert user["phone_number"] == "+919999999999"
 
 
+def test_provision_user_rejects_phone_linked_to_different_firebase_uid(monkeypatch):
+    users_store = [
+        {
+            "id": "user-1",
+            "firebase_uid": "firebase-1",
+            "phone_number": "+919999999999",
+            "full_name": "Farmer One",
+            "kyc_completed": True,
+            "wallet_address": None,
+        }
+    ]
+    fake_client = _FakeSupabaseClient(users_store)
+    monkeypatch.setattr(dependencies, "supabase_client", fake_client)
+
+    with pytest.raises(RuntimeError, match="already linked"):
+        dependencies._provision_user("firebase-2", "+919999999999")
+
+    assert users_store[0]["firebase_uid"] == "firebase-1"
+
+
 def test_fetch_user_by_attaches_latest_wallet_recovery_state(monkeypatch):
     users_store = [
         {
@@ -345,6 +365,26 @@ def test_get_current_user_returns_503_for_profile_provisioning_errors(monkeypatc
         dependencies.get_current_user("Bearer test-token")
 
     assert exc_info.value.status_code == 503
+
+
+def test_get_current_user_returns_409_for_identity_conflict(monkeypatch):
+    monkeypatch.setattr(
+        dependencies,
+        "verify_firebase_token",
+        lambda _token: {"uid": "firebase-1", "phone_number": "+919999999999"},
+    )
+    monkeypatch.setattr(
+        dependencies,
+        "_provision_user",
+        lambda **_kwargs: (_ for _ in ()).throw(
+            dependencies.UserIdentityConflict("already linked")
+        ),
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        dependencies.get_current_user("Bearer test-token")
+
+    assert exc_info.value.status_code == 409
 
 
 def test_register_wallet_is_idempotent_when_same_wallet_is_already_saved(monkeypatch):

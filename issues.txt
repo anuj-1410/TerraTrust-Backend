@@ -1,0 +1,60 @@
+**Critical findings**
+
+1. **NISAR is not implemented in production fusion.**  
+   `nisar_service.py` only reports granule availability; it does not extract raster values. `fusion_engine.py` always uses Sentinel-1 and returns `nisar_used: False`. This violates the post-June-2026 12-feature production requirement.  
+   `nisar_service.py:251` · `fusion_engine.py:550`
+
+2. **Audit certificates are transferable.**  
+   The ERC-1155 contract does not override transfer functions, although the BSDD says certificates must be non-transferable. A farmer can transfer certificate tokens freely.  
+   `TerraToken.sol:43`
+
+3. **Credit balance can become incorrect when Polygon RPC fails.**  
+   The credits endpoint silently falls back to summing database `credits_issued`, ignoring transfers and retired credits. It can display credits the wallet no longer owns.  
+   `credits.py:115`
+
+4. **Public demo reset endpoint is destructive and unauthenticated.**  
+   When demos are enabled, anyone who knows a phone suffix can reset an account, including the persistent account via `allow_persistent=True`. `/demo/status` also exposes demo configuration.  
+   `router.py:20`
+
+5. **Audit submission is not atomic or idempotent.**  
+   Existing scans are deleted before all photos and rows are successfully stored. A failure midway leaves orphaned storage files and incomplete database state. Concurrent submissions can also both pass the `PROCESSING` check and enqueue duplicate fusion jobs.  
+   `audit.py:681` · `audit.py:751`
+
+6. **Database engine failure handling is broken.**  
+   `_require_async_engine()` logs an error but returns `None`; callers then fail later with unclear `NoneType` errors. The direct database tests currently fail because of this interface regression.  
+   `database.py:55`
+
+**High-priority implementation gaps**
+
+7. **GEDI availability is converted to zero-valued data across the whole parcel.**  
+   If any zone has GEDI, the entire GEDI image is `unmask(0)`. Missing GEDI pixels become real zero-height training/prediction values instead of missing data, potentially biasing biomass estimates.  
+   `fusion_engine.py:288`
+
+8. **The biomass model is scientifically underdetermined for the stated use.**  
+   The model trains on only 9 to 15 samples, often with repeated/nearby pixels, then extrapolates to the entire farm. There is no validation split, uncertainty estimate, minimum spatial separation, or model-quality rejection threshold. The documented 5–7% accuracy is therefore not demonstrated.
+
+9. **Manual boundary extraction is not reliable georeferencing.**  
+   The implementation extracts image contours, but the documented scale-bar/coordinate georeferencing workflow is not evident. Pixel contours alone cannot produce trustworthy latitude/longitude boundaries.  
+   `land_boundary_service.py:863`
+
+10. **Land registration has a race condition around duplicates.**  
+    The API performs a duplicate lookup and then inserts separately. Concurrent requests can race; the database constraint then produces a generic 500 instead of the documented 409.  
+    `land.py:625`
+
+11. **Demo account 4 contradicts its own specification.**  
+    The specification says account 4 is persistent and never resets, but the live configuration sets `"persistent": False`, so it resets on the next login.  
+    `config.py:42`
+
+12. **The setup/test environment is currently not reproducible.**  
+    `pytest -q` produced 4 failures and 49 passes. Failures include missing `_require_async_engine`, missing `firebase_auth.settings`, and `cv2` failing because `numpy` is unavailable in the active environment despite being listed in requirements.  
+    `test_database_direct_sql.py:72` · `test_google_credentials.py:40`
+
+**Medium-priority concerns**
+
+- Authentication provisioning can reassign an existing phone-number record to a new Firebase UID instead of rejecting the identity conflict. `dependencies.py:65`
+- Storage uploads and audit rows are not cleaned up after partial submission failure.
+- Land thumbnails are generated synchronously for every listed parcel, causing repeated GEE calls and likely slow list responses. `land.py:747`
+- Most router tests use injected fake modules, so they do not exercise the real database, Firebase, Supabase, GEE, or storage integrations.
+- The README still contains frontend/project-root setup instructions that do not match this backend-only workspace.
+
+The Solidity tests pass (`4 passing`), but they do not test certificate non-transferability or all production minting/recovery failure scenarios.

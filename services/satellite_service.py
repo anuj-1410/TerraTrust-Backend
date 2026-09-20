@@ -355,6 +355,15 @@ def generate_true_color_thumbnail_url(
     max_cloud_pct: int = 20,
 ) -> str:
     """Return a signed Supabase URL for a persisted Sentinel-2 true-colour PNG."""
+    thumbnail_key = hashlib.sha256(
+        json.dumps(boundary_geojson, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    object_path = f"thumbnails/{thumbnail_key}-{dimensions}.png"
+
+    existing_signed_url = _get_existing_thumbnail_signed_url(object_path)
+    if existing_signed_url:
+        return existing_signed_url
+
     _ensure_gee()
 
     region = _build_ee_region(boundary_geojson)
@@ -378,15 +387,6 @@ def generate_true_color_thumbnail_url(
             "max": 3000,
         }
     )
-
-    thumbnail_key = hashlib.sha256(
-        json.dumps(boundary_geojson, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    object_path = f"thumbnails/{thumbnail_key}-{dimensions}.png"
-
-    existing_signed_url = _get_existing_thumbnail_signed_url(object_path)
-    if existing_signed_url:
-        return existing_signed_url
 
     response = httpx.get(raw_thumbnail_url, timeout=60.0)
     response.raise_for_status()

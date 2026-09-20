@@ -1,5 +1,7 @@
 import json
+import importlib
 import os
+import sys
 import types
 from pathlib import Path
 
@@ -27,6 +29,13 @@ def _write_service_account(tmp_path: Path, file_name: str, *, client_email: str)
     return credentials_path
 
 
+def _import_real_module(module_name: str):
+    """Import a real backend module after clearing test stubs from sys.modules."""
+    for name in (module_name, "app.config", "app.google_credentials"):
+        sys.modules.pop(name, None)
+    return importlib.import_module(module_name)
+
+
 def test_get_firebase_app_uses_dedicated_credentials_file(monkeypatch, tmp_path):
     credentials_path = _write_service_account(
         tmp_path,
@@ -34,7 +43,7 @@ def test_get_firebase_app_uses_dedicated_credentials_file(monkeypatch, tmp_path)
         client_email="firebase@test-project.iam.gserviceaccount.com",
     )
 
-    import app.firebase_auth as firebase_auth
+    firebase_auth = _import_real_module("app.firebase_auth")
 
     monkeypatch.setattr(
         firebase_auth.settings,
@@ -83,7 +92,7 @@ def test_ensure_gee_initialized_uses_dedicated_service_account(monkeypatch, tmp_
         client_email="gee@test-project.iam.gserviceaccount.com",
     )
 
-    import app.gee as gee
+    gee = _import_real_module("app.gee")
 
     monkeypatch.setattr(gee, "resolve_google_credentials_path", lambda: credentials_path)
     monkeypatch.setattr(gee, "get_gee_project_id", lambda: "gee-project")
@@ -129,7 +138,7 @@ def test_vision_client_initialisation_uses_dedicated_credentials_path(monkeypatc
         client_email="vision@test-project.iam.gserviceaccount.com",
     )
 
-    import services.ocr_service as ocr_service
+    ocr_service = _import_real_module("services.ocr_service")
 
     monkeypatch.setattr(ocr_service, "_vision_client", None)
     monkeypatch.setattr(

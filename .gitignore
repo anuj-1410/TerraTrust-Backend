@@ -6,16 +6,29 @@ backend-google-service-account.json
 __pycache__/
 *.pyc
 *.pyo
+# uv manages the venv — use .venv (not venv)
 .venv/
-venv/
 *.egg-info/
 dist/
 build/
 .pytest_cache/
 
+# uv — DO NOT ignore uv.lock; it must be committed for reproducible builds
+# uv.lock  <-- intentionally tracked in git
+
 # Node / Hardhat
 node_modules/
+contracts/node_modules/
 contracts/cache/
+contracts/artifacts/build-info/
+contracts/artifacts/@openzeppelin/
+contracts/artifacts/**/*.dbg.json
+contracts/coverage/
+contracts/coverage.json
+contracts/typechain/
+contracts/typechain-types/
+contracts/.env*
+**/.pytest_cache/
 
 # IDE
 .vscode/

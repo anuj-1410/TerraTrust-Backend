@@ -24,6 +24,20 @@ def _install_fastapi_stub():
             return decorator
 
     fastapi_stub.APIRouter = _APIRouter
+    fastapi_stub.Depends = lambda dependency=None: dependency
+
+    class _HTTPException(Exception):
+        def __init__(self, status_code, detail, headers=None):
+            super().__init__(detail)
+            self.status_code = status_code
+            self.detail = detail
+            self.headers = headers or {}
+
+    fastapi_stub.HTTPException = _HTTPException
+    fastapi_stub.status = types.SimpleNamespace(
+        HTTP_403_FORBIDDEN=403,
+        HTTP_409_CONFLICT=409,
+    )
     sys.modules["fastapi"] = fastapi_stub
 
 
@@ -38,7 +52,13 @@ def _load_demo_router_module():
     config_stub.ENABLE_DEMO_ACCOUNTS = True
     config_stub.get_demo_account = lambda _uid: {"checkpoint": "FULL", "persistent": True}
     config_stub.get_demo_status_accounts = lambda: []
+    config_stub.is_demo_uid = lambda uid: uid == "KhBSyGEVU8SkMWIXmN8qkrLNwYk1"
+    config_stub.is_resettable_demo = lambda _uid: False
     sys.modules["demo.config"] = config_stub
+
+    dependencies_stub = types.ModuleType("app.dependencies")
+    dependencies_stub.get_current_user = lambda: None
+    sys.modules["app.dependencies"] = dependencies_stub
 
     middleware_stub = types.ModuleType("demo.middleware")
     middleware_stub.invalidate_demo_session = lambda _uid: None
@@ -56,12 +76,18 @@ def _load_demo_router_module():
     return importlib.import_module("demo.router")
 
 
-def test_manual_demo_reset_allows_persistent_account_four():
+def test_manual_demo_reset_rejects_persistent_account_four():
     demo_router = _load_demo_router_module()
 
-    response = asyncio.run(demo_router.manually_reset_demo_account("9000000004"))
-
-    assert response["status"] == "reset_complete"
-    assert response["phone"] == "+919000000004"
-    assert response["checkpoint"] == "FULL"
-    assert response["persistent"] is True
+    try:
+        asyncio.run(
+            demo_router.manually_reset_demo_account(
+                "9000000004",
+                current_user={"firebase_uid": "KhBSyGEVU8SkMWIXmN8qkrLNwYk1"},
+            )
+        )
+    except Exception as exc:
+        assert exc.status_code == 409
+        assert exc.detail == "This demo account is persistent and cannot be reset."
+    else:
+        raise AssertionError("Expected persistent demo reset to be rejected.")

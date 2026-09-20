@@ -7,10 +7,12 @@ import logging
 from collections import Counter
 from datetime import datetime, timezone
 import math
-from typing import Any, Dict, List
+import threading
+import time
+from typing import Any, Dict, List, Optional
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from PIL import Image, UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool
 
@@ -18,10 +20,10 @@ from app.database import (
     delete_tree_scan_records_for_audit,
     fetch_land_parcel_record,
     insert_sampling_zone_records,
-    insert_tree_scan_record,
     land_contains_point,
     list_sampling_zones_for_audit,
     list_tree_scans_for_audit,
+    replace_tree_scan_records_for_audit,
     supabase_client,
 )
 from app.dependencies import get_current_user
@@ -73,6 +75,59 @@ AUDIT_RESULT_RATE_LIMIT = RateLimitSpec(
     window_seconds=60,
     error_message="Too many audit status requests. Please wait before polling again.",
 )
+
+_idempotency_lock = threading.Lock()
+_idempotency_cache: dict[str, float] = {}
+_idempotency_redis: Any = None
+_idempotency_redis_initialised = False
+
+
+def _get_idempotency_redis() -> Any:
+    global _idempotency_redis, _idempotency_redis_initialised
+    if not _idempotency_redis_initialised:
+        with _idempotency_lock:
+            if not _idempotency_redis_initialised:
+                try:
+                    from app.config import settings
+                    from app.redis_utils import redis_from_url
+                    _idempotency_redis = redis_from_url(settings.REDIS_URL)
+                except Exception as exc:
+                    logger.warning("Redis unavailable for audit idempotency: %s", exc)
+                    _idempotency_redis = None
+                _idempotency_redis_initialised = True
+    return _idempotency_redis
+
+
+def _is_duplicate_submission(audit_id: str, idempotency_key: Optional[str]) -> bool:
+    """Return True if this idempotency key was already accepted for this audit."""
+    if not idempotency_key:
+        return False
+    key = f"terratrust:audit_idempotency:{audit_id}:{idempotency_key.strip()}"
+    redis_client = _get_idempotency_redis()
+    if redis_client is not None:
+        try:
+            return bool(redis_client.get(key))
+        except Exception as exc:
+            logger.warning("Redis idempotency get failed: %s", exc)
+    with _idempotency_lock:
+        expiry = _idempotency_cache.get(key)
+        return expiry is not None and expiry > time.time()
+
+
+def _record_duplicate_submission(audit_id: str, idempotency_key: Optional[str], ttl_seconds: int = 3600) -> None:
+    """Cache the idempotency key to reject duplicate submissions."""
+    if not idempotency_key:
+        return
+    key = f"terratrust:audit_idempotency:{audit_id}:{idempotency_key.strip()}"
+    redis_client = _get_idempotency_redis()
+    if redis_client is not None:
+        try:
+            redis_client.set(key, "1", ex=ttl_seconds)
+            return
+        except Exception as exc:
+            logger.warning("Redis idempotency set failed: %s", exc)
+    with _idempotency_lock:
+        _idempotency_cache[key] = time.time() + ttl_seconds
 
 
 def _processing_submit_response(audit_id: str) -> AuditSubmitResponse:
@@ -310,6 +365,19 @@ def _decode_evidence_photo(photo_base64: str, expected_hash: str) -> bytes:
     return photo_bytes
 
 
+async def _cleanup_uploaded_evidence_photos(paths: List[str]) -> None:
+    """Best-effort cleanup for evidence photos uploaded by a failed submission."""
+    if not paths:
+        return
+
+    try:
+        await run_in_threadpool(
+            lambda: supabase_client.storage.from_("evidence-photos").remove(paths)
+        )
+    except Exception as exc:
+        logger.warning("Failed to clean up %d uploaded evidence photo(s): %s", len(paths), exc)
+
+
 def _distance_metres(first_lat: float, first_lng: float, second_lat: float, second_lng: float) -> float:
     """Approximate straight-line distance between two GPS points."""
     dlat = (second_lat - first_lat) * 111_320
@@ -449,6 +517,24 @@ async def get_audit_zones(
             )
 
         audit_id = existing_audit["id"]
+
+    # Generate sampling zones FIRST into memory.
+    # If GEE or zone generation fails, no existing audit records or scans are modified.
+    try:
+        zones = await run_in_threadpool(
+            zone_generation_service.generate_sampling_zones,
+            land_id,
+            boundary_geojson,
+        )
+    except Exception as exc:
+        logger.error("Zone generation failed for land %s: %s", land_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate sampling zones. Ensure GEE is configured.",
+        ) from exc
+
+    # Persist zones and refresh the audit record only after successful generation
+    if existing_audit:
         await delete_tree_scan_records_for_audit(audit_id)
         await run_in_threadpool(
             lambda: supabase_client.table("sampling_zones").delete().eq("audit_id", audit_id).execute()
@@ -467,23 +553,7 @@ async def get_audit_zones(
                 .execute()
             )
         )
-
-    # Generate zones
-    try:
-        zones = await run_in_threadpool(
-            zone_generation_service.generate_sampling_zones,
-            land_id,
-            boundary_geojson,
-        )
-    except Exception as exc:
-        logger.error("Zone generation failed for land %s: %s", land_id, exc)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to generate sampling zones. Ensure GEE is configured.",
-        ) from exc
-
-    # Create or refresh the audit record
-    if not existing_audit:
+    else:
         await run_in_threadpool(
             lambda: (
                 supabase_client.table("carbon_audits")
@@ -516,17 +586,19 @@ async def get_audit_zones(
 )
 async def submit_samples(
     body: AuditSubmitRequest,
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """Accept tree-scan samples and kick off the fusion pipeline.
 
-    Validations
-    -----------
-    - Minimum **9** trees total.
-    - At least **3** trees per zone.
-    - Each tree must have valid photo data.
+    Supports optional ``Idempotency-Key`` header to prevent duplicate processing
+    and redundant photo uploads on client retries.
     """
     enforce_rate_limit(current_user["id"], AUDIT_SUBMIT_RATE_LIMIT)
+
+    if _is_duplicate_submission(body.audit_id, idempotency_key):
+        logger.info("Idempotent submission replay detected for audit %s", body.audit_id)
+        return _processing_submit_response(body.audit_id)
 
     trees = body.trees
 
@@ -724,9 +796,9 @@ async def submit_samples(
             }
         )
 
-    # --- Process each tree ------------------------------------------------
-    await delete_tree_scan_records_for_audit(body.audit_id)
-
+    # --- Upload evidence first; existing persisted scans stay intact on upload failure.
+    scan_records: List[Dict[str, Any]] = []
+    uploaded_photo_paths: List[str] = []
     for prepared_scan in prepared_scans:
         tree = prepared_scan["tree"]
         species_name = prepared_scan["species_name"]
@@ -742,48 +814,60 @@ async def submit_samples(
                     photo_bytes,
                 )
             )
+            uploaded_photo_paths.append(photo_storage_path)
         except Exception as exc:
             logger.error("Photo upload failed for audit %s: %s", body.audit_id, exc)
+            await _cleanup_uploaded_evidence_photos(uploaded_photo_paths)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to store tree evidence photo.",
             ) from exc
 
-        # Insert into ar_tree_scans table
-        scan_record = {
-            "id": scan_id,
-            "audit_id": body.audit_id,
-            "land_id": body.land_id,
-            "zone_id": tree.zone_id,
-            "species": species_name,
-            "species_confidence": tree.species_confidence,
-            "species_source": tree.species_source,
-            "dbh_cm": tree.dbh_cm,
-            "height_m": tree.height_m,
-            "gps": {"lat": tree.gps.lat, "lng": tree.gps.lng},
-            "gps_accuracy_m": tree.gps_accuracy_m,
-            "gedi_height_m": None,
-            "height_source": "AR_FALLBACK" if tree.height_m else None,
-            "ar_tier_used": tree.ar_tier_used,
-            "confidence_score": tree.confidence_score,
-            "evidence_photo_hash": tree.evidence_photo_hash,
-            "evidence_photo_path": photo_storage_path,
-            "wood_density": wood_density,
-            "agb_kg": None,
-            "scan_timestamp": _to_utc_iso(tree.scan_timestamp),
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        await insert_tree_scan_record(scan_record)
-
-    # --- Update audit status -----------------------------------------------
-    await run_in_threadpool(
-        lambda: (
-            supabase_client.table("carbon_audits")
-            .update({"status": "CALCULATING", "error": None})
-            .eq("id", body.audit_id)
-            .execute()
+        scan_records.append(
+            {
+                "id": scan_id,
+                "audit_id": body.audit_id,
+                "land_id": body.land_id,
+                "zone_id": tree.zone_id,
+                "species": species_name,
+                "species_confidence": tree.species_confidence,
+                "species_source": tree.species_source,
+                "dbh_cm": tree.dbh_cm,
+                "height_m": tree.height_m,
+                "gps": {"lat": tree.gps.lat, "lng": tree.gps.lng},
+                "gps_accuracy_m": tree.gps_accuracy_m,
+                "gedi_height_m": None,
+                "height_source": "AR_FALLBACK" if tree.height_m else None,
+                "ar_tier_used": tree.ar_tier_used,
+                "confidence_score": tree.confidence_score,
+                "evidence_photo_hash": tree.evidence_photo_hash,
+                "evidence_photo_path": photo_storage_path,
+                "wood_density": wood_density,
+                "agb_kg": None,
+                "scan_timestamp": _to_utc_iso(tree.scan_timestamp),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+            }
         )
-    )
+
+    # --- Atomically replace scan rows and claim the audit for calculation ---
+    try:
+        claimed, old_evidence_paths = await replace_tree_scan_records_for_audit(
+            body.audit_id,
+            scan_records,
+        )
+    except Exception as exc:
+        await _cleanup_uploaded_evidence_photos(uploaded_photo_paths)
+        logger.error("Failed to persist tree scans for audit %s: %s", body.audit_id, exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to store tree scan samples.",
+        ) from exc
+
+    if not claimed:
+        await _cleanup_uploaded_evidence_photos(uploaded_photo_paths)
+        return _processing_submit_response(body.audit_id)
+
+    await _cleanup_uploaded_evidence_photos(old_evidence_paths)
 
     # --- Trigger fusion task -----------------------------------------------
     from tasks.fusion_task import run_audit_fusion
@@ -815,6 +899,7 @@ async def submit_samples(
         len(trees),
         body.audit_id,
     )
+    _record_duplicate_submission(body.audit_id, idempotency_key)
 
     return _processing_submit_response(body.audit_id)
 

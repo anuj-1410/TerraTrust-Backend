@@ -29,6 +29,7 @@ def _load_audit_module_for_demo_helper():
     fastapi_stub.APIRouter = _APIRouter
     fastapi_stub.Depends = lambda dependency=None: dependency
     fastapi_stub.Query = lambda default=None, **_kwargs: default
+    fastapi_stub.Header = lambda default=None, **_kwargs: default
     fastapi_stub.HTTPException = _HTTPException
     fastapi_stub.status = types.SimpleNamespace(
         HTTP_200_OK=200,
@@ -50,6 +51,7 @@ def _load_audit_module_for_demo_helper():
     database_stub.land_contains_point = lambda *_args, **_kwargs: True
     database_stub.list_sampling_zones_for_audit = lambda *_args, **_kwargs: []
     database_stub.list_tree_scans_for_audit = lambda *_args, **_kwargs: []
+    database_stub.replace_tree_scan_records_for_audit = lambda *_args, **_kwargs: (True, [])
     database_stub.supabase_client = types.SimpleNamespace(table=lambda *_args, **_kwargs: None)
     sys.modules["app.database"] = database_stub
 

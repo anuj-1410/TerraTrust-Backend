@@ -3,6 +3,7 @@ import importlib
 import sys
 import types
 from datetime import datetime, timezone
+import pytest
 
 
 def _install_fastapi_stub():
@@ -31,6 +32,7 @@ def _install_fastapi_stub():
     fastapi_stub.APIRouter = _APIRouter
     fastapi_stub.Depends = lambda dependency=None: dependency
     fastapi_stub.Query = lambda default=None, **_kwargs: default
+    fastapi_stub.Header = lambda default=None, **_kwargs: default
     fastapi_stub.HTTPException = _HTTPException
     fastapi_stub.status = types.SimpleNamespace(
         HTTP_200_OK=200,
@@ -92,6 +94,9 @@ def _install_supporting_stubs(stores, land_record, zones, tree_scans):
     async def land_contains_point(*_args, **_kwargs):
         return True
 
+    async def replace_tree_scan_records_for_audit(*_args, **_kwargs):
+        return True, []
+
     class _Response:
         def __init__(self, data):
             self.data = data
@@ -148,6 +153,7 @@ def _install_supporting_stubs(stores, land_record, zones, tree_scans):
     app_database_stub.land_contains_point = land_contains_point
     app_database_stub.list_sampling_zones_for_audit = list_sampling_zones_for_audit
     app_database_stub.list_tree_scans_for_audit = list_tree_scans_for_audit
+    app_database_stub.replace_tree_scan_records_for_audit = replace_tree_scan_records_for_audit
     app_database_stub.supabase_client = _FakeSupabaseClient(stores)
     sys.modules["app.database"] = app_database_stub
 
@@ -365,3 +371,54 @@ def test_get_audit_result_returns_calculating_phase_after_submission():
     assert response["zones_total"] == 2
     assert response["zones_completed"] == 2
     assert response["can_resume_scanning"] is False
+
+
+def test_submit_samples_idempotency_returns_processing_immediately():
+    audit_module = _load_audit_module(
+        {"carbon_audits": []},
+        {"id": "land-1", "user_id": "user-1", "boundary_geojson": {"type": "Polygon", "coordinates": []}},
+        [],
+        [],
+    )
+    audit_module._record_duplicate_submission("audit-123", "idemp-key-abc")
+
+    body = types.SimpleNamespace(audit_id="audit-123", land_id="land-1", trees=[])
+    res = asyncio.run(
+        audit_module.submit_samples(
+            body=body,
+            idempotency_key="idemp-key-abc",
+            current_user={"id": "user-1"},
+        )
+    )
+    assert res.status == "PROCESSING"
+    assert res.audit_id == "audit-123"
+
+
+def test_get_audit_zones_preserves_records_when_generation_fails():
+    audit_module = _load_audit_module(
+        {
+            "carbon_audits": [
+                {"id": "audit-retry", "land_id": "land-1", "user_id": "user-1", "status": "FAILED"}
+            ]
+        },
+        {"id": "land-1", "user_id": "user-1", "boundary_geojson": {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [1, 1], [0, 0]]]}},
+        [{"id": "zone-1"}],
+        [],
+    )
+
+    # Force zone generation to fail
+    sys.modules["services.zone_generation_service"].generate_sampling_zones = lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("GEE timeout"))
+
+    # Deletions must NOT be called before zone generation succeeds
+    deleted = []
+    sys.modules["app.database"].delete_tree_scan_records_for_audit = lambda _aid: deleted.append("scans")
+
+    with pytest.raises(Exception) as exc_info:
+        asyncio.run(
+            audit_module.get_audit_zones(
+                land_id="land-1",
+                current_user={"id": "user-1"},
+            )
+        )
+    assert exc_info.value.status_code == 500
+    assert deleted == []  # No deletions happened!

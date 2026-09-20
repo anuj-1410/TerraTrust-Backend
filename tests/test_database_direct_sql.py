@@ -1,8 +1,18 @@
 import asyncio
+import importlib
+import os
+import sys
 from datetime import datetime, timezone
 from uuid import uuid4
 
-import app.database as database
+os.environ.setdefault("FIREBASE_PROJECT_ID", "test-project")
+os.environ.setdefault("SUPABASE_URL", "https://example.supabase.co")
+os.environ.setdefault("SUPABASE_SERVICE_KEY", "test-service-key")
+
+for module_name in ("app.database", "app.config"):
+    sys.modules.pop(module_name, None)
+
+database = importlib.import_module("app.database")
 
 
 class _FakeResult:
@@ -40,6 +50,43 @@ class _FakeEngine:
 
     def connect(self):
         return _FakeConnection(self._result)
+
+
+class _SequencedConnection:
+    def __init__(self, results):
+        self._results = list(results)
+        self.executed = []
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    async def execute(self, query, params):
+        self.executed.append((str(query), params))
+        if self._results:
+            return self._results.pop(0)
+        return _FakeResult()
+
+
+class _SequencedEngine:
+    def __init__(self, results):
+        self.connection = _SequencedConnection(results)
+
+    def begin(self):
+        return self.connection
+
+
+def test_require_async_engine_raises_clear_setup_error(monkeypatch):
+    monkeypatch.setattr(database, "async_engine", None)
+
+    try:
+        database._require_async_engine()
+    except RuntimeError as exc:
+        assert "DATABASE_URL must be configured" in str(exc)
+    else:
+        raise AssertionError("Expected missing async engine to raise RuntimeError.")
 
 
 def test_fetch_land_parcel_record_normalises_uuid_owner_and_timestamp(monkeypatch):
@@ -110,3 +157,43 @@ def test_list_sampling_zones_for_audit_normalises_zone_ids(monkeypatch):
 
     assert zones[0]["id"] == str(zone_id)
     assert zones[0]["centre_gps"] == {"lat": 18.5123, "lng": 73.8123}
+
+
+def test_replace_tree_scan_records_returns_old_evidence_paths(monkeypatch):
+    fake_engine = _SequencedEngine(
+        [
+            _FakeResult(row={"id": "audit-1"}),
+            _FakeResult(
+                rows=[
+                    {"evidence_photo_path": "audit-1/old-a.jpg"},
+                    {"evidence_photo_path": None},
+                    {"evidence_photo_path": "audit-1/old-b.jpg"},
+                ]
+            ),
+        ]
+    )
+    monkeypatch.setattr(database, "_require_async_engine", lambda: fake_engine)
+
+    claimed, old_paths = asyncio.run(
+        database.replace_tree_scan_records_for_audit(
+            "audit-1",
+            [
+                {
+                    "id": "scan-1",
+                    "audit_id": "audit-1",
+                    "land_id": "land-1",
+                    "zone_id": "zone-1",
+                    "species": "Neem",
+                    "dbh_cm": 22.0,
+                    "height_m": 8.0,
+                    "gps": {"lat": 18.5, "lng": 73.8},
+                    "gps_accuracy_m": 4.0,
+                    "wood_density": 0.56,
+                }
+            ],
+        )
+    )
+
+    assert claimed is True
+    assert old_paths == ["audit-1/old-a.jpg", "audit-1/old-b.jpg"]
+    assert any("DELETE FROM ar_tree_scans" in query for query, _params in fake_engine.connection.executed)

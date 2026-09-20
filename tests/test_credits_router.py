@@ -2,6 +2,8 @@ import importlib
 import sys
 import types
 
+import pytest
+
 
 def _install_fastapi_stub():
     fastapi_stub = types.ModuleType("fastapi")
@@ -173,7 +175,7 @@ def test_get_balance_returns_zero_when_wallet_not_registered():
     assert response.total == 0
 
 
-def test_get_balance_falls_back_to_history_when_chain_is_unavailable(monkeypatch):
+def test_get_balance_rejects_history_fallback_when_chain_is_unavailable(monkeypatch):
     credits = _load_credits_module(
         {
             "carbon_audits": [
@@ -206,15 +208,15 @@ def test_get_balance_falls_back_to_history_when_chain_is_unavailable(monkeypatch
 
     monkeypatch.setattr(credits, "_get_contract", lambda: (_ for _ in ()).throw(RuntimeError("rpc down")))
 
-    response = credits.get_balance(
-        page=1,
-        limit=20,
-        current_user={
-            "id": "user-1",
-            "wallet_address": "0x1234567890123456789012345678901234567890",
-        },
-    )
+    with pytest.raises(Exception) as exc_info:
+        credits.get_balance(
+            page=1,
+            limit=20,
+            current_user={
+                "id": "user-1",
+                "wallet_address": "0x1234567890123456789012345678901234567890",
+            },
+        )
 
-    assert response.balance_ctt == 12.4
-    assert response.total == 2
-    assert response.history[0].land_name == "North Field"
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == "Current credit balance is temporarily unavailable."

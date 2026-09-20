@@ -1,4 +1,5 @@
 import os
+import inspect
 import sys
 import types
 
@@ -119,3 +120,9 @@ def test_calculate_credits_uses_zero_credit_baseline_when_no_previous_audit(monk
 
 def test_normalise_species_name_accepts_scientific_aliases():
     assert fusion_engine.normalise_species_name("Dalbergia sissoo") == "Indian Rosewood"
+
+
+def test_run_fusion_does_not_convert_missing_gedi_pixels_to_zero():
+    source = inspect.getsource(fusion_engine.run_fusion)
+
+    assert "raw_gedi.unmask(0)" not in source

@@ -122,3 +122,61 @@ def test_lgd_retry_delay_seconds_matches_srs_backoff():
     assert land_boundary_service._lgd_retry_delay_seconds(1) == 2
     assert land_boundary_service._lgd_retry_delay_seconds(2) == 4
     assert land_boundary_service._lgd_retry_delay_seconds(3) == 8
+
+
+def test_manual_coordinate_fit_rejects_inconsistent_axis_labels():
+    try:
+        land_boundary_service._fit_linear_coordinate_map(
+            [(0.0, 73.0), (100.0, 73.01), (200.0, 80.0)],
+            axis_pixels=300.0,
+            label="longitude",
+        )
+    except ValueError as exc:
+        assert "longitude labels were inconsistent" in str(exc)
+    else:
+        raise AssertionError("Expected inconsistent OCR axis labels to be rejected.")
+
+
+def test_manual_geojson_rejects_boundary_far_from_reported_gps():
+    geojson = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [73.0000, 18.0000],
+                [73.0010, 18.0000],
+                [73.0010, 18.0010],
+                [73.0000, 18.0010],
+                [73.0000, 18.0000],
+            ]
+        ],
+    }
+
+    try:
+        land_boundary_service._validate_manual_geojson(
+            geojson,
+            user_lat=21.1172,
+            user_lng=79.0180,
+        )
+    except ValueError as exc:
+        assert "reported location" in str(exc)
+    else:
+        raise AssertionError("Expected distant manual boundary to be rejected.")
+
+
+def test_scale_bar_coordinate_maps_uses_coordinate_anchors(monkeypatch):
+    monkeypatch.setattr(
+        land_boundary_service,
+        "_extract_scale_bar_metres_and_pixel_width",
+        lambda _image_bytes: (100.0, 100.0),
+    )
+
+    x_transform, y_transform = land_boundary_service._scale_bar_coordinate_maps(
+        b"image",
+        [(200.0, 79.0)],
+        [(300.0, 21.0)],
+    )
+
+    assert x_transform[0] > 0
+    assert y_transform[0] < 0
+    assert (x_transform[0] * 200.0) + x_transform[1] == 79.0
+    assert (y_transform[0] * 300.0) + y_transform[1] == 21.0

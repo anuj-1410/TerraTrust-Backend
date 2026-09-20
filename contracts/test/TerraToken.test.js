@@ -86,6 +86,55 @@ describe("TerraTrustToken", function () {
     expect(await token.retiredCredits(farmer.address)).to.equal(30n);
   });
 
+  it("allows carbon credit transfers", async function () {
+    const { token, farmer, buyer } = await deployFixture();
+
+    await token.mintAudit(
+      farmer.address,
+      1001,
+      100,
+      "ipfs://cid-1",
+      "land-1",
+      2026
+    );
+
+    await token.connect(farmer).safeTransferFrom(
+      farmer.address,
+      buyer.address,
+      1,
+      30,
+      "0x"
+    );
+
+    expect(await token.balanceOf(farmer.address, 1)).to.equal(70n);
+    expect(await token.balanceOf(buyer.address, 1)).to.equal(30n);
+  });
+
+  it("prevents audit certificate transfers", async function () {
+    const { token, farmer, buyer } = await deployFixture();
+
+    await token.mintAudit(
+      farmer.address,
+      1001,
+      100,
+      "ipfs://cid-1",
+      "land-1",
+      2026
+    );
+
+    await expect(
+      token.connect(farmer).safeTransferFrom(
+        farmer.address,
+        buyer.address,
+        1001,
+        1,
+        "0x"
+      )
+    )
+      .to.be.revertedWithCustomError(token, "AuditCertificateTransferDisabled")
+      .withArgs(1001);
+  });
+
   it("rejects minting by a non-owner account", async function () {
     const { token, farmer } = await deployFixture();
 

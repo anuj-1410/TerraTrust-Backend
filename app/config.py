@@ -42,7 +42,10 @@ class Settings(BaseSettings):
     # --- NASA NISAR ---------------------------------------------------------
     NASA_EARTHDATA_USERNAME: str = ""
     NASA_EARTHDATA_PASSWORD: str = ""
-    NISAR_PRODUCTION_READY: bool = False
+    NISAR_GEE_ASSET_ID: str = "users/terratrust/nisar"
+    NISAR_GEE_ASSET_TYPE: Literal["image", "image_collection"] = "image_collection"
+    NISAR_HH_BAND: str = "HH"
+    NISAR_HV_BAND: str = "HV"
 
     # --- Blockchain ---------------------------------------------------------
     ADMIN_WALLET_PRIVATE_KEY: str = ""

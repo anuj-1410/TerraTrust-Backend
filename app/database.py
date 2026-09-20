@@ -46,10 +46,9 @@ else:
 def _require_async_engine() -> AsyncEngine:
     """Return the configured async engine or fail with a clear setup error."""
     if async_engine is None:
-        # raise RuntimeError(
-        #     "DATABASE_URL must be configured for PostGIS-backed backend operations."
-        # )
-        logger.error("Startup errors: %s", startup_errors)
+        raise RuntimeError(
+            "DATABASE_URL must be configured for PostGIS-backed backend operations."
+        )
     return async_engine
 
 
@@ -395,11 +394,9 @@ async def list_sampling_zones_for_audit(audit_id: str) -> List[Dict[str, Any]]:
     return zones
 
 
-async def insert_tree_scan_record(scan_record: Dict[str, Any]) -> None:
-    """Insert an AR tree scan into the documented ar_tree_scans table."""
-    engine = _require_async_engine()
-    gps = scan_record.get("gps") or {}
-    query = text(
+def _tree_scan_insert_query():
+    """Return the shared AR tree-scan insert statement."""
+    return text(
         """
         INSERT INTO ar_tree_scans (
             id,
@@ -450,7 +447,11 @@ async def insert_tree_scan_record(scan_record: Dict[str, Any]) -> None:
         """
     )
 
-    params = {
+
+def _tree_scan_insert_params(scan_record: Dict[str, Any]) -> Dict[str, Any]:
+    """Map an API scan record into direct-SQL insert parameters."""
+    gps = scan_record.get("gps") or {}
+    return {
         "id": scan_record["id"],
         "audit_id": scan_record["audit_id"],
         "land_id": scan_record["land_id"],
@@ -475,8 +476,83 @@ async def insert_tree_scan_record(scan_record: Dict[str, Any]) -> None:
         "created_at": scan_record.get("created_at"),
     }
 
+
+async def insert_tree_scan_record(scan_record: Dict[str, Any]) -> None:
+    """Insert an AR tree scan into the documented ar_tree_scans table."""
+    engine = _require_async_engine()
+
     async with engine.begin() as conn:
-        await conn.execute(query, params)
+        await conn.execute(_tree_scan_insert_query(), _tree_scan_insert_params(scan_record))
+
+
+async def replace_tree_scan_records_for_audit(
+    audit_id: str,
+    scan_records: List[Dict[str, Any]],
+) -> tuple[bool, List[str]]:
+    """Atomically replace submitted scans and claim the audit for calculation.
+
+    Returns ``(False, [])`` when another request has already moved the audit
+    out of ``PROCESSING``. In that case no scan rows are changed. On success,
+    the second tuple item contains old evidence-photo paths that can be
+    removed from storage after the database transaction commits.
+    """
+    engine = _require_async_engine()
+
+    async with engine.begin() as conn:
+        claim_result = await conn.execute(
+            text(
+                """
+                UPDATE carbon_audits
+                SET status = 'CALCULATING',
+                    error = NULL,
+                    trees_scanned_count = :trees_scanned_count
+                WHERE id = :audit_id
+                  AND status = 'PROCESSING'
+                RETURNING id
+                """
+            ),
+            {
+                "audit_id": audit_id,
+                "trees_scanned_count": len(scan_records),
+            },
+        )
+        if claim_result.mappings().first() is None:
+            return False, []
+
+        old_paths_result = await conn.execute(
+            text(
+                """
+                SELECT evidence_photo_path
+                FROM ar_tree_scans
+                WHERE audit_id = :audit_id
+                  AND evidence_photo_path IS NOT NULL
+                """
+            ),
+            {"audit_id": audit_id},
+        )
+        old_evidence_paths = [
+            str(row["evidence_photo_path"])
+            for row in old_paths_result.mappings().all()
+            if row.get("evidence_photo_path")
+        ]
+
+        await conn.execute(
+            text(
+                """
+                DELETE FROM ar_tree_scans
+                WHERE audit_id = :audit_id
+                """
+            ),
+            {"audit_id": audit_id},
+        )
+
+        if scan_records:
+            await conn.execute(
+                _tree_scan_insert_query(),
+                [_tree_scan_insert_params(record) for record in scan_records],
+            )
+
+    return True, old_evidence_paths
 
 
 async def list_tree_scans_for_audit(audit_id: str) -> List[Dict[str, Any]]:

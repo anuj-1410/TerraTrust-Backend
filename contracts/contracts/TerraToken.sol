@@ -15,6 +15,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract TerraTrustToken is ERC1155, Ownable {
     uint256 public constant CARBON_CREDIT = 1;
+    uint256 public constant MIN_AUDIT_CERTIFICATE_ID = 1000;
 
     /// @notice IPFS evidence URI for each audit certificate tokenId.
     mapping(uint256 => string) public auditEvidence;
@@ -32,7 +33,29 @@ contract TerraTrustToken is ERC1155, Ownable {
         uint256 timestamp
     );
 
+    error AuditCertificateTransferDisabled(uint256 tokenId);
+
     constructor() ERC1155("") Ownable(msg.sender) {}
+
+    /**
+     * @notice Keep audit certificates soulbound while preserving credit transfers and burns.
+     */
+    function _update(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory values
+    ) internal override {
+        if (from != address(0) && to != address(0)) {
+            for (uint256 i = 0; i < ids.length; i++) {
+                if (ids[i] >= MIN_AUDIT_CERTIFICATE_ID) {
+                    revert AuditCertificateTransferDisabled(ids[i]);
+                }
+            }
+        }
+
+        super._update(from, to, ids, values);
+    }
 
     /**
         * @notice Documented parameter order from the v3.1 backend spec.

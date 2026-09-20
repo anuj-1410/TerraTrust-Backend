@@ -12,6 +12,6 @@ def test_checkpoint_full_contains_baseline_minted_audit():
     assert checkpoint["carbon_audits"][0]["audit_year"] == 2024
 
 
-def test_account_four_blueprint_is_resettable():
-    assert DEMO_ACCOUNT_BLUEPRINTS["+919000000004"]["persistent"] is False
+def test_account_four_blueprint_is_persistent():
+    assert DEMO_ACCOUNT_BLUEPRINTS["+919000000004"]["persistent"] is True
 

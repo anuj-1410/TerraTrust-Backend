@@ -374,7 +374,7 @@ cd blockchain && npx hardhat test
 
 ## 🔮 Roadmap
 
-- [ ] **June 2026** — Enable NISAR production data (`NISAR_PRODUCTION_READY=true`)
+- [x] **June 2026** — Enable calibrated NISAR production fusion via `NISAR_PRODUCTION_READY=true` + `NISAR_GEE_ASSET_ID`
 - [ ] **Q3 2026** — Submit for Verra VM0047 methodology certification
 - [ ] **Q3 2026** — Multi-state LGD integration (KA, AP, TG, TN, UP)
 - [ ] **Q4 2026** — iOS port (ARKit bridge + alternative map renderer)

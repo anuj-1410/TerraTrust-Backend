@@ -1,2 +1,3 @@
-web: uvicorn main:app --host 0.0.0.0 --port $PORT
-worker: celery -A tasks.celery_app worker --loglevel=info --concurrency=1 --without-gossip --without-mingle --without-heartbeat
+
+web: uv run uvicorn main:app --host 0.0.0.0 --port $PORT
+worker: uv run celery -A tasks.celery_app worker --loglevel=info --concurrency=1 --without-gossip --without-mingle --without-heartbeat

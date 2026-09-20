@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Optional
 
 import ee
 
+from app.config import settings
 from app.database import supabase_client
 from app.gee import ensure_gee_initialized
+from services.nisar_service import build_nisar_feature_image
 
 logger = logging.getLogger("terratrust.fusion")
 
@@ -147,14 +149,25 @@ def _sample_zone_gedi_height(gedi_image: ee.Image, zone: Dict[str, Any]) -> Opti
 
 
 def _image_has_valid_pixels(image: ee.Image, region: ee.Geometry, scale: int) -> bool:
-    """Return whether an Earth Engine image has any unmasked pixels in a region."""
-    stats = image.reduceRegion(
-        reducer=ee.Reducer.count(),
-        geometry=region,
-        scale=scale,
-        maxPixels=1e8,
-    ).getInfo()
-    return any(((value or 0) > 0) for value in (stats or {}).values())
+    """Return whether an Earth Engine image has any unmasked pixels in a region.
+
+    Returns ``False`` on any GEE error (timeout, quota, network) so that the
+    caller can safely fall back to a no-GEDI fusion run rather than propagating
+    an uncaught exception.
+    """
+    try:
+        stats = image.reduceRegion(
+            reducer=ee.Reducer.count(),
+            geometry=region,
+            scale=scale,
+            maxPixels=1e8,
+        ).getInfo()
+        return any(((value or 0) > 0) for value in (stats or {}).values())
+    except Exception as exc:  # pragma: no cover - GEE transient errors
+        logger.warning(
+            "GEDI pixel-count check failed; treating GEDI as unavailable for this run: %s", exc
+        )
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -192,21 +205,50 @@ def run_fusion(
     """
     _ensure_gee()
 
-    # --- EE geometry -------------------------------------------------------
-    coords = land_boundary_geojson.get("coordinates", [])
+    # -----------------------------------------------------------------------
+    # 0. Derive GEE geometry and date window from function parameters
+    # -----------------------------------------------------------------------
     geom_type = land_boundary_geojson.get("type", "Polygon")
+    coords = land_boundary_geojson.get("coordinates", [])
     if geom_type == "Polygon":
         region = ee.Geometry.Polygon(coords)
     elif geom_type == "MultiPolygon":
         region = ee.Geometry.MultiPolygon(coords)
     else:
-        raise ValueError(f"Unsupported geometry type: {geom_type}")
+        raise ValueError(
+            f"Unsupported GeoJSON geometry type for fusion: '{geom_type}'. "
+            "Expected 'Polygon' or 'MultiPolygon'."
+        )
 
+    # Annual composite window: calendar year of the audit
     date_start = f"{audit_year}-01-01"
     date_end = f"{audit_year}-12-31"
 
     # -----------------------------------------------------------------------
-    # 1. Sentinel-1 (VH, VV) — speckle filtered
+    # 1. NISAR L-band SAR (HH, HV, HH/HV ratio) — Primary SAR layer
+    # -----------------------------------------------------------------------
+    nisar_feature_image = None
+    nisar_used = False
+    try:
+        nisar_feature_image = build_nisar_feature_image(region, date_start, date_end)
+        if not _image_has_valid_pixels(nisar_feature_image, region, scale=20):
+            logger.info(
+                "NISAR asset configured but has no valid pixels for region in audit year %d; "
+                "proceeding with Sentinel-1 primary fallback.",
+                audit_year,
+            )
+            nisar_feature_image = None
+        else:
+            nisar_used = True
+    except Exception as exc:
+        logger.info(
+            "NISAR L-band data unavailable for region (%s); proceeding with Sentinel-1 primary fallback.",
+            exc,
+        )
+        nisar_feature_image = None
+
+    # -----------------------------------------------------------------------
+    # 2. Sentinel-1 (VH, VV) — speckle filtered
     # -----------------------------------------------------------------------
     s1 = (
         ee.ImageCollection("COPERNICUS/S1_GRD")
@@ -225,7 +267,7 @@ def run_fusion(
     s1_ratio = s1_vh.divide(s1_vv).rename("S1_VH_VV_RATIO")
 
     # -----------------------------------------------------------------------
-    # 2. Sentinel-2 optical — cloud-filtered median composite
+    # 3. Sentinel-2 optical — cloud-filtered median composite
     # -----------------------------------------------------------------------
     s2 = (
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
@@ -236,7 +278,7 @@ def run_fusion(
     )
 
     # -----------------------------------------------------------------------
-    # 3. Vegetation indices
+    # 4. Vegetation indices
     # -----------------------------------------------------------------------
     ndvi = s2.normalizedDifference(["B8", "B4"]).rename("NDVI")
 
@@ -252,7 +294,7 @@ def run_fusion(
     red_edge = s2.select("B7").rename("RED_EDGE")
 
     # -----------------------------------------------------------------------
-    # 4. GEDI canopy height
+    # 5. GEDI canopy height
     # -----------------------------------------------------------------------
     raw_gedi = (
         ee.ImageCollection("LARSE/GEDI/GEDI02_A_002_MONTHLY")
@@ -274,19 +316,35 @@ def run_fusion(
     else:
         gedi_feature_enabled = _image_has_valid_pixels(raw_gedi, region, scale=25)
 
-    gedi = raw_gedi.unmask(0) if gedi_feature_enabled else None
+    # Only use the raw GEDI image (with natural masking).  Never unmask(0) so
+    # that pixels with no GEDI coverage remain masked and are excluded from
+    # training rather than biasing the model with zero-height values.
+    gedi = raw_gedi if gedi_feature_enabled else None
 
     # -----------------------------------------------------------------------
-    # 5. SRTM elevation & slope
+    # 6. SRTM elevation & slope
     # -----------------------------------------------------------------------
     srtm = ee.Image("USGS/SRTMGL1_003").select("elevation").rename("ELEVATION")
     slope = ee.Terrain.slope(srtm).rename("SLOPE")
 
     # -----------------------------------------------------------------------
-    # 6. Stack all bands into a single feature image
+    # 7. Stack all bands into a single feature image
     # -----------------------------------------------------------------------
-    feature_bands = [s1_vh, s1_vv, s1_ratio, ndvi, evi, red_edge]
-    band_names = ["S1_VH", "S1_VV", "S1_VH_VV_RATIO", "NDVI", "EVI", "RED_EDGE"]
+    feature_bands = []
+    band_names = []
+
+    if nisar_feature_image is not None:
+        feature_bands.extend(
+            [
+                nisar_feature_image.select("NISAR_HH"),
+                nisar_feature_image.select("NISAR_HV"),
+                nisar_feature_image.select("NISAR_HH_HV_RATIO"),
+            ]
+        )
+        band_names.extend(["NISAR_HH", "NISAR_HV", "NISAR_HH_HV_RATIO"])
+
+    feature_bands.extend([s1_vh, s1_vv, s1_ratio, ndvi, evi, red_edge])
+    band_names.extend(["S1_VH", "S1_VV", "S1_VH_VV_RATIO", "NDVI", "EVI", "RED_EDGE"])
 
     if gedi is not None:
         feature_bands.append(gedi)
@@ -298,7 +356,7 @@ def run_fusion(
     feature_stack = ee.Image.cat(feature_bands).clip(region)
 
     # -----------------------------------------------------------------------
-    # 7. Compute per-tree AGB using Chave allometric equation
+    # 8. Compute per-tree AGB using Chave allometric equation
     # -----------------------------------------------------------------------
     training_points: List[ee.Feature] = []
     tree_measurements: List[Dict[str, Any]] = []
@@ -323,10 +381,26 @@ def run_fusion(
         gedi_height_m = scan.get("gedi_height_m")
         if zone and zone.get("gedi_available"):
             if zone_id not in zone_height_cache:
-                zone_height_cache[zone_id] = _sample_zone_gedi_height(raw_gedi, zone)
+                try:
+                    zone_height_cache[zone_id] = _sample_zone_gedi_height(raw_gedi, zone)
+                except Exception as _gedi_exc:
+                    logger.warning(
+                        "GEDI zone sample failed for zone %s; using AR fallback: %s",
+                        zone_id,
+                        _gedi_exc,
+                    )
+                    zone_height_cache[zone_id] = None
             gedi_height_m = zone_height_cache.get(zone_id)
         elif gedi_height_m is None and not zone_lookup and gedi_feature_enabled:
-            gedi_height_m = _sample_gedi_height(raw_gedi, lat, lng)
+            try:
+                gedi_height_m = _sample_gedi_height(raw_gedi, lat, lng)
+            except Exception as _gedi_exc:
+                logger.warning(
+                    "GEDI point sample failed for scan %s; using AR fallback: %s",
+                    scan.get("id"),
+                    _gedi_exc,
+                )
+                gedi_height_m = None
 
         height_m = gedi_height_m if gedi_height_m is not None else scan.get("height_m")
         if height_m is None or float(height_m) <= 0:
@@ -365,7 +439,7 @@ def run_fusion(
         )
 
     # -----------------------------------------------------------------------
-    # 8. Train XGBoost regressor on GEE
+    # 9. Train XGBoost regressor on GEE
     # -----------------------------------------------------------------------
     training_fc = ee.FeatureCollection(training_points)
 
@@ -374,6 +448,13 @@ def run_fusion(
         properties=["AGB_THA"],
         scale=10,
     ).filter(ee.Filter.notNull(band_names + ["AGB_THA"]))
+
+    valid_training_points = int(training_data.size().getInfo() or 0)
+    if valid_training_points < 9:
+        raise ValueError(
+            "Minimum 9 tree samples with complete satellite features are required for fusion. "
+            f"Received {valid_training_points} usable sample(s) after masking missing data."
+        )
 
     classifier = (
         ee.Classifier.smileGradientTreeBoost(
@@ -390,12 +471,12 @@ def run_fusion(
     )
 
     # -----------------------------------------------------------------------
-    # 9. Classify entire parcel → pixel-level biomass map
+    # 10. Classify entire parcel → pixel-level biomass map
     # -----------------------------------------------------------------------
     biomass_map = feature_stack.classify(classifier).rename("BIOMASS_THA")
 
     # -----------------------------------------------------------------------
-    # 10. Sum all pixels to get total biomass (tonnes)
+    # 11. Sum all pixels to get total biomass (tonnes)
     # -----------------------------------------------------------------------
     # Each Sentinel-2 pixel at 10 m is 0.01 ha
     pixel_area_ha = 0.01
@@ -424,27 +505,34 @@ def run_fusion(
         "Fusion complete for audit %s: total_biomass=%.2f tonnes, %d training points",
         audit_id,
         total_biomass,
-        len(training_points),
+        valid_training_points,
     )
 
     return {
         "total_biomass_tonnes": round(total_biomass, 4),
-        "training_points_count": len(training_points),
+        "training_points_count": valid_training_points,
         "tree_measurements": tree_measurements,
         "satellite_features": {
             "s1_vh_mean_db": sat_stats.get("S1_VH", 0),
             "s1_vv_mean_db": sat_stats.get("S1_VV", 0),
             "s1_vh_vv_ratio_mean": sat_stats.get("S1_VH_VV_RATIO", 0),
+            "nisar_hh_mean_db": sat_stats.get("NISAR_HH"),
+            "nisar_hv_mean_db": sat_stats.get("NISAR_HV"),
+            "nisar_hh_hv_ratio_mean": sat_stats.get("NISAR_HH_HV_RATIO"),
             "s2_ndvi_mean": sat_stats.get("NDVI", 0),
             "s2_evi_mean": sat_stats.get("EVI", 0),
             "s2_red_edge_mean": sat_stats.get("RED_EDGE", 0),
-            "gedi_height_mean": sat_stats.get("GEDI_RH98", 0),
+            "gedi_height_mean": sat_stats.get("GEDI_RH98"),
             "srtm_elevation_mean": sat_stats.get("ELEVATION", 0),
             "srtm_slope_mean": sat_stats.get("SLOPE", 0),
-            "nisar_used": False,
+            "nisar_used": nisar_used,
             "features_count": len(band_names),
             "processing_method": (
-                "S1_S2_GEDI_SRTM_XGBoost_v3.1"
+                "NISAR_S1_S2_GEDI_SRTM_XGBoost_v3.1"
+                if nisar_used and gedi_feature_enabled
+                else "NISAR_S1_S2_SRTM_XGBoost_v3.1"
+                if nisar_used
+                else "S1_S2_GEDI_SRTM_XGBoost_v3.1"
                 if gedi_feature_enabled
                 else "S1_S2_SRTM_XGBoost_v3.1"
             ),

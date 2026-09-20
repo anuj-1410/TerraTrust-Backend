@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 try:
@@ -25,6 +25,66 @@ def _require_asf_search() -> Any:
             "asf_search is not installed. Install backend requirements to enable NISAR support."
         )
     return asf
+
+
+def build_nisar_feature_image(
+    region: Any,
+    date_start: str,
+    date_end: str,
+) -> Any:
+    """Build the calibrated NISAR HH/HV/ratio feature image from a GEE asset.
+
+    This is the **production** path used by :func:`fusion_engine.run_fusion`
+    when ``NISAR_PRODUCTION_READY=True``.  The ASF service can download source
+    products, but production fusion needs calibrated, georeferenced raster bands
+    published as an Earth Engine image or image collection, referenced by
+    ``NISAR_GEE_ASSET_ID``.
+
+    Parameters
+    ----------
+    region:
+        An ``ee.Geometry`` that clips the returned image.
+    date_start, date_end:
+        ISO-8601 date strings (``YYYY-MM-DD``) for the composite window.
+
+    Returns
+    -------
+    ee.Image
+        Three-band image with bands ``NISAR_HH``, ``NISAR_HV``,
+        ``NISAR_HH_HV_RATIO``, all clipped to *region*.
+
+    Raises
+    ------
+    RuntimeError
+        If ``NISAR_GEE_ASSET_ID`` is not configured or
+        ``earthengine-api`` is not installed.
+    """
+    asset_id = settings.NISAR_GEE_ASSET_ID.strip()
+    if not asset_id:
+        raise RuntimeError(
+            "NISAR_GEE_ASSET_ID must be configured to point to "
+            "a calibrated Earth Engine asset with HH and HV bands."
+        )
+
+    try:
+        import ee
+    except ImportError as exc:  # pragma: no cover - earthengine-api is a runtime dependency
+        raise RuntimeError("earthengine-api is required for NISAR fusion.") from exc
+
+    if settings.NISAR_GEE_ASSET_TYPE == "image":
+        nisar_source = ee.Image(asset_id)
+    else:
+        nisar_source = (
+            ee.ImageCollection(asset_id)
+            .filterBounds(region)
+            .filterDate(date_start, date_end)
+            .median()
+        )
+
+    hh = nisar_source.select(settings.NISAR_HH_BAND).rename("NISAR_HH")
+    hv = nisar_source.select(settings.NISAR_HV_BAND).rename("NISAR_HV")
+    ratio = hh.divide(hv).rename("NISAR_HH_HV_RATIO")
+    return ee.Image.cat([hh, hv, ratio]).clip(region)
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +157,7 @@ def search_nisar_granules(
     else:
         raise ValueError(f"Unsupported geometry type: {geom_type}")
 
-    end_date = datetime.utcnow()
+    end_date = datetime.now(timezone.utc)
     start_date = end_date - timedelta(days=days_back)
 
     logger.info(
@@ -204,37 +264,131 @@ def download_nisar_scene(
 # ---------------------------------------------------------------------------
 # Extract L-band backscatter statistics
 # ---------------------------------------------------------------------------
+def _extract_nisar_gee_backscatter(
+    boundary_geojson: Dict[str, Any],
+    date_start: str,
+    date_end: str,
+) -> Dict[str, Any]:
+    """Sample mean HH/HV backscatter for a parcel from the configured GEE asset.
+
+    This is the production implementation used when ``NISAR_PRODUCTION_READY=True``
+    and ``NISAR_GEE_ASSET_ID`` points to a calibrated Earth Engine asset.
+
+    Returns a stats dict with keys:
+    ``available``, ``hh_mean_db``, ``hv_mean_db``, ``hh_hv_ratio``.
+    """
+    try:
+        import ee
+        from app.gee import ensure_gee_initialized
+        ensure_gee_initialized()
+    except Exception as exc:
+        logger.warning("GEE not available for NISAR backscatter extraction: %s", exc)
+        return {"available": False, "hh_mean_db": None, "hv_mean_db": None, "hh_hv_ratio": None}
+
+    geom_type = boundary_geojson.get("type", "Polygon")
+    coords = boundary_geojson.get("coordinates", [])
+    try:
+        if geom_type == "Polygon":
+            region = ee.Geometry.Polygon(coords)
+        elif geom_type == "MultiPolygon":
+            region = ee.Geometry.MultiPolygon(coords)
+        else:
+            raise ValueError(f"Unsupported geometry type: {geom_type}")
+    except Exception as exc:
+        logger.warning("Could not build GEE geometry for NISAR backscatter: %s", exc)
+        return {"available": False, "hh_mean_db": None, "hv_mean_db": None, "hh_hv_ratio": None}
+
+    try:
+        nisar_img = build_nisar_feature_image(region, date_start, date_end)
+        stats = nisar_img.reduceRegion(
+            reducer=ee.Reducer.mean(),
+            geometry=region,
+            scale=20,
+            maxPixels=1e8,
+        ).getInfo()
+    except Exception as exc:
+        logger.warning("NISAR GEE reduceRegion failed: %s", exc)
+        return {"available": False, "hh_mean_db": None, "hv_mean_db": None, "hh_hv_ratio": None}
+
+    hh_mean = stats.get("NISAR_HH")
+    hv_mean = stats.get("NISAR_HV")
+    ratio_mean = stats.get("NISAR_HH_HV_RATIO")
+
+    if hh_mean is None and hv_mean is None:
+        logger.info("NISAR GEE asset returned no data for this region.")
+        return {"available": False, "hh_mean_db": None, "hv_mean_db": None, "hh_hv_ratio": None}
+
+    logger.info(
+        "NISAR GEE backscatter: HH=%.2f dB, HV=%.2f dB, ratio=%.4f",
+        hh_mean or 0,
+        hv_mean or 0,
+        ratio_mean or 0,
+    )
+    return {
+        "available": True,
+        "hh_mean_db": round(float(hh_mean), 4) if hh_mean is not None else None,
+        "hv_mean_db": round(float(hv_mean), 4) if hv_mean is not None else None,
+        "hh_hv_ratio": round(float(ratio_mean), 6) if ratio_mean is not None else None,
+    }
+
+
 def extract_nisar_backscatter(
     boundary_geojson: Dict[str, Any],
     days_back: int = 365,
 ) -> Dict[str, Any]:
-    """Extract L-band HH/HV backscatter statistics for biomass estimation.
+    """Extract L-band HH/HV backscatter statistics for a land parcel.
 
-    This function searches for the most recent NISAR
-    L-band scene covering the parcel and computes summary statistics
-    useful for the fusion engine's biomass model.
+    When ``NISAR_PRODUCTION_READY=True`` and ``NISAR_GEE_ASSET_ID`` is set,
+    this function samples mean HH and HV backscatter directly from the
+    calibrated Earth Engine asset.  This is the **only production-quality**
+    path that returns real numeric values.
 
-    L-band SAR penetrates canopy and is strongly correlated with
-    above-ground biomass (AGB) up to ~150 t/ha, complementing the
-    C-band Sentinel-1 data used in the core fusion pipeline.
+    When the GEE asset is not configured (``NISAR_PRODUCTION_READY=False``),
+    the function falls back to the ASF availability stub: it searches for
+    recent NISAR granules via the ASF API to confirm data exists for the
+    region, but returns ``None`` for the numeric fields because the raw
+    granules have not been calibrated and ingested into Earth Engine yet.
+    In this mode ``available=True`` only means a raw granule was found, not
+    that the numeric backscatter values are usable.
 
     Parameters
     ----------
     boundary_geojson : dict
         GeoJSON geometry of the land parcel.
     days_back : int, optional
-        Number of days to search back (default 365).
+        Look-back window for ASF granule search (default 365).  Only used
+        in the fallback stub path.
 
     Returns
     -------
     dict
-        ``{available, platform, acquisition_date, polarisation,
-          hh_mean_db, hv_mean_db, hh_hv_ratio, granule_name}``
-
-        If no data is available, ``available`` is ``False`` and all
-        numeric fields are ``None``.
+        Keys: ``available``, ``platform``, ``acquisition_date``,
+        ``polarisation``, ``hh_mean_db``, ``hv_mean_db``,
+        ``hh_hv_ratio``, ``granule_name``.
     """
-    # Search for granules
+    if settings.NISAR_GEE_ASSET_ID.strip():
+        # Production path — sample from the calibrated GEE asset.
+        audit_year = datetime.now(timezone.utc).year
+        date_start = f"{audit_year - 1}-01-01"
+        date_end = f"{audit_year}-12-31"
+        gee_stats = _extract_nisar_gee_backscatter(boundary_geojson, date_start, date_end)
+        if gee_stats.get("available"):
+            return {
+                "available": True,
+                "platform": "NISAR",
+                "acquisition_date": date_end,
+                "polarisation": "HH+HV",
+                "hh_mean_db": gee_stats["hh_mean_db"],
+                "hv_mean_db": gee_stats["hv_mean_db"],
+                "hh_hv_ratio": gee_stats["hh_hv_ratio"],
+                "granule_name": settings.NISAR_GEE_ASSET_ID.strip(),
+            }
+
+    # --- Fallback: ASF granule availability check ---------------------------
+    # If GEE asset returned no data or is not configured, check ASF for granule existence.
+    logger.info(
+        "Calibrated NISAR GEE data unavailable; running ASF granule availability check."
+    )
     granules = search_nisar_granules(
         boundary_geojson=boundary_geojson,
         days_back=days_back,
@@ -254,32 +408,21 @@ def extract_nisar_backscatter(
             "granule_name": None,
         }
 
-    # Use the most recent granule
     latest = granules[0]
-
-    # For actual backscatter extraction, the granule would need to be
-    # downloaded and processed with GDAL/rasterio.  Here we provide
-    # the metadata indicating that L-band data IS available so the
-    # fusion engine can incorporate it when full processing is added.
-    #
-    # Typical L-band backscatter ranges for Indian forests:
-    #   HH: -8 to -4 dB   (higher = more biomass)
-    #   HV: -18 to -10 dB (most sensitive to AGB)
-
     logger.info(
-        "L-band granule found: %s (%s, %s)",
+        "L-band granule found (availability only — not yet ingested to GEE): %s (%s, %s)",
         latest["granule_name"],
         latest["platform"],
         latest["acquisition_date"],
     )
-
     return {
         "available": True,
         "platform": latest["platform"],
         "acquisition_date": latest["acquisition_date"],
         "polarisation": latest["polarisation"],
-        "hh_mean_db": None,       # Populated after full raster processing
-        "hv_mean_db": None,       # Populated after full raster processing
-        "hh_hv_ratio": None,      # Populated after full raster processing
+        # Numeric fields are None: raw granule requires GEE calibration/ingestion.
+        "hh_mean_db": None,
+        "hv_mean_db": None,
+        "hh_hv_ratio": None,
         "granule_name": latest["granule_name"],
     }

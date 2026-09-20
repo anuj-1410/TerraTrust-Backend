@@ -359,6 +359,9 @@ def build_audit_metadata(
         "co2_equivalent": credit_result.get("co2_equivalent", 0),
         "credits_issued": credit_result.get("credits_issued", 0),
         "satellite_data": {
+            "nisar_hh_mean_db": satellite_data.get("nisar_hh_mean_db"),
+            "nisar_hv_mean_db": satellite_data.get("nisar_hv_mean_db"),
+            "nisar_hh_hv_ratio_mean": satellite_data.get("nisar_hh_hv_ratio_mean"),
             "sentinel1_vh_mean_db": satellite_data.get("s1_vh_mean_db", 0),
             "sentinel1_vv_mean_db": satellite_data.get("s1_vv_mean_db", 0),
             "sentinel1_vh_vv_ratio_mean": satellite_data.get("s1_vh_vv_ratio_mean", 0),

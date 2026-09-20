@@ -1,5 +1,6 @@
 """Land verification router aligned to the backend design document."""
 
+import asyncio
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 import json
@@ -59,6 +60,12 @@ FETCH_BOUNDARY_RATE_LIMIT = RateLimitSpec(
     window_seconds=60 * 60,
     error_message="Too many boundary fetch requests. Please try again later.",
 )
+
+
+def _is_unique_constraint_error(exc: Exception) -> bool:
+    """Return whether an exception represents a database uniqueness violation."""
+    message = str(exc).casefold()
+    return "duplicate key" in message or "unique constraint" in message
 
 _pending_land_context_client: Redis | None = None
 _pending_land_context_initialised = False
@@ -520,6 +527,8 @@ async def fetch_boundary_from_manual_map(
     taluka: str = Form(...),
     village: str = Form(...),
     state: str = Form(...),
+    user_lat: float | None = Form(None),
+    user_lng: float | None = Form(None),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """Process a farmer-uploaded government map image into a parcel boundary."""
@@ -542,6 +551,8 @@ async def fetch_boundary_from_manual_map(
             taluka=taluka,
             village=village,
             state=state,
+            user_lat=user_lat,
+            user_lng=user_lng,
         )
         _cache_pending_land_context(
             current_user["id"],
@@ -617,21 +628,11 @@ async def register_land(
             detail="Land boundary must be a Polygon or MultiPolygon geometry.",
         )
 
-    # --- 3. Duplicate check ------------------------------------------------
-    dup_check = await run_in_threadpool(
-        lambda: (
-            supabase_client.table("land_parcels")
-            .select("id")
-            .eq("user_id", current_user["id"])
-            .eq("survey_number", body.survey_number)
-            .execute()
-        )
-    )
-    if dup_check.data:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This survey number is already registered under your account.",
-        )
+    # --- 3. Insert into PostGIS (unique constraint is the authoritative guard) --
+    # A pre-check SELECT would create a TOCTOU race: two concurrent requests can
+    # both pass the SELECT and then race to INSERT.  The unique constraint on
+    # (user_id, survey_number) is enforced atomically by the database, so we
+    # rely on catching it and returning 409 instead of doing a separate lookup.
 
     area_hectares = round(float(boundary_analysis.get("area_hectares") or 0), 4)
 
@@ -674,6 +675,11 @@ async def register_land(
     try:
         insert_result = await insert_land_parcel_record(insert_data)
     except Exception as exc:
+        if _is_unique_constraint_error(exc):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This survey number is already registered under your account.",
+            ) from exc
         logger.error("Failed to insert land parcel: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -696,7 +702,12 @@ async def list_lands(
     limit: int = Query(20, ge=1, le=100),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
-    """Return all registered land parcels for the authenticated farmer."""
+    """Return all registered land parcels for the authenticated farmer.
+
+    Audit status and thumbnails are fetched concurrently for all parcels on the
+    current page so that N GEE / Supabase round-trips do not add latency in
+    series.
+    """
     try:
         parcels = await list_land_parcels_for_user(current_user["id"])
         total = len(parcels)
@@ -704,20 +715,48 @@ async def list_lands(
         page_items = parcels[start_index : start_index + limit]
         current_year = datetime.now(timezone.utc).year
 
-        items: List[LandListItem] = []
-        for parcel in page_items:
-            audits_response = (
-                await run_in_threadpool(
-                    lambda parcel_id=parcel["id"]: (
-                        supabase_client.table("carbon_audits")
-                        .select("id, status, audit_year, created_at, trees_scanned_count, error")
-                        .eq("land_id", parcel_id)
-                        .order("audit_year", desc=True)
-                        .execute()
-                    )
+        # -----------------------------------------------------------------------
+        # Fetch audit rows for every parcel on this page concurrently.
+        # -----------------------------------------------------------------------
+        async def _fetch_audit_rows(parcel_id: str) -> List[Dict[str, Any]]:
+            response = await run_in_threadpool(
+                lambda: (
+                    supabase_client.table("carbon_audits")
+                    .select("id, status, audit_year, created_at, trees_scanned_count, error")
+                    .eq("land_id", parcel_id)
+                    .order("audit_year", desc=True)
+                    .execute()
                 )
             )
-            audit_rows = audits_response.data or []
+            return response.data or []
+
+        async def _fetch_thumbnail(parcel: Dict[str, Any]) -> str | None:
+            """Return a thumbnail URL for a parcel or None on any failure."""
+            boundary_geojson = parcel.get("boundary_geojson") or parcel.get("geojson")
+            if not boundary_geojson:
+                return None
+            try:
+                return await run_in_threadpool(
+                    satellite_service.generate_true_color_thumbnail_url,
+                    boundary_geojson,
+                    512,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to generate thumbnail for land %s: %s", parcel["id"], exc
+                )
+                return None
+
+        # Gather audit rows and thumbnails concurrently across all page parcels.
+        audit_rows_list, thumbnail_urls = await asyncio.gather(
+            asyncio.gather(*(_fetch_audit_rows(p["id"]) for p in page_items)),
+            asyncio.gather(*(_fetch_thumbnail(p) for p in page_items)),
+        )
+
+        items: List[LandListItem] = []
+        for parcel, audit_rows, thumbnail_url in zip(
+            page_items, audit_rows_list, thumbnail_urls
+        ):
             last_audit_year = next(
                 (
                     audit["audit_year"]
@@ -731,18 +770,6 @@ async def list_lands(
                 None,
             )
             current_audit_summary = _summarise_current_audit(current_audit)
-
-            thumbnail_url = None
-            try:
-                boundary_geojson = parcel.get("boundary_geojson") or parcel.get("geojson")
-                if boundary_geojson:
-                    thumbnail_url = await run_in_threadpool(
-                        satellite_service.generate_true_color_thumbnail_url,
-                        boundary_geojson,
-                        512,
-                    )
-            except Exception as exc:
-                logger.warning("Failed to generate thumbnail for land %s: %s", parcel["id"], exc)
 
             items.append(
                 LandListItem(

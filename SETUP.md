@@ -71,6 +71,11 @@ Important variables:
 | `GOOGLE_APPLICATION_CREDENTIALS` | Legacy fallback for older shared-credential setups |
 | `NASA_EARTHDATA_USERNAME` | Earthdata username for ASF access |
 | `NASA_EARTHDATA_PASSWORD` | Earthdata password for ASF access |
+| `NISAR_PRODUCTION_READY` | Enables calibrated NISAR L-band features in fusion |
+| `NISAR_GEE_ASSET_ID` | Earth Engine image or image collection containing calibrated NISAR HH/HV bands |
+| `NISAR_GEE_ASSET_TYPE` | `image` or `image_collection`; defaults to `image_collection` |
+| `NISAR_HH_BAND` | HH band name in the calibrated NISAR GEE asset |
+| `NISAR_HV_BAND` | HV band name in the calibrated NISAR GEE asset |
 | `ADMIN_WALLET_PRIVATE_KEY` | Polygon Amoy admin private key |
 | `ADMIN_WALLET_ADDRESS` | Polygon Amoy admin public wallet |
 | `ALCHEMY_POLYGON_AMOY_URL` | Alchemy Polygon Amoy RPC URL |

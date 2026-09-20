@@ -4,6 +4,7 @@ import asyncio
 
 import json
 import logging
+import math
 import re
 from html import unescape
 from typing import Any, Dict, Optional, Sequence
@@ -97,6 +98,10 @@ DEFAULT_LAYER2_SELECTORS: Dict[str, Sequence[str]] = {
 }
 COORDINATE_LAT_RANGE = (6.0, 38.0)
 COORDINATE_LNG_RANGE = (68.0, 98.0)
+SCALE_BAR_TOKEN_RE = re.compile(r"(?<!\d)(\d+(?:\.\d+)?)\s*(km|kilometres?|kilometers?|m|metres?|meters?)\b", re.IGNORECASE)
+AXIS_LABEL_EDGE_FRACTION = 0.25
+MAX_MANUAL_MAP_AXIS_SPAN_DEGREES = 2.0
+MAX_MANUAL_BOUNDARY_GPS_DISTANCE_METRES = 5000
 LGD_API_MAX_ATTEMPTS = 3
 LGD_API_INITIAL_BACKOFF_SECONDS = 2
 
@@ -909,7 +914,12 @@ def _extract_manual_map_contour(image_bytes: bytes) -> list[tuple[float, float]]
     return contour_points
 
 
-def _fit_linear_coordinate_map(samples: list[tuple[float, float]]) -> tuple[float, float]:
+def _fit_linear_coordinate_map(
+    samples: list[tuple[float, float]],
+    *,
+    axis_pixels: float | None = None,
+    label: str = "coordinate",
+) -> tuple[float, float]:
     """Fit a linear pixel-to-coordinate transform from OCR-derived map labels."""
     distinct_samples = list(dict.fromkeys((round(pixel, 3), round(value, 8)) for pixel, value in samples))
     if len(distinct_samples) < 2:
@@ -924,30 +934,202 @@ def _fit_linear_coordinate_map(samples: list[tuple[float, float]]) -> tuple[floa
             "Could not georeference the uploaded map because the coordinate labels were incomplete."
         )
 
-    slope, intercept = np.polyfit(pixels, values, 1)
+    inlier_mask = np.ones(len(distinct_samples), dtype=bool)
+    if len(distinct_samples) >= 3:
+        best_mask: np.ndarray | None = None
+        best_score: tuple[int, float] | None = None
+        residual_threshold = max(0.0005, float(np.ptp(values)) * 0.05)
+
+        for left_index in range(len(distinct_samples) - 1):
+            for right_index in range(left_index + 1, len(distinct_samples)):
+                left_pixel, left_value = distinct_samples[left_index]
+                right_pixel, right_value = distinct_samples[right_index]
+                if math.isclose(left_pixel, right_pixel):
+                    continue
+
+                candidate_slope = (right_value - left_value) / (right_pixel - left_pixel)
+                candidate_intercept = left_value - (candidate_slope * left_pixel)
+                residuals = np.abs(values - ((candidate_slope * pixels) + candidate_intercept))
+                candidate_mask = residuals <= residual_threshold
+                inlier_count = int(candidate_mask.sum())
+                if inlier_count < 2:
+                    continue
+
+                rmse = float(np.sqrt(np.mean(np.square(residuals[candidate_mask]))))
+                score = (inlier_count, -rmse)
+                if best_score is None or score > best_score:
+                    best_score = score
+                    best_mask = candidate_mask
+
+        minimum_inliers = max(3, math.ceil(len(distinct_samples) * 0.6))
+        if best_mask is None or int(best_mask.sum()) < minimum_inliers:
+            raise ValueError(
+                f"Could not georeference the uploaded map because the {label} labels were inconsistent."
+            )
+        inlier_mask = best_mask
+
+    slope, intercept = np.polyfit(pixels[inlier_mask], values[inlier_mask], 1)
+    if axis_pixels is not None and abs(float(slope)) * float(axis_pixels) > MAX_MANUAL_MAP_AXIS_SPAN_DEGREES:
+        raise ValueError(
+            f"Could not georeference the uploaded map because the {label} labels span too large an area."
+        )
     return float(slope), float(intercept)
 
 
 def _extract_coordinate_axis_samples(image_bytes: bytes) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
     """Extract OCR-labelled longitude and latitude samples from a printed map image."""
-    raw_annotations = ocr_service.extract_text_annotations(image_bytes)
-    annotations = raw_annotations
-    if not annotations:
-        annotations = ocr_service.extract_text_annotations(
-            ocr_service.preprocess_document_image(image_bytes)
-        )
+    image = _decode_manual_map_image(image_bytes)
+    image_height, image_width = image.shape[:2]
+    x_axis_y_min = image_height * AXIS_LABEL_EDGE_FRACTION
+    x_axis_y_max = image_height * (1 - AXIS_LABEL_EDGE_FRACTION)
+    y_axis_x_min = image_width * AXIS_LABEL_EDGE_FRACTION
+    y_axis_x_max = image_width * (1 - AXIS_LABEL_EDGE_FRACTION)
+
+    annotations = _extract_text_annotations_with_retry(image_bytes)
 
     x_axis_samples: list[tuple[float, float]] = []
     y_axis_samples: list[tuple[float, float]] = []
     for annotation in annotations:
         for token in ocr_service.COORDINATE_TOKEN_RE.findall(annotation["text"]):
             value = float(token)
-            if COORDINATE_LNG_RANGE[0] <= value <= COORDINATE_LNG_RANGE[1]:
-                x_axis_samples.append((float(annotation["center_x"]), value))
-            elif COORDINATE_LAT_RANGE[0] <= value <= COORDINATE_LAT_RANGE[1]:
-                y_axis_samples.append((float(annotation["center_y"]), value))
+            center_x = float(annotation["center_x"])
+            center_y = float(annotation["center_y"])
+            if (
+                COORDINATE_LNG_RANGE[0] <= value <= COORDINATE_LNG_RANGE[1]
+                and (center_y <= x_axis_y_min or center_y >= x_axis_y_max)
+            ):
+                x_axis_samples.append((center_x, value))
+            elif (
+                COORDINATE_LAT_RANGE[0] <= value <= COORDINATE_LAT_RANGE[1]
+                and (center_x <= y_axis_x_min or center_x >= y_axis_x_max)
+            ):
+                y_axis_samples.append((center_y, value))
 
     return x_axis_samples, y_axis_samples
+
+
+def _extract_text_annotations_with_retry(image_bytes: bytes) -> list[Dict[str, Any]]:
+    """Return OCR annotations from the raw image or the preprocessed fallback."""
+    annotations = ocr_service.extract_text_annotations(image_bytes)
+    if annotations:
+        return annotations
+    return ocr_service.extract_text_annotations(
+        ocr_service.preprocess_document_image(image_bytes)
+    )
+
+
+def _scale_bar_metres_from_text(text_value: str) -> float | None:
+    """Parse a scale-bar label such as ``100 m`` or ``0.5 km``."""
+    match = SCALE_BAR_TOKEN_RE.search(text_value or "")
+    if not match:
+        return None
+
+    amount = float(match.group(1))
+    unit = match.group(2).lower()
+    metres = amount * 1000 if unit.startswith("k") else amount
+    if metres <= 0 or metres > 5000:
+        return None
+    return metres
+
+
+def _find_scale_bar_pixel_width(
+    image: np.ndarray,
+    *,
+    label_x: float,
+    label_y: float,
+) -> float | None:
+    """Find a horizontal scale-bar line near its OCR label."""
+    grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    thresholded = cv2.threshold(grayscale, 90, 255, cv2.THRESH_BINARY_INV)[1]
+    contours, _hierarchy = cv2.findContours(
+        thresholded,
+        cv2.RETR_EXTERNAL,
+        cv2.CHAIN_APPROX_SIMPLE,
+    )
+
+    image_height, image_width = image.shape[:2]
+    candidates: list[tuple[float, float]] = []
+    for contour in contours:
+        x, y, width, height = cv2.boundingRect(contour)
+        if width < 20 or width > image_width * 0.8:
+            continue
+        if height > max(8, width * 0.20):
+            continue
+
+        centre_x = x + (width / 2)
+        centre_y = y + (height / 2)
+        if abs(centre_y - label_y) > max(80, image_height * 0.12):
+            continue
+
+        distance_to_label = abs(centre_y - label_y) + (abs(centre_x - label_x) * 0.25)
+        candidates.append((distance_to_label, float(width)))
+
+    if not candidates:
+        return None
+    return min(candidates, key=lambda item: item[0])[1]
+
+
+def _extract_scale_bar_metres_and_pixel_width(image_bytes: bytes) -> tuple[float, float]:
+    """Extract scale-bar ground length and pixel width from a manual map image."""
+    image = _decode_manual_map_image(image_bytes)
+    annotations = _extract_text_annotations_with_retry(image_bytes)
+
+    for annotation in annotations:
+        metres = _scale_bar_metres_from_text(str(annotation.get("text") or ""))
+        if metres is None:
+            continue
+
+        pixel_width = _find_scale_bar_pixel_width(
+            image,
+            label_x=float(annotation["center_x"]),
+            label_y=float(annotation["center_y"]),
+        )
+        if pixel_width:
+            return metres, pixel_width
+
+    raise ValueError(
+        "Could not georeference the uploaded map because the scale bar was not readable."
+    )
+
+
+def _anchor_coordinate_sample(samples: list[tuple[float, float]]) -> tuple[float, float]:
+    """Return a stable middle OCR coordinate sample for scale-bar anchoring."""
+    if not samples:
+        raise ValueError(
+            "Could not georeference the uploaded map because coordinate labels were incomplete."
+        )
+    ordered = sorted(samples, key=lambda sample: sample[0])
+    return ordered[len(ordered) // 2]
+
+
+def _scale_bar_coordinate_maps(
+    image_bytes: bytes,
+    x_axis_samples: list[tuple[float, float]],
+    y_axis_samples: list[tuple[float, float]],
+) -> tuple[tuple[float, float], tuple[float, float]]:
+    """Build coordinate transforms from one axis label per axis plus a scale bar."""
+    x_anchor_pixel, x_anchor_value = _anchor_coordinate_sample(x_axis_samples)
+    y_anchor_pixel, y_anchor_value = _anchor_coordinate_sample(y_axis_samples)
+    scale_metres, scale_pixels = _extract_scale_bar_metres_and_pixel_width(image_bytes)
+
+    metres_per_pixel = scale_metres / scale_pixels
+    lat_radians = math.radians(y_anchor_value)
+    lng_degrees_per_pixel = metres_per_pixel / (111_320 * max(math.cos(lat_radians), 0.1))
+    lat_degrees_per_pixel = metres_per_pixel / 111_320
+
+    x_slope = lng_degrees_per_pixel
+    y_slope = -lat_degrees_per_pixel
+    if len(x_axis_samples) >= 2:
+        linear_x = _fit_linear_coordinate_map(x_axis_samples, label="longitude")
+        x_slope = math.copysign(lng_degrees_per_pixel, linear_x[0])
+    if len(y_axis_samples) >= 2:
+        linear_y = _fit_linear_coordinate_map(y_axis_samples, label="latitude")
+        y_slope = math.copysign(lat_degrees_per_pixel, linear_y[0])
+
+    return (
+        (x_slope, x_anchor_value - (x_slope * x_anchor_pixel)),
+        (y_slope, y_anchor_value - (y_slope * y_anchor_pixel)),
+    )
 
 
 def _contour_to_geojson(
@@ -968,6 +1150,63 @@ def _contour_to_geojson(
     return {"type": "Polygon", "coordinates": [coordinates]}
 
 
+def _manual_geojson_points(geojson: Dict[str, Any]) -> list[tuple[float, float]]:
+    """Return flattened ``(lng, lat)`` points from a manual Polygon GeoJSON."""
+    if geojson.get("type") != "Polygon":
+        return []
+    rings = geojson.get("coordinates") or []
+    if not rings:
+        return []
+    return [
+        (float(point[0]), float(point[1]))
+        for point in rings[0]
+        if isinstance(point, list) and len(point) >= 2
+    ]
+
+
+def _distance_metres(first_lat: float, first_lng: float, second_lat: float, second_lng: float) -> float:
+    """Approximate straight-line distance between two GPS points."""
+    dlat = (second_lat - first_lat) * 111_320
+    dlng = (second_lng - first_lng) * 111_320 * math.cos(
+        math.radians((first_lat + second_lat) / 2)
+    )
+    return math.sqrt(dlat**2 + dlng**2)
+
+
+def _validate_manual_geojson(
+    geojson: Dict[str, Any],
+    *,
+    user_lat: float | None = None,
+    user_lng: float | None = None,
+) -> None:
+    """Fail closed when OCR georeferencing produces implausible coordinates."""
+    points = _manual_geojson_points(geojson)
+    if len(points) < 4:
+        raise ValueError("Could not extract a valid parcel boundary from the uploaded map.")
+
+    lngs = [point[0] for point in points]
+    lats = [point[1] for point in points]
+    if not all(COORDINATE_LNG_RANGE[0] <= lng <= COORDINATE_LNG_RANGE[1] for lng in lngs):
+        raise ValueError("Could not georeference the uploaded map because longitude labels were invalid.")
+    if not all(COORDINATE_LAT_RANGE[0] <= lat <= COORDINATE_LAT_RANGE[1] for lat in lats):
+        raise ValueError("Could not georeference the uploaded map because latitude labels were invalid.")
+    if max(lngs) - min(lngs) > MAX_MANUAL_MAP_AXIS_SPAN_DEGREES:
+        raise ValueError("Could not georeference the uploaded map because longitude span is implausible.")
+    if max(lats) - min(lats) > MAX_MANUAL_MAP_AXIS_SPAN_DEGREES:
+        raise ValueError("Could not georeference the uploaded map because latitude span is implausible.")
+
+    if user_lat is not None and user_lng is not None:
+        centroid_lng = sum(lngs[:-1] or lngs) / len(lngs[:-1] or lngs)
+        centroid_lat = sum(lats[:-1] or lats) / len(lats[:-1] or lats)
+        if (
+            _distance_metres(user_lat, user_lng, centroid_lat, centroid_lng)
+            > MAX_MANUAL_BOUNDARY_GPS_DISTANCE_METRES
+        ):
+            raise ValueError(
+                "Uploaded map boundary does not match the farmer's reported location."
+            )
+
+
 async def process_manual_boundary_map(
     image_bytes: bytes,
     survey_number: str,
@@ -975,16 +1214,53 @@ async def process_manual_boundary_map(
     taluka: str,
     village: str,
     state: str,
+    user_lat: float | None = None,
+    user_lng: float | None = None,
 ) -> Dict[str, Any]:
     """Extract and georeference a farmer-uploaded government parcel map image."""
     try:
         contour_points = _extract_manual_map_contour(image_bytes)
+        image = _decode_manual_map_image(image_bytes)
+        image_height, image_width = image.shape[:2]
         x_axis_samples, y_axis_samples = _extract_coordinate_axis_samples(image_bytes)
+        try:
+            x_transform = _fit_linear_coordinate_map(
+                x_axis_samples,
+                axis_pixels=float(image_width),
+                label="longitude",
+            )
+            y_transform = _fit_linear_coordinate_map(
+                y_axis_samples,
+                axis_pixels=float(image_height),
+                label="latitude",
+            )
+        except ValueError as _linear_fit_exc:
+            # Not enough axis coordinate labels for a full linear fit.
+            # Fall back to scale-bar + single-anchor georeferencing.
+            # This is less accurate than a multi-label linear fit; the boundary
+            # should be validated against a field GPS check before relying on it.
+            logger.warning(
+                "Linear coordinate-axis fit failed for survey %s (%s/%s/%s); "
+                "falling back to scale-bar georeferencing — boundary accuracy "
+                "may be reduced. Fit error: %s",
+                survey_number,
+                village,
+                taluka,
+                district,
+                _linear_fit_exc,
+            )
+            x_transform, y_transform = _scale_bar_coordinate_maps(
+                image_bytes,
+                x_axis_samples,
+                y_axis_samples,
+            )
+
         geojson = _contour_to_geojson(
             contour_points,
-            _fit_linear_coordinate_map(x_axis_samples),
-            _fit_linear_coordinate_map(y_axis_samples),
+            x_transform,
+            y_transform,
         )
+        _validate_manual_geojson(geojson, user_lat=user_lat, user_lng=user_lng)
         result = await _build_boundary_success_response(
             "MANUAL",
             {"geojson": geojson},

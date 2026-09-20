@@ -27,7 +27,7 @@ BALANCE_RATE_LIMIT = RateLimitSpec(
 
 
 def _load_credit_history(user_id: str) -> tuple[list[CreditHistory], float]:
-    """Load audit history and derive a demo-safe balance fallback from minted records."""
+    """Load audit history and derive a no-wallet display fallback from minted records."""
     history: list[CreditHistory] = []
     minted_balance_ctt = 0.0
 
@@ -123,6 +123,7 @@ def get_balance(
 
     balance_ctt = fallback_balance_ctt
     if not wallet_address:
+        balance_ctt = 0.0
         logger.info(
             "User %s has no registered wallet yet; returning history-derived zero balance.",
             current_user["id"],
@@ -134,12 +135,16 @@ def get_balance(
             balance = contract.functions.balanceOf(checksum, CARBON_CREDIT_TOKEN_ID).call()
             balance_ctt = float(balance) / 10
         except Exception as exc:
-            logger.warning(
-                "balanceOf call failed for %s; using history-derived fallback balance %.4f CTT: %s",
+            logger.error(
+                "balanceOf call failed for %s; refusing to use history-derived fallback %.4f CTT: %s",
                 wallet_address,
                 fallback_balance_ctt,
                 exc,
             )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Current credit balance is temporarily unavailable.",
+            ) from exc
 
     total = len(history)
     start_index = (page - 1) * limit
