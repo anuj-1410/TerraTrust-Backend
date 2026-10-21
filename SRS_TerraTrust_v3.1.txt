@@ -3,8 +3,8 @@
        PROJECT: TERRATRUST-AR
        Autonomous Carbon Credit Verification System for Indian Farmers
 ================================================================================
-Document Version  : 3.1 (Revised — Firebase Auth + Pinata alignment review)
-Date              : April 2026
+Document Version  : 4.0 (Institution extension; farmer v3.1 retained)
+Date              : 10 October 2026
 Target Platform   : Android (React Native CLI + Native Kotlin)
 Backend           : Python 3.11+ / FastAPI + Celery
 Authentication    : Firebase Phone Auth + Firebase Admin token verification
@@ -12,9 +12,117 @@ Database          : Supabase (PostgreSQL 15 + PostGIS 3.3 + Storage) — Cloud H
 Blockchain        : Polygon PoS (Solidity ERC-1155 Smart Contract)
 Satellite Engine  : Google Earth Engine (GEE)
 OCR Engine        : Google Cloud Vision API (Document Text Detection)
-Status            : Final — Ready for Implementation
+Status            : Institution implementation contract; runtime readiness unverified
 ================================================================================
 
+
+
+
+
+
+
+Documentation review : 19 October 2026
+
+TABLE OF CONTENTS — SEARCH AND LINE NAVIGATION
+--------------------------------------------------------------------------------
+Use Ctrl+G with the line number, or Ctrl+F with the exact heading below.
+Search again (F3) to move from this contents entry to its body heading.
+Farmer chapters retain their existing text; institution chapters follow them.
+
+IMPLEMENTATION QUICK LINKS
+  Line  6889 | 34.3 FEATURE-TO-IMPLEMENTATION INDEX
+  Line  7112 | 36.4 RELEASE COMMISSIONING REGISTER — REQUIRED BEFORE ENABLEMENT
+
+CHAPTERS AND INSTITUTION DETAILS
+  Line   210 | SECTION 1: INTRODUCTION
+  Line   288 | SECTION 2: SYSTEM OVERVIEW AND ARCHITECTURE
+  Line   364 | SECTION 3: COMPLETE TECHNOLOGY STACK
+  Line   505 | SECTION 4: PREREQUISITES AND ACCOUNT SETUP
+  Line   990 | SECTION 5: MODULE 1 — AUTHENTICATION AND KYC
+  Line  1180 | SECTION 6: MODULE 2 — LAND VERIFICATION (THE DIGITAL FENCE)
+  Line  1575 | SECTION 7: MODULE 3 — AR TREE SCANNING (GROUND TRUTH COLLECTION)
+  Line  1953 | SECTION 8: MODULE 4 — SATELLITE DATA ENGINE (6-LAYER FUSION STACK)
+  Line  2197 | SECTION 9: MODULE 5 — BIOMASS CALCULATION (XGBOOST FUSION ENGINE)
+  Line  2415 | SECTION 10: MODULE 6 — BLOCKCHAIN AND TOKEN MINTING
+  Line  2877 | SECTION 11: DATABASE SCHEMA (SUPABASE / POSTGRESQL + POSTGIS)
+  Line  3186 | SECTION 12: API ENDPOINTS (FASTAPI — COMPLETE)
+  Line  3525 | SECTION 13: STATE MANAGEMENT (REDUX TOOLKIT)
+  Line  3639 | SECTION 14: NATIVE AR BRIDGE (KOTLIN)
+  Line  3829 | SECTION 15: SECURITY DESIGN
+  Line  3928 | SECTION 16: OFFLINE STRATEGY
+  Line  3966 | SECTION 17: UI/UX DESIGN SYSTEM
+  Line  4240 | SECTION 18: MOBILE FOLDER STRUCTURE
+  Line  4353 | SECTION 19: BACKEND FOLDER STRUCTURE
+  Line  4423 | SECTION 20: ENVIRONMENT VARIABLES (COMPLETE)
+  Line  4497 | SECTION 21: PYTHON DEPENDENCIES (requirements.txt)
+  Line  4561 | SECTION 22: MOBILE npm DEPENDENCIES (package.json)
+  Line  4654 | SECTION 23: ERROR HANDLING STRATEGY
+  Line  4741 | SECTION 24: TESTING STRATEGY
+  Line  4845 | SECTION 25: DEPLOYMENT
+  Line  4958 | SECTION 26: IMPLEMENTATION SEQUENCE (16-WEEK PLAN)
+  Line  5283 | SECTION 27: COMPLETE GAPS CORRECTED FROM OLD SRS v3.0
+  Line  5393 | SECTION 28: GLOSSARY
+  Line  5548 | SECTION 29: v4.0 — PRODUCT SCOPE, REUSE AND DOMAIN ENTRY
+    Line  5551 | 29.1 PRODUCT BOUNDARY AND DELIVERY LABELS
+    Line  5579 | 29.2 REUSE REGISTER (existing frontend asset responsibilities)
+    Line  5640 | 29.3 AUTH REQUIREMENTS
+    Line  5738 | 29.4 PERMISSIONS AND CONTROLLED ONBOARDING
+  Line  5778 | SECTION 30: v4.0 — CAMPUS TREES AND SHARED BIOMASS ENGINE
+    Line  5996 | 30.1 STOCK AND PERIOD CHANGE
+  Line  6037 | SECTION 31: v4.0 — INSTITUTIONAL INVENTORY AND MITIGATION
+    Line  6118 | 31.1 CATEGORY CONTRACTS (server deterministic; round display only)
+    Line  6219 | 31.2 MITIGATION (separate baseline-relative avoided impact)
+    Line  6315 | 31.3 INVENTORY TOTAL AND PROJECT BALANCE
+  Line  6333 | SECTION 32: v4.0 — AUDIT LIFECYCLE, RESULTS AND REPORTS
+  Line  6471 | SECTION 33: v4.0 — INSTITUTION-AWARE ADVISOR AND RESEARCH
+    Line  6621 | 33.1 RESEARCH BOUNDARY
+  Line  6659 | SECTION 34: v4.0 — CONTRACTS, OFFLINE AND SECURITY
+    Line  6698 | 34.1 IMPLEMENTABLE CONTRACTS AND OPERATOR RESPONSIBILITIES
+    Line  6792 | 34.2 IMPLEMENTATION COMPLETENESS REQUIREMENTS
+    Line  6889 | 34.3 FEATURE-TO-IMPLEMENTATION INDEX
+  Line  6939 | SECTION 35: v4.0 — TRACEABILITY AND ACCEPTANCE
+    Line  6998 | 35.1 ADDITIONAL ACCEPTANCE EVIDENCE REQUIRED
+  Line  7026 | SECTION 36: v4.0 — DELIVERY GATES, DECISIONS AND REFERENCES
+    Line  7029 | 36.1 INCREMENTAL IMPLEMENTATION PLAN (future implementation)
+    Line  7063 | 36.2 DECISIONS THAT REQUIRE EVIDENCE BEFORE ENABLEMENT
+    Line  7078 | 36.3 REFERENCES VERIFIED FOR THE ACCOUNTING/ALGORITHM DISTINCTIONS
+    Line  7112 | 36.4 RELEASE COMMISSIONING REGISTER — REQUIRED BEFORE ENABLEMENT
+    Line  7151 | 36.5 DOCUMENTATION REVIEW RECORD — 19 OCTOBER 2026
+    Line  7170 | 36.6 INDEPENDENT DEMO CONTROLS AND REAL-APP CHECKPOINTS
+    Line  7201 | 36.7 IMPLEMENTATION AND ACCEPTANCE HANDOFF
+    Line  7232 | 36.8 PRODUCTION CONTRACT AUDIT AND REQUIRED EVIDENCE
+
+END OF CONTENTS
+
+REVISION 4.0 — INSTITUTION EXTENSION
+--------------------------------------------------------------------------------
+Purpose: Add institution accounting and campus tree assessment to the same app.
+
+Institution entry:
+  LoginScreen -> choose Institution -> existing Firebase phone OTP -> server profile.
+
+Reuse:
+  Existing authentication, API transport, theme, UI controls, AR, GPS, species
+  detection and shared satellite/biomass utilities through institution adapters.
+
+Separate records:
+  Institution profiles, memberships, campuses, surveys, annual audits and advice.
+  Farmer KYC, land, wallet, audits, credits and production flow remain unchanged.
+
+Document responsibilities:
+  SRS   : Requirements and acceptance.
+  BSDD  : Database, APIs, formulas, server jobs and environment configuration.
+  FDD   : Screens, components, state and storage.
+  FFC   : Navigation, actions, return paths and complete journeys.
+  Demo  : Test accounts, checkpoint content, setup and reset behavior.
+
+Reading rule:
+  Keep the existing farmer sections as the baseline. Use the institution chapters
+  below for the upgrade; the older upgrade proposal is background material.
+
+Status:
+  Specifications are implementation contracts. Live deployment/device readiness
+  still requires SRS 35–36 evidence. This edit changes documentation only.
 
 --------------------------------------------------------------------------------
 REVISION HISTORY
@@ -38,7 +146,7 @@ Version 3.0 — Major Architecture Upgrade
                 * Blockchain contract fixed (burn + double-mint prevention)
                 * IPFS evidence storage standardised for blockchain proof
 
-Version 3.1 — Current Version (Architecture Alignment Review Incorporated)
+Version 3.1 — Farmer Baseline (Architecture Alignment Review Incorporated)
                 * Authentication architecture finalised:
                   Firebase Authentication handles phone OTP on mobile.
                   FastAPI validates Firebase ID tokens via Firebase Admin SDK.
@@ -96,38 +204,13 @@ Version 3.1 — Current Version (Architecture Alignment Review Incorporated)
 
 
 --------------------------------------------------------------------------------
-TABLE OF CONTENTS
---------------------------------------------------------------------------------
-1.   Introduction
-2.   System Overview and Architecture
-3.   Complete Technology Stack
-4.   Prerequisites and Account Setup (ALL ACCOUNTS — DO THIS FIRST)
-5.   Module 1 — Authentication and KYC
-6.   Module 2 — Land Verification (The Digital Fence)
-7.   Module 3 — AR Tree Scanning (Ground Truth Collection)
-8.   Module 4 — Satellite Data Engine (6-Layer Fusion Stack)
-9.   Module 5 — Biomass Calculation (XGBoost Fusion Engine)
-10.  Module 6 — Blockchain and Token Minting
-11.  Database Schema (Supabase / PostgreSQL + PostGIS)
-12.  API Endpoints (FastAPI — Complete)
-13.  State Management (Redux Toolkit)
-14.  Native AR Bridge (Kotlin)
-15.  Security Design
-16.  Offline Strategy
-17.  UI/UX Design System
-18.  Mobile Folder Structure
-19.  Backend Folder Structure
-20.  Environment Variables (Complete — Mobile + Backend)
-21.  Python Dependencies (requirements.txt)
-22.  Error Handling Strategy
-23.  Testing Strategy
-24.  Deployment
-25.  Implementation Sequence
-26.  Glossary
-
 
 ================================================================================
+
 SECTION 1: INTRODUCTION
+
+v4.0 scope extension: institution users, partial operational inventory and own campus
+trees are defined in Sections 29–36. The original introduction below is farmer scope.
 ================================================================================
 
 1.1 PURPOSE
@@ -283,13 +366,17 @@ SECTION 3: COMPLETE TECHNOLOGY STACK
 
 MOBILE APPLICATION
 ------------------
-Framework        : React Native CLI 0.84.1
+Framework        : React Native CLI 0.86.2
+React            : 19.2.3
                    NOTE: Use a plain React Native project with New
                    Architecture enabled. TerraTrust does not use the
                    Expo-managed workflow because ARCore and custom native
                    modules are part of the baseline design.
 Language         : TypeScript 5.9.x (strict mode enabled)
-AR Engine        : Google ARCore (via Native Kotlin Bridge)
+AR Engine        : Google ARCore 1.54.0 (via Native Kotlin Bridge)
+Android Build    : compileSdk/targetSdk 36, minSdk 26, buildTools 36.0.0,
+                   NDK 27.1.12297006, AGP 8.13.2, Kotlin 2.2.0,
+                   Gradle 9.3.1, Google Services plugin 4.4.4
 Maps             : react-native-maps (used for ZoneNavigationScreen only
                    — Google Maps road view for GPS walking navigation)
                    On Android, BoundaryConfirmScreen reuses it as a
@@ -308,7 +395,8 @@ Local Storage    : MMKV 3.3.x (30x faster than AsyncStorage, synchronous,
                    the wallet or secret store)
 Form Validation  : Zod + React Hook Form
 Styling          : NativeWind 4.2.x + Tailwind CSS 3.4.x
-ML On-device     : TensorFlow Lite 2.14.x (tree species identification)
+ML On-device     : TensorFlow Lite 2.15.0 + TFLite Support 0.4.4
+                   (tree species identification)
 Blockchain       : ethers.js v6 (farmer wallet generation + balance)
 Camera           : react-native-vision-camera v4.7.x
                    (higher quality capture for OCR accuracy)
@@ -428,17 +516,18 @@ RAM              : Minimum 16GB (Android Studio uses 4-8GB alone)
 Storage          : Minimum 50GB free space
 Node.js          : v22.11+ LTS (required by package.json engines; install via nvm)
 Python           : v3.11+ (check: python3 --version)
-Java JDK         : OpenJDK 17 (required for Android build)
+Java JDK         : OpenJDK 25 LTS (system installation)
 Android Studio   : Latest stable version
 
 Android Studio Setup (complete all of these):
   SDK Manager → SDK Platforms:
-    Install: Android 13.0 (API 33)
     Install: Android 14.0 (API 34)
+    Install: Android 15.0 (API 35)
+    Install: Android 16.0 (API 36)
   SDK Manager → SDK Tools:
-    Install: NDK (Side by side) — latest version
+    Install: NDK (Side by side) — 27.1.12297006
     Install: CMake — latest version
-    Install: Android SDK Build-Tools — latest version
+    Install: Android SDK Build-Tools — 36.0.0
   Virtual Device Manager:
     Create: Pixel 6 emulator, API 34 (for basic UI testing)
     NOTE: AR scanning CANNOT be tested on any emulator.
@@ -880,7 +969,7 @@ MOBILE APP (.env.development and .env.production in project root):
   # Firebase Android config comes from android/app/google-services.json
   ALCHEMY_POLYGON_AMOY_URL=https://polygon-amoy.g.alchemy.com/v2/your-development-alchemy-key
   CONTRACT_ADDRESS=your-development-contract-address
-  
+
   NOTE: GOOGLE_MAPS_API_KEY must also be in android/local.properties:
     GOOGLE_MAPS_API_KEY=AIzaSyBxxxxxx
   It is injected into AndroidManifest.xml via build.gradle.
@@ -899,6 +988,10 @@ IMPORTANT SECURITY RULES:
 
 ================================================================================
 SECTION 5: MODULE 1 — AUTHENTICATION AND KYC
+
+v4.0 shared entry update: Farmer/Institution selector and server domain bootstrap
+precede farmer KYC/wallet. Institution never executes these farmer-only stages.
+See Section 29.3 and BSDD 15.2 for compatible /auth/me extension.
 ================================================================================
 
 5.1 PURPOSE
@@ -2102,6 +2195,11 @@ Sentinel-1 only + single k-factor (original v1.0)   | ~35%
 
 ================================================================================
 SECTION 9: MODULE 5 — BIOMASS CALCULATION (XGBOOST FUSION ENGINE)
+
+v4.0 terminology/validity note: the shown smileGradientTreeBoost example is GEE
+Smile GBT, not Python XGBoost. Farmer implementation behavior is preserved.
+Its training/stock examples are historical; institution plot support, applicable
+allometry and stock-versus-period-change rules are authoritative in Section 30.
 ================================================================================
 
 9.1 PURPOSE
@@ -2777,6 +2875,9 @@ SCREEN: MaintenanceScreen
 
 ================================================================================
 SECTION 11: DATABASE SCHEMA (SUPABASE / POSTGRESQL + POSTGIS)
+
+v4.0: this is the preserved farmer schema. Add domain/membership/campus/accounting/
+advisory entities from BSDD 16; do not reuse farmer audits for institution results.
 ================================================================================
 
 11.1 SETUP — RUN THESE FIRST IN SUPABASE SQL EDITOR
@@ -3083,6 +3184,9 @@ ORDER BY audit_year DESC LIMIT 1;
 
 ================================================================================
 SECTION 12: API ENDPOINTS (FASTAPI — COMPLETE)
+
+v4.0: endpoints below are the farmer baseline, not the complete two-domain list.
+Compatible auth additions and separate institution APIs are in BSDD 15 and 18.
 ================================================================================
 
 Base URL (development): http://localhost:8000
@@ -3493,7 +3597,7 @@ MMKV is used instead of AsyncStorage because:
   - Synchronous API — tree data saves instantly when farmer taps "Save"
   - Optional encryption support when the key is supplied securely at runtime
   - Intended for persisted app state, not for private keys or other secrets
-  - Current repo baseline uses react-native-mmkv 3.3.x on React Native 0.84.1
+  - Current repo baseline uses react-native-mmkv 3.3.x on React Native 0.86.2
   - New Architecture stays enabled
 
   // store/mmkvStorage.ts
@@ -3588,8 +3692,8 @@ Inside android { defaultConfig { ... } } block:
   ]
 
 Inside dependencies { ... } block:
-  implementation 'com.google.ar:core:1.42.0'
-  implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+  implementation 'com.google.ar:core:1.54.0'
+  implementation 'org.tensorflow:tensorflow-lite:2.15.0'
   implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
 
 In android/local.properties (create if it does not exist — already in
@@ -3860,6 +3964,9 @@ Multi-day audit handling:
 
 ================================================================================
 SECTION 17: UI/UX DESIGN SYSTEM
+
+v4.0: preserve current farmer UI including recent corrections. Institution reuses
+primitives and adds sibling navigation, defined in FDD 16–22 and FFC 12–17.
 ================================================================================
 
 17.1 DESIGN PRINCIPLES
@@ -4455,7 +4562,7 @@ SECTION 22: MOBILE npm DEPENDENCIES (package.json)
 ================================================================================
 
 Install all mobile dependencies with:
-  npx @react-native-community/cli@20.1.3 init TerraTrustAR --version 0.84.1 --template react-native-template-typescript
+  npx react-native@0.86.2 init TerraTrustAR --version 0.86.2 --template react-native-template-typescript
   cd TerraTrustAR
 
   # TerraTrustAR baseline assumes Node.js 22.11+ and the New Architecture.
@@ -4463,8 +4570,8 @@ Install all mobile dependencies with:
   # In android/gradle.properties set: newArchEnabled=true
 
   # Core platform alignment
-  npm install react@19.2.4
-  npm install --save-dev react-test-renderer@19.2.4 @types/react@^19.2.14
+  npm install react@19.2.3
+  npm install --save-dev react-test-renderer@19.2.3 @types/react@^19.2.14
   npm install --save-dev jest@^29.7.0 @types/jest@^29.5.14
   npm install --save-dev typescript@^5.9.3
 
@@ -4507,7 +4614,7 @@ Install all mobile dependencies with:
   npm install lottie-react-native@^7.3.6
 
   # UI utilities
-  npm install react-native-reanimated@^4.3.0
+  npm install react-native-reanimated@4.4.2
   npm install react-native-haptic-feedback@^2.3.4
   npm install react-native-device-info@^15.0.2
 
@@ -4849,6 +4956,9 @@ docker-compose.yml:
 
 ================================================================================
 SECTION 26: IMPLEMENTATION SEQUENCE (16-WEEK PLAN)
+
+Historical farmer implementation sequence; do not rebuild completed farmer app.
+The additive institution delivery gates are in Section 36, without fixed dates.
 ================================================================================
 
 This is the correct order. Build exactly in this sequence. Each phase
@@ -5412,15 +5522,13 @@ XGBoost     Extreme Gradient Boosting. Ensemble ML algorithm. Uses 100
 
 
 ================================================================================
-END OF DOCUMENT
+END OF PRESERVED FARMER BASELINE
 ================================================================================
-Version  : 3.1
-Status   : Final
-Pages    : Complete — all architecture decisions incorporated
-Date     : March 2026
+Baseline : 3.1 (historical farmer specification)
+Upgrade  : 4.0, planned institution extension, 10 October 2026
 
-This document supersedes SRS v3.0, FDD v3.1, and BSDD v3.1.
-Where any of those documents contradict this SRS, this SRS takes precedence.
+Historical v3.1 precedence statement: use v4.0 upgrade control for current
+cross-document authority; farmer baseline details remain preserved.
 
 All design decisions from the complete project discussion sessions are
 fully incorporated. No further architecture questions should be needed
@@ -5435,3 +5543,2023 @@ For OCR (Google Cloud Vision API): see Sections 3 and 6.3.
 For satellite engine: see Sections 8 and 9.
 For AR bridge: see Section 14.
 ================================================================================
+
+================================================================================
+SECTION 29: v4.0 — PRODUCT SCOPE, REUSE AND DOMAIN ENTRY
+================================================================================
+
+29.1 PRODUCT BOUNDARY AND DELIVERY LABELS
+-----------------------------------------
+
+CORE
+----
+  - Institution login, setup and membership.
+  - Approved campus boundary and vegetation mask.
+  - Tree inventory, sampling plots, AR survey and satellite-assisted biomass.
+  - Operational inventory, mitigation analysis and versioned factors.
+  - Annual audits and validated CSV import.
+  - Dashboards, history and PDF/CSV/JSON reports.
+  - Private evidence and offline drafts.
+  - Institution-aware Q&A, real citations and ranked recommendations.
+
+RESEARCH
+--------
+
+  - a separately evaluated RAG benchmark, baselines, ablations and results.
+
+LATER
+-----
+
+  - dual-domain accounts, institution credits/wallet/marketplace/on-chain anchoring,
+    full Scope 3, bill OCR/IoT integration, autonomous interventions, financial
+    optimization, unsupported carbon pools and iOS production support.
+  - No implementation schedule is promised.
+  - Each phase has the exit gate in 36.1.
+
+29.2 REUSE REGISTER (existing frontend asset responsibilities)
+----------------------------------------------------------------
+
+AUTHENTICATION
+--------------
+
+  - src/services/firebase.ts and authBootstrap.ts; existing phone verification,
+    Firebase token transport, stale-session guards and OTPDrawer.
+  - Required extension: domain intent/server routing BEFORE farmer wallet setup.
+
+NETWORKING
+----------
+
+  - src/services/api.ts; transport, auth, errors/retries.
+  - Institution repositories add typed contracts without changing farmer
+    payloads/envelopes.
+
+PRESENTATION
+------------
+
+  - src/common/components, common/theme, ScreenHeader, SheetModal, FloatingTabBar,
+    responsive/reduced-motion behavior and common chart/map tools.
+
+MEASUREMENT
+-----------
+
+  - src/services/ar-bridge.ts, native ARModule, camera/species assets, GPS/evidence
+    utilities and device capability detection.
+  - New campus screens wrap these services; existing farm screens keep land/audit
+    route contracts.
+
+LOCAL DATA
+----------
+
+  - Reuse Redux Toolkit/resetAppState and personal theme preferences.
+  - Institution slices are memory-only; sensitive profiles/forms/files/queues use
+    the Android encrypted vault.
+  - Do not persist them in farmer MMKV or slices.
+
+ALLOMETRY
+---------
+
+  - src/common/utils/chave.ts is a reusable calculation primitive where applicable.
+  - Its farmer preview fallback (default height/density and rounding) is NOT
+    authoritative campus stock/removal.
+  - Campus requires measured/supported height, species/density provenance, validated
+    method and server calculation.
+
+SERVER DESIGNS
+--------------
+
+  - Firebase verification, PostGIS, private Storage, Celery/Redis, satellite
+    acquisition/fusion, evidence hashing and export utilities are reuse candidates
+    from the baseline specifications, subject to backend inspection.
+
+FARMER-ONLY
+-----------
+
+  - 7/12 OCR, LGD/BhuNaksha ownership, farm parcels/zones/audits, wallet
+    registration/recovery, CTT minting and credit history remain farmer-only.
+
+29.3 AUTH REQUIREMENTS
+----------------------
+
+--------------------------------------------------------------------------------
+AUTH-I01 — FARMER / INSTITUTION LOGIN CHOICE
+--------------------------------------------------------------------------------
+
+  Purpose: Choose the account flow before starting phone verification.
+  Screen / service: LoginScreen / OTPDrawer
+  Backend: GET /api/v1/auth/me; BSDD 15.2
+
+  Behavior:
+    - LoginScreen shows accessible Farmer/Institution choices; Farmer is default.
+    - Switching closes/cancels any OTP attempt, discards late callbacks and does not
+      reuse the previous phone/domain intent.
+
+  Reuse:
+    - Reuse six-digit auto-submit, Firebase automatic verification and existing
+      drawer dismissal behavior.
+
+--------------------------------------------------------------------------------
+AUTH-I02 — SERVER PROFILE AND FIRST SIGN-IN
+--------------------------------------------------------------------------------
+
+  Purpose: Confirm identity, domain and access before opening a feature branch.
+  Screen / service: SplashScreen / LoginScreen
+  Backend: GET /api/v1/auth/me; BSDD 15.2–15.4
+
+  Behavior:
+    - GET /api/v1/auth/me keeps old fields and adds account_domain, role,
+      institution_onboarding_status and institution_memberships.
+    - Optional header X-TerraTrust-Flow=FARMER|INSTITUTION identifies explicit login
+      intent only.
+    - Legacy callers without a header retain farmer provisioning for new accounts.
+    - Interrupted login resumes that intent before first provisioning.
+    - An existing account domain is never changed by the header.
+    - For new institution identity create a restricted INSTITUTION_ADMIN profile
+      with onboarding REQUIRED, no membership, no Aadhaar and no wallet.
+    - The role alone grants no tenant access.
+
+  Reuse:
+    - The root auth observer and LoginScreen must share one bootstrap owner
+      and pending flow intent so institution sign-in cannot race a headerless
+      farmer-default provisioning call.
+
+--------------------------------------------------------------------------------
+AUTH-I03 — RETURNING USER AND WRONG FLOW
+--------------------------------------------------------------------------------
+
+  Purpose: Restore the right branch and explain a wrong flow selection.
+  Screen / service: SplashScreen / LoginScreen
+  Backend: GET /api/v1/auth/me; BSDD 15.2
+
+  Behavior:
+    - Returning accounts route by server domain and fresh memberships; cold launch
+      restores that domain without asking for the selector again.
+    - Mismatch after explicit selection stays at login with an actionable
+      switch-flow message.
+
+  Validation:
+    - Do not silently open the other flow, mutate the role or start a wallet.
+
+--------------------------------------------------------------------------------
+AUTH-I04 — ACCOUNT DOMAIN AND INSTITUTION SELECTION
+--------------------------------------------------------------------------------
+
+  Purpose: Select an authorized institution without changing the account domain.
+  Screen / service: InstitutionSelectorScreen
+  Backend: GET /api/v1/institutions; BSDD 15.4
+
+  Behavior:
+    - Initial release uses one domain per Firebase UID.
+    - Multiple approved institution memberships use InstitutionSelectorScreen, not a
+      domain switcher.
+
+  Validation:
+    - No conversion of a completed farmer account or in-app dual-domain switcher.
+
+--------------------------------------------------------------------------------
+AUTH-I05 — INSTITUTION REGISTRATION OR INVITATION
+--------------------------------------------------------------------------------
+
+  Purpose: Register an institution or accept an invitation after phone
+           authentication.
+  Screen / service: InstitutionSetupScreen / InstitutionAccessStatusScreen
+  Backend: BSDD 18.1 and 18.11
+
+  Behavior:
+    - New institution identity can submit one registration or accept a server
+      invitation code.
+    - OTP purpose SIGN_IN starts a login; REAUTHENTICATE verifies sensitive actions
+      for the same identity without a demo reset (BSDD 15.4).
+    - Setup does not require farmer KYC.
+
+  Validation:
+    - Pending/rejected/suspended institution access routes to status/correction
+      screens, not main tabs.
+
+29.4 PERMISSIONS AND CONTROLLED ONBOARDING
+------------------------------------------
+
+OWNER
+-----
+
+  - manage profile/campuses/audits/advice and member invitations/permissions.
+
+MANAGER
+-------
+
+  - campus surveys, draft entry, submission, reports/advice; no ownership or
+    membership administration.
+
+VIEWER
+------
+
+  - authorized finalized records/maps/reports and existing published advisory
+    history; no writes, draft access or new Q&A.
+
+PLATFORM REVIEWER
+-----------------
+
+  - explicitly assigned tenant/case capability, separate from OWNER/MANAGER; reviews
+    institution authority, geometry/mask/surveys and audit finalization.
+  - Existing ADMIN/AUDITOR roles are reused only after backend audit.
+  - Institution owners cannot approve their own institution or finalize their own
+    audit.
+  - Initial operator review tooling/API is required; no new staff mobile app.
+  - Protect the last active OWNER.
+  - Invitations target verified identity, never a client-supplied institution_id.
+  - Revocation blocks requests, jobs and file access.
+  - Fresh setup creates PENDING institution and pending OWNER membership, allowing
+    only that registration's setup/evidence/status corrections.
+  - Independent institution registration approval activates pending OWNER
+    membership; later campus-control approval is a separate case.
+  - Suspended tenants retain restricted status view.
+
+================================================================================
+
+SECTION 30: v4.0 — CAMPUS TREES AND SHARED BIOMASS ENGINE
+================================================================================
+
+--------------------------------------------------------------------------------
+TREE-I01 — CAMPUS CONTROL AND BOUNDARY
+--------------------------------------------------------------------------------
+
+  Purpose: Register campus control and a reviewed geographic boundary.
+  Screen / service: CampusDetailScreen / CampusBoundaryScreen
+  Backend: BSDD 18.1 and 18.11
+
+  Behavior:
+    - Institution has one or more campuses with own authority evidence and versioned
+      Polygon/MultiPolygon boundary.
+    - EPSG:4326 exchange; PostGIS geography or suitable projection for area.
+    - Institution-authorized GeoJSON plus evidence is accepted for REVIEW; operator
+      digitization is an administrative fallback.
+    - Farmer self-drawn boundary restrictions remain unchanged.
+
+--------------------------------------------------------------------------------
+TREE-I02 — OVERLAPPING ASSETS
+--------------------------------------------------------------------------------
+
+  Purpose: Prevent duplicate attribution where controlled assets overlap.
+  Screen / service: CampusBoundaryScreen / operator review
+  Backend: BSDD 17.7; boundary review API
+
+  Behavior:
+    - Review overlap with other campus/farm assets for duplicate attribution.
+    - Campus control is independent of farmer land ownership and 7/12 verification.
+
+--------------------------------------------------------------------------------
+TREE-I03 — ELIGIBLE TREE AREA
+--------------------------------------------------------------------------------
+
+  Purpose: Identify the area that can support a campus tree assessment.
+  Screen / service: CampusVegetationScreen
+  Backend: POST /campuses/{cid}/vegetation-assessments
+
+  Behavior:
+    - Approved mask identifies tree-bearing area, excluding buildings, roads, water,
+      bare ground and unsupported lawns/crops.
+    - NDVI alone is insufficient.
+
+  Saved data:
+    - Store eligible area, fractional boundary pixels, mask method/version/evidence.
+
+--------------------------------------------------------------------------------
+TREE-I04 — SAMPLING PLOTS
+--------------------------------------------------------------------------------
+
+  Purpose: Prepare reviewed plots that can be revisited in later surveys.
+  Screen / service: CampusSamplingScreen
+  Backend: POST /campuses/{cid}/sampling-plots/generate
+
+  Behavior:
+    - Generate reviewed stratified/revisitable plots using shared geometry and
+      satellite services.
+
+  Saved data:
+    - Save measured plot area, stratum, inclusion design, coverage requirement and
+      dates.
+
+  Validation:
+    - Fixed farmer three-zone/tree-count defaults do not establish campus
+      statistical adequacy.
+    - Quality policy must be validated.
+
+--------------------------------------------------------------------------------
+TREE-I05 — PERMANENT TREE IDENTITY
+--------------------------------------------------------------------------------
+
+  Purpose: Keep one stable tree identity across repeated measurements.
+  Screen / service: CampusTreeInventoryScreen / TreeEventSheet
+  Backend: BSDD 18.2; campus_trees and campus_tree_events
+
+  Behavior:
+    - Separate stable campus_trees from repeated survey measurements.
+
+  Saved data:
+    - Save tag/location, species/condition/planting if known; record planting,
+      mortality, removal/pruning and matching corrections without rewriting accepted
+      history.
+
+--------------------------------------------------------------------------------
+TREE-I06 — MEASUREMENT RECORD
+--------------------------------------------------------------------------------
+
+  Purpose: Capture a tree observation with explicit units and evidence.
+  Screen / service: CampusTreeScanScreen / CampusManualMeasureScreen
+  Backend: MeasurementItem and batch API; BSDD 18.6
+
+  Saved data:
+    - Campus survey records DBH cm, height m/source, applicable wood density and
+      version, species confidence/selection method, AR tier, operator/time, GPS
+      accuracy, plot support, exact photo hash and local UUID.
+
+  Reuse:
+    - Reuse actual existing Tier 1/Tier 2/manual fallback.
+
+  Validation:
+    - Unknown species/allometry needs review; the 11-species classifier is not proof
+      of support for all campus trees.
+
+--------------------------------------------------------------------------------
+TREE-I07 — OFFLINE FIELD SURVEY
+--------------------------------------------------------------------------------
+
+  Purpose: Continue approved fieldwork offline and synchronize it safely.
+  Screen / service: CampusPlotNavigationScreen / InstitutionSyncScreen
+  Backend: BSDD 21.2; survey/measurement APIs
+
+  Behavior:
+    - Field scanning is offline after downloading approved plot/boundary data.
+    - Fieldwork has no backend dependency on farmer accounts.
+    - Measurements upload once and membership is rechecked.
+
+  Validation:
+    - Missing maps, unresolved device capability or permissions show explicit
+      recovery; no invented location/height.
+
+--------------------------------------------------------------------------------
+TREE-I08 — PLOT BIOMASS LABELS
+--------------------------------------------------------------------------------
+
+  Purpose: Build a biomass-density training label for each measured plot.
+  Screen / service: Shared allometry / campus engine adapter
+  Backend: BSDD 17.7–17.8
+
+  Behavior:
+    - Plot training label = sum(measured dry AGB kg)/1000/plot_area_ha.
+    - A single tree is not automatically an entire satellite pixel.
+
+  Validation:
+    - Do not add ground inventory stock to satellite stock; they assess the same
+      trees.
+
+--------------------------------------------------------------------------------
+TREE-I09 — SHARED ENGINE REQUEST AND RESULT
+--------------------------------------------------------------------------------
+
+  Purpose: Run the shared engine against the institution’s own campus inputs.
+  Screen / service: CampusTreeProgressScreen / CampusTreeResultScreen
+  Backend: POST /campuses/{cid}/tree-audits
+
+  Behavior:
+    - Campus adapter invokes the shared tree-carbon/satellite engine with
+      domain=INSTITUTION, campus ID, approved boundary/mask/survey revision,
+      seasonal window, feature/model/method versions and optional compatible
+      baseline.
+    - Engine returns biomass density/map, total AGB, included pools, tC stock,
+      stock-equivalent tCO2, coverage, provenance, uncertainty/flags and comparable
+      period change.
+    - Engine does not perform domain authorization or mint tokens; caller checks
+      authorization and engine jobs bind to authorized scoped inputs.
+
+  Reuse:
+    - Farmer adapter preserves the old farmer API, sampling and minting behavior.
+
+--------------------------------------------------------------------------------
+TREE-I10 — SATELLITE DATA AND COVERAGE
+--------------------------------------------------------------------------------
+
+  Purpose: Use compatible satellite observations with recorded coverage and units.
+  Screen / service: Shared satellite service
+  Backend: BSDD 17.1 and 17.7–17.8
+
+  Behavior:
+    - Shared services acquire Sentinel-1, Sentinel-2, GEDI and SRTM; NISAR only when
+      actual compatible coverage/calibration is confirmed.
+    - Resampling to 10 m does not create 10 m independent information.
+    - GEDI footprint height is canopy information, not necessarily exact
+      individual-tree height.
+
+  Saved data:
+    - Record native resolutions, cloud/SAR quality, units and co-registration.
+
+--------------------------------------------------------------------------------
+TREE-I11 — ACTUAL ALGORITHM AND SENSOR FALLBACK
+--------------------------------------------------------------------------------
+
+  Purpose: Record the actual model and handle missing sensors explicitly.
+  Screen / service: Shared biomass service / model registry
+  Backend: BSDD 17.1 and MODEL config in 18.9
+
+  Behavior:
+    - GEE Smile gradient-tree boosting is named GEE_SMILE_GBT.
+    - Python XGBoost is named XGBOOST only when that implementation is actually
+      selected.
+    - Default upgrade strategy preserves the deployed backend family after
+      inspection; it does not mandate switching algorithms or rewriting the farmer
+      engine.
+    - A focal median is identified as focal median, not a Lee filter.
+
+  Saved data:
+    - Store the actual filter, feature units/order and artifact hash; unavailable
+      mandatory sensors require validated reduced-feature models or NEEDS_DATA,
+      never zero-fill.
+
+--------------------------------------------------------------------------------
+TREE-I12 — CAMPUS MODEL VALIDATION
+--------------------------------------------------------------------------------
+
+  Purpose: Approve a model only when its campus applicability is supported.
+  Screen / service: Model registry / independent operator tooling
+  Backend: BSDD 17.7 and 18.9
+
+  Behavior:
+    - Use spatial held-out plots, MAE/RMSE/R2 and uncertainty; no fixed 5–6%
+      accuracy or arbitrary minimum tree guarantee.
+
+  Validation:
+    - A farm-trained model is not automatically campus-valid.
+    - Registry must declare domain applicability and campus validation; separate
+      model artifacts within the same engine are allowed.
+    - Unsupported tiny/mixed-pixel campuses produce reviewed provisional ground
+      estimates or NEEDS_DATA, not a fabricated successful satellite assessment.
+
+30.1 STOCK AND PERIOD CHANGE
+----------------------------
+
+  - Method starts with above-ground live woody biomass; roots/soil/deadwood/litter
+    excluded unless separately supported.
+  - Chave is used only within its documented applicability; carbon_fraction and wood
+    densities are reviewed/versioned.
+FORMULAS
+--------
+  AGB_t = sum(predicted_AGB_t_per_ha * actual_eligible_pixel_area_ha)
+
+  stock_tC = included_dry_biomass_t * approved_carbon_fraction
+
+  stock_co2_t = stock_tC * (44/12)
+
+  signed_change_tCO2 = (end_stock_tC - start_stock_tC) * (44/12)
+    Apply documented pool/area/transferred-tree adjustments and comparability review.
+
+  stock_gain = max(signed_change, 0); stock_loss = max(-signed_change, 0)
+
+  removal = stock_gain only with supported atmospheric-gain attribution.
+  attributable_release = stock_loss only with supported atmospheric-loss attribution.
+    Otherwise NULL with reason; do not equate a live-pool transfer to emission.
+
+COMPARABILITY RULES
+--------------------
+  - Unexplained model differences are REVIEW/NONCOMPARABLE, not automatic biological
+    release.
+  - First accepted assessment establishes BASELINE_ONLY; period removal is NULL, not
+    zero and not the current stock.
+  - Multi-year change stays a period change; annualization, if supported, is a
+    separately labeled scenario.
+  - Same boundaries/pools/method/model or consistently re-estimated comparison
+    revisions are required.
+  - Imported mature trees and boundary expansion are not automatically atmospheric
+    removal.
+  - Changes within uncertainty are inconclusive.
+  - Historical accepted results stay immutable; new recalculation creates revision.
+
+================================================================================
+
+SECTION 31: v4.0 — INSTITUTIONAL INVENTORY AND MITIGATION
+================================================================================
+
+--------------------------------------------------------------------------------
+ACC-I01 — PERIOD, CAMPUSES AND EMISSION SCOPES
+--------------------------------------------------------------------------------
+
+  Purpose: Define the reporting period, campuses and stated emissions coverage.
+  Screen / service: InstitutionAuditPeriodScreen
+  Backend: POST /institutions/{iid}/audits; AuditCreate
+
+  Behavior:
+    - Audit specifies institution, reporting timezone, explicit inclusive start/end
+      dates, calendar/financial/academic label, campuses, consolidation approach and
+      included sources/scopes.
+    - Year label is display only.
+    - Core forms cover a PARTIAL operational inventory.
+    - Scope 1: controlled vehicle and stationary fuel combustion.
+    - Scope 2: purchased electricity, initially location-based.
+    - Selected Scope 3: actual waste treatment and optional sourced
+      purchased-water/wastewater; outsourced activities follow their method.
+    - Scope mapping is persisted per line.
+    - Refrigerants/process gases, full commuting/travel/procurement and complete
+      Scope 3 are disclosed exclusions; core completion does not imply a
+      comprehensive GHG Protocol inventory.
+
+  Validation:
+    - Initial approach is operational control; any exception requires reviewed
+      methodology, not ad hoc mixing of boundaries.
+
+--------------------------------------------------------------------------------
+ACC-I02 — REPORTED, ZERO, EXCLUDED OR MISSING DATA
+--------------------------------------------------------------------------------
+
+  Purpose: Show whether each category is reported, zero, excluded or missing.
+  Screen / service: CategoryDeclaration / InstitutionAuditOverviewScreen
+  Backend: Declaration; BSDD 18.6 and 18.11
+
+  Behavior:
+    - Every expected category is REPORTED, ZERO_CONFIRMED, NOT_APPLICABLE or
+      MISSING, with evidence/exclusion reason.
+    - MISSING is never zero.
+    - Draft forms may be incomplete; submission/finalization enforce stated coverage
+      policy.
+
+--------------------------------------------------------------------------------
+ACC-I03 — ACTIVITY ENTRY AND EVIDENCE
+--------------------------------------------------------------------------------
+
+  Purpose: Save actual activity with source dates, units and supporting evidence.
+  Screen / service: The five institution activity forms
+  Backend: EmissionLine; BSDD 18.6–18.11
+
+  Behavior:
+    - Annual total OR monthly entries for one source, never both.
+
+  Saved data:
+    - Each input has dates, category/subcategory, quantity/unit, campus or
+      institution-level meter/asset/invoice, measured/reported/estimated source,
+      evidence, revision and allocation/inclusion links.
+
+  Validation:
+    - Validate date overlap/units/duplicates.
+
+--------------------------------------------------------------------------------
+ACC-I04 — CSV IMPORT AND SHARED BILLS
+--------------------------------------------------------------------------------
+
+  Purpose: Preview CSV activity and count shared bills only once.
+  Screen / service: InstitutionCSVImportScreen
+  Backend: imports/preview and imports/commit; BSDD 18.7
+
+  Behavior:
+    - CSV upload -> preview row errors/normalized units/duplicates -> explicit
+      commit of validated rows -> revision update.
+    - Institution-shared bills enter once with allocation children; children are
+      breakdowns, not additional totals.
+
+  Validation:
+    - No hidden partial import commit; institution bill OCR is deferred.
+
+31.1 CATEGORY CONTRACTS (server deterministic; round display only)
+------------------------------------------------------------------
+
+FORMULA DIRECTORY
+  - Full input definitions, factor units and validation: BSDD 17.3.1–17.3.7.
+  - All results below are tonnes CO2e; sum only unique included period lines.
+  - EF means an approved compatible factor, not a hardcoded constant.
+  - /1000 converts kg emissions to tonnes. Missing values remain NULL.
+
+ELECTRICITY
+-----------
+
+  Formula ID : EM-GRID-01
+  Formula    : E_grid = sum(grid_import_kWh * EF_grid / 1000)
+  Factor unit: kgCO2e/kWh; location/year-specific inventory factor.
+
+  - Record grid/year/meter, distinct solar self-use/export and total load if
+    metered.
+
+TRANSPORT
+---------
+
+  Formula ID : EM-TRANSPORT-01
+  Formula    : E_transport = sum(consumed_fuel_qty * EF_transport / 1000)
+  Input unit : Petrol/diesel L; CNG kg or documented standard m3.
+  Factor unit: kgCO2e per matching fuel unit and applicable vehicle method.
+
+  - Fuel method first; distance estimates require a distinct approved method and
+    cannot duplicate the same trips.
+  - EV campus charging is metered electricity, not a second fuel line.
+  - Commuting is explicitly optional.
+
+STATIONARY FUEL
+---------------
+
+  Formula ID : EM-STATIONARY-01
+  Conversion : LPG_kg = sum(cylinder_count * verified_net_fuel_kg_each)
+  Formula    : E_stationary = sum(consumed_fuel_qty * EF_stationary / 1000)
+  Factor unit: kgCO2e per matching fuel unit/equipment method.
+
+  - LPG kg, diesel/petrol L or compatible CNG for kitchens/generators/boilers; known
+    net cylinder mass required for cylinder conversion.
+  - Do not assign the same fuel purchase to transport and stationary use twice.
+
+WASTE
+-----
+
+  Formula ID : EM-WASTE-01
+  Formula    : E_waste = sum(actual_treated_tonnes * EF_actual_pathway)
+  Factor unit: tCO2e/tonne, matching material, mass basis and actual treatment.
+
+  - For kgCO2e/tonne factors, divide the product by 1000 instead.
+  - Composted/digested waste uses actual treatment emissions; not also landfill.
+
+WATER
+-----
+
+  Formula ID : EM-PUMP-01
+  Attribution: E_pump = pumping_kWh * EF_pump / 1000
+  Extra total: 0 if included in a counted main meter; E_pump if separate.
+  Factor unit: kgCO2e/kWh.
+
+  Formula ID : EM-WATER-01 (optional supported processes)
+  Formula    : E_supply = supplied_m3 * EF_supply / 1000
+               E_wastewater = treated_wastewater_m3 * EF_wastewater / 1000
+  Factor unit: kgCO2e/m3 for each nonoverlapping supply/treatment boundary.
+
+  - If included in main meter, retain a nested attribution and zero extra
+    contribution.
+  - Separate pumping enters once.
+  - Optional m3 supply/wastewater uses compatible process factor and nonoverlapping
+    boundary.
+  - Water volume is not energy; kL=m3 conversion is allowed.
+
+ACTUAL BIOGAS / BIOLOGICAL TREATMENT GASES
+-----------------------------------------
+  Formula ID : EM-GAS-01
+  Formula    : E_gases = (fossil_CO2_kg + CH4_kg * GWP_CH4
+                          + N2O_kg * GWP_N2O) / 1000
+  Inputs     : Actual gas emitted, approved GWP version/time horizon.
+
+  - Gas mass may come from matching activity * gas-specific emission factor.
+  - Combustion, treatment and leakage use reviewed component boundaries.
+  - This replaces gas components already included in a combined CO2e factor; never
+    add the same gas component or apply GWP twice.
+  - Biogenic CO2 is disclosed separately under the selected method.
+
+FACTOR AND COVERAGE RULES — ALL CATEGORIES
+------------------------------------------
+  - Factors state CO2/CO2e gas coverage, GWP basis, geography, year/technology,
+    units, source/page/version and approval.
+  - CO2-only factors remain clearly CO2-only.
+  - Biogas combustion/leakage CH4/N2O within the selected inventory boundary require
+    supported actual-project lines or explicit exclusions; biogenic CO2 is disclosed
+    separately under the chosen method.
+  - Avoided benefits cannot replace these lines.
+  - Missing/wrong-unit factors block applicable final lines; no guessed constants.
+  - Reviewed broad fallback requires documented approval/assumptions.
+  - Final results snapshot exact factor values and formula/method versions; RAG
+    cannot set them.
+
+31.2 MITIGATION (separate baseline-relative avoided impact)
+-----------------------------------------------------------
+
+FORMULA DIRECTORY
+  - Full inputs, units, baseline boundaries and overlap rules: BSDD 17.4.1–17.4.5.
+  - A = avoided baseline-relative emissions, in tonnes CO2e.
+  - A = E_baseline - E_project for the same period, service and boundary.
+  - Unknown baseline/project terms -> NULL/UNQUANTIFIED; negative stays negative.
+
+SOLAR
+-----
+
+  Formula ID : MIT-SOLAR-01
+  Self-use   : A_solar_self = eligible_displaced_self_kWh * EF_displaced / 1000
+                             - included_project_self_tCO2e
+  Export     : A_solar_export = eligible_export_kWh * EF_export / 1000
+                               - included_project_export_tCO2e
+  Factor unit: kgCO2e/kWh for the approved avoided-grid assessment.
+
+  - reconcile generated/self-used/exported kWh; only applicable displaced grid
+    supply informs avoided impact.
+  - Actual inventory already uses grid imports.
+  - Export is separate impact, no campus inventory deduction; disclose attributes.
+  - Avoided-grid EF is not automatically the location-based inventory EF.
+  - Export is outside the default campus mitigation total.
+  - Zero project terms require a documented boundary or evidence, not a default.
+
+RAINWATER
+---------
+
+  Formula ID : MIT-RAIN-01
+  Baseline   : baseline_kWh = utilized_rainwater_kL * baseline_kWh_per_kL
+  Formula    : A_rainwater = baseline_kWh * EF_baseline / 1000
+                            - project_kWh * EF_project / 1000
+                            + other_baseline_tCO2e - other_project_tCO2e
+  Factor unit: kgCO2e/kWh; intensities and other included terms need evidence.
+
+  - Same-factor energy-only case: A_rainwater = (baseline_kWh - project_kWh) *
+    EF_energy / 1000.
+  - A supported supplier-process factor is an alternative to its included energy
+    terms; never combine overlapping process and energy contributions.
+  - Storage capacity is not utilization.
+  - Negative/unknown benefit is allowed.
+
+BIOGAS
+------
+
+  Formula ID : MIT-BIOGAS-01
+  Useful heat: Q_MJ = utilized_std_m3 * LHV_biogas_MJ_per_std_m3 * eta_biogas
+  Displaced  : fuel_qty = Q_MJ / (LHV_fuel_MJ_per_unit * eta_baseline)
+  Baseline   : E_baseline_energy = fuel_qty * EF_fuel_kgCO2e_per_unit / 1000
+  Net benefit: A_biogas = E_baseline_energy + E_baseline_treatment
+                         - E_project_system
+
+  - Electricity alternative uses eligible metered displaced kWh * compatible
+    kgCO2e/kWh /1000 instead of the heat/fuel baseline term.
+  - Source heating values and efficiencies; no universal gas-volume benefit.
+  - Energy-only coverage explicitly excludes treatment benefit.
+  - Combined coverage includes treatment, combustion/leakage and auxiliary energy
+    once.
+  - actual utilized gas, standard conditions/composition/energy/efficiency,
+    displaced fuel, losses/leakage and treatment boundary.
+  - Benefit = baseline minus project emissions under approved method; production
+    alone is not displacement.
+
+COMPOSTING
+----------
+
+  Formula ID : MIT-COMPOST-01
+  Baseline   : E_baseline = composted_tonnes * EF_baseline_disposal
+                           + other_baseline_tCO2e
+  Project    : E_project = composted_tonnes * EF_actual_compost
+                          + other_project_tCO2e
+  Net benefit: A_composting = E_baseline - E_project
+  Factor unit: tCO2e/tonne; use /1000 if supplied as kgCO2e/tonne.
+
+  - actual feedstock tonnes and plausible baseline disposal minus actual composting
+    emissions.
+  - Keep actual compost pathway in waste inventory; no assumed soil storage or
+    simultaneous composting/digestion of the same feedstock.
+
+MITIGATION TOTAL
+-----------------
+  Formula ID : MIT-TOTAL-01
+  Formula    : A_total_quantified = sum(compatible nonoverlapping benefits)
+
+  - This requires overlap review, not an unconditional sum of four actions.
+  - Shared solar/pumping energy and compost/biogas feedstock need exclusive
+    attribution or a reviewed joint baseline before aggregation.
+  - Unknown actions remain separately unquantified; label any partial aggregate.
+  - Every benefit stores baseline/project/evidence/overlap links; no universal
+    benefit constant.
+  - Sum compatible nonoverlapping benefits only.
+  - Unknown is unquantified.
+  - Do not subtract avoided impact again from already-reduced actual activity.
+
+31.3 INVENTORY TOTAL AND PROJECT BALANCE
+----------------------------------------
+  Formula ID : INVENTORY-TOTAL-01
+  Formula    : actual_total = E_scope_1 + E_scope_2 + E_scope_3_covered
+  Scope sums : Unique contributing actual inventory lines; no allocation duplicates.
+
+  Formula ID : BALANCE-01
+  Formula    : project_balance = eligible_period_removal - actual_total
+                                - attributable_tree_release
+
+  - Tree stock is not annual removal. First stock assessment -> removal NULL.
+  - Missing required covered lines -> actual_total NULL; draft subtotals are labeled.
+  - Unknown removal/release -> balance NULL even if covered emissions can finalize.
+  - Never add avoided mitigation to this actual-inventory balance.
+  - BSDD 17.5 defines reconciliation, optional baseline scenarios and finalization.
+
+================================================================================
+
+SECTION 32: v4.0 — AUDIT LIFECYCLE, RESULTS AND REPORTS
+================================================================================
+
+--------------------------------------------------------------------------------
+AUD-I01 — ANNUAL AUDIT AND REVISION LIFECYCLE
+--------------------------------------------------------------------------------
+
+  Purpose: Keep a revision history for each reporting-period family.
+  Screen / service: InstitutionAuditListScreen / InstitutionAuditOverviewScreen
+  Backend: BSDD 19.1; submit/revisions/finalize APIs
+
+  Behavior:
+    - One logical institution audit per explicit period; append revisions.
+    - Backdated corrections use the same logical audit, not a second overlapping
+      period.
+    - Business: DRAFT -> SUBMITTED -> UNDER_REVIEW -> FINALIZED; review can return
+      NEEDS_CORRECTION, followed by a new DRAFT revision.
+    - Approved replacement marks previous finalized revision SUPERSEDED without
+      deleting it.
+    - Processing: IDLE -> QUEUED -> RUNNING -> SUCCEEDED / FAILED / NEEDS_DATA.
+    - Quality/completeness and balance classification are separate from both states.
+
+  Validation:
+    - Overlapping institution periods are rejected in initial delivery.
+
+--------------------------------------------------------------------------------
+AUD-I02 — SUBMISSION AND FINALIZATION
+--------------------------------------------------------------------------------
+
+  Purpose: Freeze, independently review and finalize the exact submitted
+           calculation.
+  Screen / service: InstitutionCarbonResultScreen / operator review
+  Backend: BSDD 18.5 and 19.1
+
+  Behavior:
+    - Submission freezes input revision.
+    - Review/finalize bind to its exact result/input hash, factor/model/method
+      versions and evidence.
+    - Reviewer differs from submitter.
+
+  Validation:
+    - No draft writes after submission; corrections create revision.
+
+--------------------------------------------------------------------------------
+AUD-I03 — LINKING OWN CAMPUS ASSESSMENTS
+--------------------------------------------------------------------------------
+
+  Purpose: Use eligible assessments from this institution’s own campuses.
+  Screen / service: InstitutionTreeAssessmentScreen
+  Backend: GET/PUT /institution-audits/{aid}/tree-links
+
+  Behavior:
+    - Link each applicable accepted campus tree assessment once with its
+      period/baseline/comparability.
+    - Stock-only baseline can accompany finalized covered-emissions report, but no
+      net claim.
+
+  Validation:
+    - Never link carbon_audits from farmers.
+
+--------------------------------------------------------------------------------
+AUD-I04 — RESULTS AND CARBON BALANCE
+--------------------------------------------------------------------------------
+
+  Purpose: Explain actual emissions, tree change and the supported project balance.
+  Screen / service: InstitutionCarbonResultScreen
+  Backend: ResultResource; BSDD 17.5 and 18.6
+
+  Behavior:
+    - Core result keeps emissions by scope/category; total_actual_emissions; campus
+      stock; eligible removal/release; separate avoided benefits; completeness,
+      exclusions, uncertainty and provenance.
+    - Project assessment balance = removal - actual_emissions -
+      attributable_releases.
+    - Positive means assessed removal exceeds included emissions.
+    - This is a TerraTrust assessment view, not a formal certification or substitute
+      for separate scope totals/removal disclosures.
+    - Optional conservative display may show covered emissions alone, clearly
+      labeled "Tree removal unavailable"; do not turn missing removal into measured
+      zero.
+    - Classify complete comparable balance using methodology epsilon: NET_EMITTER
+      below -epsilon; BALANCED_ESTIMATE within epsilon; REMOVAL_SURPLUS above
+      epsilon.
+    - Interval spanning zero is INCONCLUSIVE.
+    - Optional scenario = removal + nonoverlapping_avoided -
+      documented_baseline_emissions - attributable_releases, only under a coherent
+      aligned baseline method.
+    - Example: baseline operations 500, avoided 200, actual 300, removal 150
+      (tCO2e/tCO2 as applicable): actual assessment balance -150; baseline scenario
+      -150.
+    - Adding avoided to removal then subtracting actual yields +50 and double
+      counts.
+
+  Validation:
+    - No single ambiguous "carbon saved" total.
+    - Unknown removal/release/comparability -> balance NULL.
+    - Missing data -> INCOMPLETE/BASELINE_ONLY/NONCOMPARABLE flags; unknown
+      uncertainty is disclosed and prevents a confident balance claim.
+    - Never show certified carbon-neutral or issue institution tokens.
+
+--------------------------------------------------------------------------------
+AUD-I05 — DASHBOARD AND TRENDS
+--------------------------------------------------------------------------------
+
+  Purpose: Compare compatible reporting periods and known intensity denominators.
+  Screen / service: InstitutionDashboardScreen / InstitutionTrendsScreen
+  Backend: GET /institutions/{iid}/analytics
+
+  Behavior:
+    - Dashboard shows selected period/revision/status, actual inventory, separate
+      stock/removal, balance when available, mitigation, campus quality and data
+      gaps.
+    - Trends use compatible periods/boundaries; zero prior value -> N/A percentage.
+    - Intensity denominators require actual student/staff/floor-area data.
+    - Changed factors/coverage are distinguished from observed activity change.
+
+--------------------------------------------------------------------------------
+AUD-I06 — REPORTS AND PRIVATE EVIDENCE
+--------------------------------------------------------------------------------
+
+  Purpose: Export a reproducible result while protecting private source evidence.
+  Screen / service: InstitutionReportDownloadsScreen / InstitutionEvidenceScreen
+  Backend: Exports/artifact APIs; BSDD 18.3 and 18.9
+
+  Behavior:
+    - PDF, activity/calculation CSV and reproducibility JSON include dates,
+      coverage/exclusions, inputs/units, formulas/factors, model/mask/pool versions,
+      evidence hashes, quality and review decisions.
+    - AI advice is labeled separately.
+    - Report failure retries independently without invalidating calculation.
+    - Institution public manifest pinning/anchoring is LATER and disabled initially;
+      no private documents on public IPFS and no initial inventory dependency.
+
+  Validation:
+    - Private bills/photos stay protected.
+
+================================================================================
+
+SECTION 33: v4.0 — INSTITUTION-AWARE ADVISOR AND RESEARCH
+================================================================================
+
+--------------------------------------------------------------------------------
+AI-I01 — AUTHORIZED AUDIT CONTEXT
+--------------------------------------------------------------------------------
+
+  Purpose: Answer using one authorized, immutable audit context.
+  Screen / service: InstitutionAdvisorScreen
+  Backend: POST /advisory/ask; BSDD 20.1
+
+  Behavior:
+    - Advisor reads authorized audit/revision context, approved public knowledge and
+      user-specified constraints.
+    - Latest FINALIZED is default; OWNER/MANAGER may explicitly use a draft with
+      provisional label.
+    - Numerical lookup uses deterministic records, not LLM arithmetic.
+
+  Validation:
+    - Unknown budget/site conditions remain unknown.
+
+--------------------------------------------------------------------------------
+AI-I02 — APPROVED KNOWLEDGE SOURCES
+--------------------------------------------------------------------------------
+
+  Purpose: Publish a reviewed knowledge corpus with traceable source passages.
+  Screen / service: Independent knowledge administration
+  Backend: BSDD 18.5, 18.9 and 20
+
+  Behavior:
+    - Independent operators review licensed public government/research sources.
+
+  Saved data:
+    - Store publisher, topic, geography, dates, source version and actual byte hash.
+
+  Validation:
+    - Author cannot approve its own source; URL/upload metadata is not approval.
+    - Validate allowlisted URLs/uploads; extract/OCR/chunk preserving table units,
+      pages and sections; review; embed with pinned model/dimension; index in
+      pgvector AND PostgreSQL lexical search; publish immutable corpus version.
+    - Private bills and tenant numerical facts are never inserted into shared public
+      corpus.
+
+--------------------------------------------------------------------------------
+AI-I03 — RETRIEVAL AND RERANKING
+--------------------------------------------------------------------------------
+
+  Purpose: Retrieve applicable evidence with lexical and vector search.
+  Screen / service: Advisory retrieval service
+  Backend: BSDD 20.1
+
+  Behavior:
+    - Classify multiple topics, build scoped structured profile, retrieve vector and
+      lexical candidates, fuse rankings, filter applicability, rerank, deduplicate
+      and bound context.
+    - Hybrid means lexical + vector; topic metadata alone is not hybrid.
+    - Mandatory visibility filters never relax; applicability relaxation is
+      disclosed.
+    - Conflicting/outdated sources and low evidence return bounded guidance.
+
+--------------------------------------------------------------------------------
+AI-I04 — GROUNDED ANSWERS AND CITATIONS
+--------------------------------------------------------------------------------
+
+  Purpose: Return supported facts and recommendations with valid citations.
+  Screen / service: InstitutionAdvisorScreen / AdvisorySourceScreen
+  Backend: AdvisoryResource; BSDD 20.1
+
+  Behavior:
+    - Typed output separates institution DATA facts, DOCUMENT evidence and ADVISORY
+      judgment, with citations and missing information.
+    - Bounded retry then failed/partial result; no invented sources.
+
+  Validation:
+    - Validate source IDs/pages and numeric facts against the supplied snapshot.
+    - Unsupported savings are rejected or explicitly quantified with a backend
+      scenario.
+    - Retrieved text cannot grant tools.
+
+--------------------------------------------------------------------------------
+AI-I05 — RECOMMENDATION PRIORITY
+--------------------------------------------------------------------------------
+
+  Purpose: Order supported actions using the approved backend ranking rules.
+  Screen / service: RecommendationDetailScreen
+  Backend: RULES_V1; BSDD 20.1
+
+  Behavior:
+    - Actions identify category, institution-specific reason, prerequisites,
+      constraints, existing-action overlap, sources, impact assumptions and ranking.
+    - Initial ranking is RULES_V1 as defined in BSDD 20.1: missing-data tasks,
+      supported actions, then actions requiring site checks, with stable tie-breaks.
+    - Feasibility stays UNKNOWN without evidence. No invented numeric score.
+    - A weighted ranking model is a later independently validated configuration;
+      retain its version, normalization, weights and missing-data policy.
+    - LLM explains candidates; backend ranks.
+    - High electricity alone does not establish HVAC as the cause.
+
+--------------------------------------------------------------------------------
+AI-I06 — NUMERICAL SCENARIOS
+--------------------------------------------------------------------------------
+
+  Purpose: Calculate hypothetical action outcomes without changing the audit.
+  Screen / service: InstitutionScenarioSheet
+  Backend: POST /institution-audits/{aid}/scenarios
+
+  Behavior:
+    - Scenario tools calculate supplied savings/displacement inputs with approved
+      factors and explicit baseline/overlap rules.
+
+  Saved data:
+    - Store scenario ID/assumptions/units; never update finalized inventory.
+
+  Validation:
+    - Cost/payback requires real cost inputs.
+
+--------------------------------------------------------------------------------
+AI-I07 — ADVISORY HISTORY
+--------------------------------------------------------------------------------
+
+  Purpose: Reopen the original answer and preserve its context and source versions.
+  Screen / service: InstitutionAdviceHistoryScreen / AdviceDetailScreen
+  Backend: BSDD 18.4; advisory-history and advisory/{qid}
+
+  Behavior:
+    - Regenerate creates a new record.
+    - Cached history shows date/revision.
+    - Initial advisor is Q&A/history; no autonomous control or unlimited
+      conversational memory.
+
+  Saved data:
+    - History preserves audit snapshot, query, retrieved chunks/scores, corpus,
+      embedding/reranker/LLM/prompt versions, answer, citations, rank config and
+      warnings.
+
+--------------------------------------------------------------------------------
+AI-I08 — PROVIDER FAILURE AND DATA PRIVACY
+--------------------------------------------------------------------------------
+
+  Purpose: Handle provider failures and protect private institution information.
+  Screen / service: Advisory provider/context services
+  Backend: BSDD 20.1 and 21
+
+  Behavior:
+    - Provider failure disables new advice with retry; audits/reports remain usable.
+    - Tenant cache key includes identity, revision, query/constraints and versions.
+
+  Validation:
+    - External model context is minimum required/redacted; credentials server only.
+
+33.1 RESEARCH BOUNDARY
+----------------------
+
+  - Hypotheses: structured context improves appropriate personalization; applicable
+    retrieval improves support; constraint-aware ranking improves expert priorities;
+    missing/conflicting evidence produces suitable abstention.
+  - These are hypotheses.
+  - Pilot determines feasible benchmark size (300–500 is an aspiration, not required
+    or claimed achieved).
+  - Use reviewed anonymized consented or labeled synthetic profiles across core
+    topics, factual/prioritization/scenario/missing/adversarial queries.
+  - Case schema includes profile/query/corpus IDs, relevant chunks, expected
+    facts/actions/priorities, abstention and annotation/adjudication provenance.
+  - Two qualified reviewers for a meaningful subset; blind system identity and
+    report agreement.
+  - Group institutions/profile families/paraphrases into the same split; freeze
+    held-out tests/corpus before tuning.
+  - LLM is not sole gold-label authority.
+  - Baselines: LLM-only; LLM+same profile; vector RAG+same profile; strong
+    hybrid+same profile+standard reranker; full system.
+  - Match LLM/settings/token budget/corpus.
+  - Ablate classifier, profile context, applicability, lexical retrieval, reranker,
+    evidence rubric and action ranking.
+  - Evaluate retrieval P/R@k, MRR, nDCG;
+  - factual correctness, faithfulness, citation support/coverage, unsupported
+    claims;
+  - expert relevance/feasibility/actionability/priority;
+  - paired-profile adaptation and stability under irrelevant edits;
+  - abstention/tenant leakage/injection;
+  - latency/tokens/cost.
+  - Repeat stochastic runs, paired/clustered confidence intervals, per-topic results
+    and ranking sensitivity.
+  - Deliver dataset card/rubric/configs/scripts and measured error analysis; no
+    fabricated improvements, novelty or publication guarantee.
+  - The paper's proposed focus is RAG decision support; biomass supplies context.
+
+================================================================================
+
+SECTION 34: v4.0 — CONTRACTS, OFFLINE AND SECURITY
+================================================================================
+
+  - BSDD Sections 15–22 are canonical new schemas/APIs/jobs.
+  - Existing /auth, /land, /audit, /credits remain compatible; institution resources
+    have separate routes.
+  - Use UUID ancestry checks for institution/campus/audit/evidence/job accesses;
+    Firebase identity is not Supabase auth.uid().
+  - All mobile access remains through FastAPI; do not rely on implicit Supabase RLS
+    for Firebase membership.
+  - Long work -> 202/job_id, scoped polling, immutable revision, bounded retries and
+    timeouts.
+  - Submissions/jobs/imports use Idempotency-Key and request hash; draft writes use
+    input_revision/If-Match with conflict reconciliation.
+  - Persist local forms/measurements/evidence UUID queues by
+    UID/domain/institution/campus/audit/revision.
+  - Only draft writes/field survey work offline; approval, satellite, calculation,
+    finalization, downloads and live advisor need network.
+  - Same-UID tenant switch may retain encrypted unsynced drafts with explicit
+    consent, while clearing old visible caches and requests.
+  - Logout offers Sync and log out / Discard and log out / Stay; successful logout
+    destroys institution vault keys and files.
+  - Revocation destroys the affected tenant vault and blocks export.
+  - Follow BSDD 21.2.
+  - Cross-device edits produce conflict, no silent overwrite.
+  - Never store keys/tokens/server credentials in Redux/MMKV.
+  - Draft/evidence encryption and OS-backed key storage are rollout gates, not
+    assumed properties of MMKV.
+  - Private downloads require authorization plus short-lived URLs; limit stale-link
+    exposure by short expiry and stop issuing them after revocation.
+  - Background jobs recheck tenant access/status before publishing results.
+  - Bound uploads/CSV/batch/Q&A size and frequency; hash exact bytes and enforce
+    MIME/type validation.
+  - Operational logging omits credentials, private document contents and unnecessary
+    PII.
+  - Back up database/storage and test restore.
+  - Long institution/GEE/RAG jobs need measured quotas/resources; preserve farmer
+    throughput with queue controls.
+
+34.1 IMPLEMENTABLE CONTRACTS AND OPERATOR RESPONSIBILITIES
+----------------------------------------------------------
+REQ-I01 — Data and API completeness
+--------------------------------------------------------------------------------
+
+  Purpose: Data and API completeness.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - BSDD 16.0–16.3 define physical types, enums, IDs, support tables and
+      constraints.
+    - BSDD 18.6–18.10 defines typed requests/responses, mutations and errors.
+    - audit_id identifies one revision row; correction returns a NEW audit_id.
+    - input_revision is draft concurrency; snapshot_id identifies calculation.
+    - Approved catalog/subordinate source IDs and campus assessment-config are BSDD
+      16.3/18.10; no hidden allometry/policy/model selection endpoint.
+
+  Validation:
+    - No app screen may invent a route, factor, approval or numeric result.
+REQ-I02 — Review and durable processing
+--------------------------------------------------------------------------------
+
+  Purpose: Review and durable processing.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Provide a scoped operator queue/detail/claim tool outside member navigation.
+    - Independent reviews use frozen revision/hashes and a renewable claim lease.
+    - APPROVE and finalize are separate annual-audit operations; finalize creates
+      the immutable result and atomically supersedes the previous final.
+    - Enqueue transaction includes resource, job, idempotency record and outbox.
+    - Crash/retry recovery follows BSDD 19.2; duplicate delivery is expected.
+    - Quality decisions and processing completion remain separate states.
+REQ-I03 — Scientific and accounting eligibility
+--------------------------------------------------------------------------------
+
+  Purpose: Scientific and accounting eligibility.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Approved methods define source coverage, pools, factors, sampling thresholds,
+      model applicability, uncertainty and comparison policy in BSDD 17.6–17.7.
+    - Initial inventory uses operational control and disclosed supported categories;
+      excluded scopes/pools are explicit.
+    - It is not an unexplained full footprint.
+    - Annual periods follow the selected calendar/timezone; shorter CUSTOM periods
+      are labeled.
+    - Finalization follows period end; missing months are not zero.
+    - Method/factor/model changes require a new calculation/review, never mutation
+      of an already frozen or finalized snapshot.
+
+  Validation:
+    - No default wood density/height, fixed tree count or assumed annual growth.
+REQ-I04 — Privacy and institutional account deletion
+--------------------------------------------------------------------------------
+
+  Purpose: Privacy and institutional account deletion.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Provide deletion/status/cancel entry in Profile and restricted access status.
+    - Verify recent Firebase phone authentication; transfer the last OWNER first.
+    - Scoped privacy operator processes idempotent account/provider cleanup and
+      documents justified retained shared audit records under an approved policy.
+    - Uploads remain quarantined until byte/type/hash/scan validation succeeds.
+
+  Validation:
+    - Publish the required external deletion-request page before store release.
+    - Sensitive offline work requires separate OS-backed encrypted storage, a
+      bounded cached context and conflict recovery; existing MMKV is insufficient.
+REQ-I05 — Deployment and rollback
+--------------------------------------------------------------------------------
+
+  Purpose: Deployment and rollback.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Protect farmer queues/capacity; flags independently disable new institution
+      work/advice while preserving authorized released reads and account rights.
+    - Apply additive migration rehearsal, backups, restore drill and rollback
+      runbook.
+    - Logging, rate/file limits, timeouts and alerts follow BSDD 21.1–21.4.
+    - These are future implementation requirements, not executed deployment claims.
+
+  Validation:
+    - Do not remove historical data when disabling a feature.
+
+================================================================================
+
+34.2 IMPLEMENTATION COMPLETENESS REQUIREMENTS
+---------------------------------------------
+REQ-I06 — Exact build and storage contract
+--------------------------------------------------------------------------------
+
+  Purpose: Exact build and storage contract.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Implement BSDD 16.0 database columns, FK/nullability/unique/immutable rules,
+      17.8 arithmetic/hash policy, 18.11 exact nested fields and 21.6 env/processes.
+    - Use BSDD 19.0 backend module map, 22.2 ordered migrations, FDD 22.3 mobile map
+      and FFC 12.5/12.6 typed route registry.
+    - Required scientific values/source artifacts are commissioned inputs, never
+      invented defaults.
+
+  Validation:
+    - No unnamed second API/storage implementation.
+    - Supported method schemas must exist before forms are enabled.
+REQ-I07 — Registration, campus control and invitations
+--------------------------------------------------------------------------------
+
+  Purpose: Registration, campus control and invitations.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Campus is created PENDING before campus-owned uploads.
+    - Independent CAMPUS_CONTROL review approves exact frozen control hash, then
+      boundary/mask/plot/survey/result reviews follow their distinct state machines.
+    - Initial invitations use one-time copy/share/paste codes after normal phone
+      auth; no token deep links.
+    - Reissue atomically invalidates predecessor, expires in 7 days.
+
+  Validation:
+    - New user registration can be drafted before evidence; final submission
+      requires READY authority evidence.
+    - Additional institution creation by an existing owner requires the
+      server-issued single-use authorization in BSDD 18.11.
+    - No self-assigned membership or review.
+REQ-I08 — Released read, personal inbox and feature-off
+--------------------------------------------------------------------------------
+
+  Purpose: Released read, personal inbox and feature-off.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - VIEWER gets released snapshot data, including historical campus/tree/map
+      fields; never reconstruct historical views by joining mutable current tree
+      metadata.
+    - Each verified institution identity can read its safe personal notification
+      inbox, update read flags, request privacy deletion and view own status without
+      an active tenant.
+    - Tapping notification/link performs fresh resource/ancestry authorization.
+    - Feature-off blocks new institution work while permitted released reads/own
+      privacy remain.
+    - Accepted jobs can finish only with valid actor/generation; explicit worker
+      pause is operational.
+
+  Validation:
+    - Advisor outage/flag cannot block accounting/history.
+REQ-I09 — Durable edit ownership and logout
+--------------------------------------------------------------------------------
+
+  Purpose: Durable edit ownership and logout.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Preserve original form/observation revision through refresh/restart.
+    - Resolve uncertain accepted requests with original key/body before local
+      discard/retry.
+    - Offline local allowance is <=24h, same boot, exact downloaded survey lineage.
+    - Logout checks own registration and all accessible institution namespaces;
+      incomplete drafts require save/discard.
+    - Known revocation purges affected keys.
+
+  Validation:
+    - Explicit denial/new demo login cannot restore cached authority.
+REQ-I10 — Reproducible stage demos
+--------------------------------------------------------------------------------
+
+  Purpose: Reproducible stage demos.
+  Screen / service: Institution implementation
+  Backend: See the BSDD/FDD/FFC references below.
+
+  Behavior:
+    - Demo Parts 12–13/18 define exact 5–9 checkpoint content, actual Firebase UID
+      provisioning, source manifests and acceptance.
+    - Reset only logging-in account's registered owned development resources, never
+      all stage accounts together.
+    - Preserve Farmer 1–4 numbers/OTPs/stages/persistence and normal production
+      flow.
+    - Reference arithmetic is separate from actual completed checkpoint snapshots.
+
+34.3 FEATURE-TO-IMPLEMENTATION INDEX
+-----------------------------------
+Purpose: Start from a requirement and find its complete implementation contract.
+The named owner defines the detail once; other documents link to that contract.
+
+Requirement IDs | Feature / contract locations
+----------------|---------------------------------------------------------------
+AUTH-I01..04    | Same phone auth/domain/tenant dispatch: BSDD 15.2..15.4;
+                | FDD 16/22.3 shared wiring; FFC 12.1..12.6.
+AUTH-I05       | Setup/authority evidence/invitations: BSDD 18.1/18.11/19.1;
+                | FDD Setup/AccessStatus/Members; FFC 13.
+TREE-I01..04   | Campus control/boundary/mask/plots: BSDD 16/17.7/18.1/18.10;
+                | FDD Campus screen cards; FFC 13.4/14.1..14.3.
+TREE-I05..07   | Tree identity/capture/sync: BSDD 18.2/18.6/21.2;
+                | FDD 18/21/22.3 vault/native; FFC 14/17.
+TREE-I08..12   | Shared engine/stock/model validation: BSDD 17/19.0/19.2;
+                | FDD tree progress/result/history; FFC 14.
+ACC-I01..02    | Annual period/coverage/declarations: BSDD 17/18.3/18.11;
+                | FDD period/overview/category cards; FFC 15.
+ACC-I03..04    | Line entry/CSV/evidence/overlap: BSDD 18.3/18.7/18.10/18.11;
+                | FDD ActivityLineEditor/CSV/Evidence; FFC 15.
+AUD-I01..03    | Freeze/review/correction/finalize: BSDD 16.3/19.1;
+                | FDD validation/overview/results; FFC 15/16.
+AUD-I04..06    | Results/trends/reports: BSDD 17/18.3/19.0;
+                | FDD result/trends/download cards; FFC 16.
+AI-I01..05     | Context/sources/retrieval/citations/ranking: BSDD 18.4/20/21.6;
+                | FDD Advisor/Recommendation/Source cards; FFC 16.
+AI-I06..08     | Scenarios/history/provider privacy: BSDD 18.4/20.1/21;
+                | FDD scenario/history/advice cards; FFC 16/17.
+REQ-I01..03    | Typed HTTP/DB/scientific/jobs: BSDD 16..19.3;
+                | FDD contracts/repository/state in 22.3.
+REQ-I04..05    | Privacy/config/deployment: BSDD 21/22.2;
+                | FDD 22; FFC 17; release gates in SRS 36.4.
+REQ-I06..09    | File trees/routes/native/recovery: BSDD 19.0/21.2/22.2;
+                | FDD 22.3; FFC 12.5/12.6/17.
+REQ-I10        | Real staged accounts/reset: Demo 12..18.6;
+                | BSDD 22.1; FDD 22.2; FFC 17.5.
+
+Build rules:
+  - Folder/file names: BSDD 19.0 and FDD 22.3. Navigation types: FFC 12.6.
+  - Physical columns: BSDD 16.0. API bodies/resources: BSDD 18.6; exact category
+    fields and registry configs: BSDD 18.9/18.11. Do not infer a DTO from SQL columns.
+  - Inputs with approved scientific/source/policy IDs require actual commissioning
+    in 36.4. Missing inputs block that capability; invented constants are forbidden.
+  - Bootstrap/migrations/operators: BSDD 19.3/22.2. Demo bundle/CLI: Demo 18.2/18.6.
+  - Review acceptance against the same snapshot/hash/permission across UI, API,
+    stored rows, worker output and exported report; screenshots alone are insufficient.
+
+================================================================================
+
+SECTION 35: v4.0 — TRACEABILITY AND ACCEPTANCE
+================================================================================
+
+Requirement family | FDD chapter | BSDD chapter | FFC chapter | Demo checkpoint
+AUTH-I01..05       | 16          | 15,18        | 12          | 1..8 selector
+Permission/setup   | 16,17,21    | 15,16,18,21  | 12,13,17    | 5,6 + QA roles
+TREE-I01..12       | 18          | 16,17,18,19  | 14          | 7,8
+ACC-I01..04        | 19          | 16,17,18     | 15          | 7,8
+AUD-I01..06        | 17,19,20    | 16..19       | 15,16       | 7,8
+AI-I01..08         | 20          | 16,18,20,21  | 16          | 8 + QA roles
+REQ-I06..10        | 17,21,22.3  | 16.0,18.11,  | 12.5,13,17  | 12..18 + QA
+                   |             | 21.6,22.2    |             |
+Offline/isolation  | 21          | 18,19,21     | 17          | 7 + QA isolation
+Research           | 20,22       | 20,22        | 16          | labeled fixtures
+
+ACCEPTANCE MUST DEMONSTRATE
+---------------------------
+
+1. Farmer selector routes through unchanged OTP/KYC/onboarding/four
+   tabs/land/scan/credit/wallet flow; background jobs run only for the correct
+   domain.
+
+2. Institution setup/invite, review, one/multiple tenants and revoked access
+   work; role/header/payload tampering cannot elevate permissions or change
+   domain.
+
+3. Campus survey + shared satellite engine succeeds independently of farmer
+   data; unsupported species/mixed pixels/sensors surface NEEDS_DATA or
+   review.
+
+4. First stock is baseline only; compatible later period removal is distinct;
+   multi-year/boundary/model changes and negative/inconclusive change are
+   explicit.
+
+5. Units/factors reproduce each revision. Pumping, allocation, EV charging,
+   solar, fuel purchases and waste/biogas/compost overlap never double count.
+
+6. Missing categories/factors never become complete net-zero results. Baseline
+   report can finalize its stated emissions coverage without a net claim.
+
+7. Submit freezes revision; corrections/finalization/supersession preserve
+   hashes and evidence. Retries/import commits/measurements produce one result
+   each.
+
+8. Tenant isolation includes nested IDs, jobs, files, exports, advice and
+   caches; owner/manager/viewer/reviewer and last-owner constraints are
+   enforced.
+
+9. Reports reproduce results; failed report/advisor stages are
+   independent.
+
+10. Advisor cites real supplied evidence, uses authorized numbers, adapts to
+    relevant constraints and abstains on weak evidence; institution never
+    mints.
+
+11. Offline save/restart/sync/conflicts and domain switch/logout cleanup
+    preserve tenant privacy and user choices. Existing farmer regression
+    checks pass.
+
+35.1 ADDITIONAL ACCEPTANCE EVIDENCE REQUIRED
+-------------------------------------------
+  Case / expected outcome                     | Canonical contract
+  --------------------------------------------|-------------------------------
+  Lost registration response resumes same ID  | BSDD 15.4,18.6
+  Approved invite activates only target role  | BSDD 15.4,18.9
+  Review author/member cannot approve case    | BSDD 19.1
+  New correction ID preserves old final       | BSDD 16.2,19.1
+  Broker/worker crash resumes one job         | BSDD 19.2
+  READY upload requires actual bytes/scan     | BSDD 21.1
+  CSV stale/duplicate/malformed commit fails  | BSDD 18.7
+  Offline expiry/revoke hides/deletes data    | BSDD 21.2; FDD 21
+  Base/local/server conflict is explicit      | BSDD 21.2; FDD 21.1
+  VIEWER reads released history, never draft  | BSDD 15.4
+  Feature-off retains read/privacy access     | BSDD 15.4,18.9
+  Delete last OWNER requires transfer         | BSDD 21.3,18.9
+  Corpus candidate failure keeps old version  | BSDD 18.9,20.1
+  Draft advice publish matches final hash     | BSDD 20.1
+  Restore/capacity/farmer regression measured | BSDD 21.4; SRS 36.4
+
+  - Demonstrate each case with actual request/output, actor/scope, revision/hash,
+    timestamp and expected-versus-observed result.
+  - Synthetic fixtures are labeled.
+  - Demo Parts 13 and 16 supply scenarios; fixtures alone do not verify production
+    Firebase, storage, satellite, model accuracy, device encryption or capacity.
+
+================================================================================
+
+SECTION 36: v4.0 — DELIVERY GATES, DECISIONS AND REFERENCES
+================================================================================
+
+36.1 INCREMENTAL IMPLEMENTATION PLAN (future implementation)
+------------------------------------------------------------
+
+  - Phase 0: inspect deployed backend/auth/model/demo behavior; capture farmer API
+    and UI baseline, backup/restore and rollback plan.
+  - Gate: contracts understood.
+
+  - Phase 1: additive user-domain/membership schema, bootstrap selector routing and
+    controlled setup; farmer wallet/sync guards.
+  - Gate: isolation + farmer regression.
+
+  - Phase 2: campus geometry/mask/plots/inventory/AR/shared-engine adapter/satellite
+    baseline.
+  - Gate: reviewed model applicability and honest coverage/quality output.
+
+  - Phase 3: factors/activity/mitigation/audit
+    workflow/CSV/results/dashboard/reports.
+  - Gate: reproducible formulas, anti-overlap tests and independent review.
+
+  - Phase 4: approved corpus/retrieval/citations/ranking/history/scenarios.
+  - Gate: grounding/tenant/provider-failure checks; accounting usable without
+    provider.
+
+  - Phase 5: hardening/offline recovery/device validation/demo seeds/research runs.
+  - Gate: complete acceptance evidence and measured operational capacity before
+    flag.
+  - Flags: backend ENABLE_INSTITUTION_FLOW=false initially;
+    ENABLE_INSTITUTION_ADVISOR is separate.
+  - Client reads capabilities; server rejects disabled mutations.
+  - Enable only after relevant gates; rollback disables new work without deleting
+    records.
+  - No auto-recalculation/reassignment of old farmer audits or deployment to
+    mainnet.
+
+36.2 DECISIONS THAT REQUIRE EVIDENCE BEFORE ENABLEMENT
+------------------------------------------------------
+
+  - Backend owner confirms deployed algorithm/feature schemas and existing roles.
+  - Method reviewer approves species/allometry/density/pools, sampling quality,
+    campus model/coverage/uncertainty, period comparability, epsilon and source
+    factors.
+  - Operator chooses private buckets, encryption, queue budgets, retention and
+    reviewed provider/model/reranker licenses/configuration.
+  - No guessed versions or API keys.
+  - Research lead approves benchmark/rubric/weights after pilot.
+  - Advisor may initially use transparent rule ordering.
+  - Unsupported configuration produces explicit NEEDS_DATA/configuration-unavailable
+    state and is not silently substituted.
+
+36.3 REFERENCES VERIFIED FOR THE ACCOUNTING/ALGORITHM DISTINCTIONS
+-----------------------------------------------------------------
+GHG Protocol Corporate Standard:
+  https://ghgprotocol.org/corporate-standard
+
+GHG Protocol Scope 2 Guidance:
+  https://ghgprotocol.org/scope-2-guidance
+
+Formula catalog and primary calculation references:
+  - BSDD 17.3: Actual operational emissions, inputs and units.
+  - BSDD 17.4: Mitigation baselines, project terms and nonoverlapping totals.
+  - BSDD 17.5: Scope totals and project balance.
+  - BSDD 17.6: GHG Protocol fuel/waste/project and IPCC biological-treatment source
+    links; approved production parameters are still required.
+
+Inventory versus project / avoided-impact distinction:
+  https://ghgprotocol.org/blog/inventory-and-project-accounting
+
+GEE Smile API — actual backend identity:
+  https://developers.google.com/earth-engine/apidocs/ee-classifier-smilegradienttreeboost
+
+Use of these sources:
+  - Design references; no claim of full standards compliance.
+  - Production factor values and the formal method need approved source versions.
+
+Prior review source record (historical, not a new code audit):
+  - Upgrade proposal and the four companion v4.0 documents.
+  - src/app/App.tsx and src/types/navigation.ts.
+  - services/firebase.ts, authBootstrap.ts and ar-bridge.ts.
+  - common/utils/chave.ts.
+  - store/index.ts and resettableReducer.ts.
+  - features/ar-audit/utils/demoMode.ts.
+  - No backend implementation was inspected.
+
+36.4 RELEASE COMMISSIONING REGISTER — REQUIRED BEFORE ENABLEMENT
+----------------------------------------------------------------
+  Item                         | Accountable owner | Required release evidence
+  -----------------------------|-------------------|------------------------------
+  Current backend compatibility| Backend lead      | Schema/API baseline; migrations
+  Auth/routing/RBAC            | Backend/mobile    | Domain, OTP, isolation tests
+  Factors/conversions/GWP      | Method reviewer   | Reviewed source/value/unit IDs
+  Allometry/density/quality    | Method reviewer   | Applicability; numeric policies
+  Campus model/features        | Model reviewer    | Artifact/hash; held-out errors
+  Uncertainty/comparability    | Method reviewer   | Method/pool/period reference cases
+  Provider/RAG/corpus config   | Advisor owner     | Licensed versions; grounding cases
+  Review/operator access       | Operations lead   | Tool, independent grants, leases
+  Buckets/encryption/offline   | Security/mobile   | Vault/scan/revocation device tests
+  Privacy/retention/deletion   | Privacy owner     | Approved policy; in/out-app paths
+  Recovery/quotas/monitoring   | Operations lead   | Restore drill, alerts, runbooks
+  Capacity and queue isolation | Backend lead      | BSDD 21.4 targets measured
+  Five-tab UX/accessibility    | Mobile lead       | Supported-device navigation checks
+  Farmer compatibility         | QA lead           | Existing flow/API regression
+  Demo isolation               | QA/operations     | Fixture registry; release guards
+
+Register format for each item:
+  - deployment_id, owner, artifact/config/version IDs and source links;
+  - status PENDING|VERIFIED|BLOCKED, verified_at, independent approver;
+  - observed evidence, limitations, remediation and rollback link.
+
+Current status:
+  - PENDING for all runtime commissioning items: this task edits specifications.
+  - Documentation defines the required behavior and verification path; it does not
+    create a backend, approve scientific parameters or certify production.
+  - Deploy accounting only when its applicable gates are VERIFIED; advisor has
+    separate gates/flag.
+  - An unsupported method/category remains unavailable.
+  - Actual production values, privacy deadlines, provider IDs and supported device
+    matrix are commissioned inputs.
+  - Initial Android resource links use the fixed custom scheme; production HTTPS
+    links are LATER.
+  - Record them here/in the linked controlled deployment register before release; no
+    unresolved required input may silently become a runtime default.
+
+36.5 DOCUMENTATION REVIEW RECORD — 19 OCTOBER 2026
+--------------------------------------------------
+  Scope: Institution chapters in the five root-level project documents.
+
+  Presentation standard:
+    - Use the farmer sections as the writing and formatting reference.
+    - Start with Purpose; separate fields, behavior, backend API and validation.
+    - Write one database/API field per row using full type names.
+    - Use numbered steps for journeys and separate success/failure/back behavior.
+    - Keep implementation detail; remove compressed notation and repeated preambles.
+
+  Verification:
+    - Preserve farmer baseline bytes and existing application/configuration files.
+    - Retain institution requirement IDs, screen/route identities and API contracts.
+    - Check full schema names/types, 49 screen/route pairs and chapter references.
+    - Verify searchable contents and explicit backend/mobile/native/demo file maps.
+    - Validate typed receipts, parent enums, configuration keys and restore boundaries.
+    - Runtime deployment/device acceptance remains in 36.4; this is a document edit.
+
+36.6 INDEPENDENT DEMO CONTROLS AND REAL-APP CHECKPOINTS
+------------------------------------------------
+  - ENABLE_FARMER_DEMO_ACCOUNTS and ENABLE_INSTITUTION_DEMO_ACCOUNTS are independent.
+  - Mobile/server use their own institution flag; farmer configuration never
+    enables institution checkpoint handling.
+  - Five institution checkpoints: 5 INSTITUTION_FRESH; 6 INSTITUTION_APPROVED;
+    7 CAMPUS_READY; 8 BIOMASS_COMPLETE_FORMS_PENDING;
+    9 ACCOUNTING_COMPLETE_TWO_YEARS (PERSISTENT).
+  - Demo Parts 12–13 define exact content.
+  - Every fresh login for accounts 5-8 restores its mapped checkpoint.
+    Account 9 never automatically resets and retains new 2026 work.
+  - No reset on ordinary profile refresh/token refresh/session resume.
+  - Farmer 1–3 retain next-login reset; Farmer 4 retains persistence.
+  - Normal authenticated app/backend/AR/satellite/accounting/export/advisor paths
+    execute real work.
+  - Checkpoint history comes from actual saved service output.
+  - No fake result/provider adapter; the institution demo control is independent.
+  - Reference-test constants in Demo 13.1 are not account-9 totals or seed factors.
+  - Stage prep uses real review/source evidence and normal permissions; incomplete
+    checkpoint/provider setup stays NOT READY, not a fabricated completed account.
+  - VIEWER/MANAGER/isolation cases use controlled QA fixtures, not additional public accounts 10/11.
+  - Reset authorizes exact dedicated development resources and generation; actual
+    LIVE-origin development data is allowed, production/other tenants never reset.
+  - Acceptance: add work -> sign out -> authenticate again -> original stage;
+    same-session resume retains work; parallel retry once; stale generation blocked.
+  - Demo session integration is Demo 14/16.2 and BSDD 22.1; full provisioning and
+    immutable checkpoint preparation are Demo 18.
+  - Existing Android code presence is separate from verified backend/account/device
+    readiness.
+
+================================================================================
+
+36.7 IMPLEMENTATION AND ACCEPTANCE HANDOFF
+-------------------------------------------
+  Platform: same Android app; farmer default entry and four tabs; institution five
+  tabs and independent domain records. iOS, institution minting and token links
+  are outside initial scope.
+
+  Build source                  | Required owning contract
+  ------------------------------|-----------------------------------------------
+  Database/constraints          | BSDD 16.0–16.3 and 22.2
+  Numerical engine/hash         | BSDD 17.1–17.8; no farmer result dependency
+  HTTP/permissions/JSON         | BSDD 15/18.1–18.11
+  Server modules/transactions   | BSDD 19.0–19.2
+  Advisor/providers/corpus      | BSDD 20/21.6; separate RESEARCH in SRS 33.1
+  Config/security/processes     | BSDD 21.1–21.6
+  Mobile components/vault       | FDD 16–22.4
+  Screen registry/actions/back  | FFC 12.5–17
+  Test accounts/real checkpoints| Demo 11–18
+
+  Required delivery evidence:
+    - Setup/invitation/control review and role/tenant/snapshot isolation.
+    - Same native AR/species/GPS pipeline, exact-survey offline recovery, honest
+      partial inputs, no institution farmer-wallet or farmer-persistence effects.
+    - Complete stated accounting coverage, unit/overlap/factor checks, independent
+      review/finalization, immutable correction/supersession and exact reports.
+    - Cited final-context advice/scenarios/history; outages degrade affected service.
+    - Original edit-revision/uncertain-request recovery, stale epoch/generation
+      rejection, personal notifications, privacy and all-tenant logout guards.
+    - SRS 36.4 live API/device/restore/capacity gates and unchanged farmer regression.
+  This review specifies these behaviors; it does not assert that runtime acceptance
+  passed. Backend/provider/model/policy values are approved commissioning inputs.
+
+36.8 PRODUCTION CONTRACT AUDIT AND REQUIRED EVIDENCE
+----------------------------------------------------
+Purpose: Close remaining implementation gaps without claiming live certification.
+Owning details: BSDD 16/18/19.4/21; FDD 22.3/22.4; FFC 17.7; Demo 18.7.
+
+Production requirement                 | Required evidence before enablement
+---------------------------------------|------------------------------------------
+Registry can bootstrap from empty DB   | DRAFT {} -> private source READY -> typed
+                                       | parameters/policies -> independent publish
+Raw measurement hash is stable         | Circumference/partial-GPS round trip keeps
+                                       | raw MCJ1 separate from derived values
+One working revision per family        | Concurrent create/submit/correction rejects
+                                       | loser; current final survives failure
+Reviewer independence survives changes | Frozen contributors/historical memberships
+                                       | prevent self-review after leave/demotion
+Receipts cannot replay after TTL       | Detailed receipt compacts to durable denial;
+                                       | original key never executes a second time
+Invitation replay has bounded secrets  | Encrypted receipt TTL/local key continuity verified;
+                                       | token absent from rows/logs/plain backups
+Retention preserves truthful history   | Purged source bytes return unavailable;
+                                       | retained numeric hashes/FKs stay valid
+Native storage survives auth races     | Destroy/late-write and interrupted-logout
+                                       | tests cannot recreate or expose old data
+External calls recover honestly        | Lost provider acceptance is reconciled or
+                                       | blocked, without duplicate provider work
+Verified source bytes cannot change    | Quarantine-to-verified promotion prevents
+                                       | an old upload URL overwriting READY proof
+Physical and wire schemas agree        | Named source/GPS/hash fields, parameter
+                                       | materialization and decimal limits match
+Deployment is operationally verified   | Locked dependencies, migration rehearsal,
+                                       | isolation tests, restore/load/device gates
+
+Release record:
+  - Use 36.4 for actual owner, build/commit, deployment, observed result, timestamp,
+    evidence location and unresolved blockers for each row. Do not premark PASS.
+  - Required scientific/model/policy values must come from the approved source
+    commissioning process. A complete field schema is not proof of valid inputs.
+  - Production server/build have both demo flags=false; no reset grants, test UIDs,
+    manifests, OTP shortcuts or synthetic training labels enter production.
+  - Stage with a production-equivalent schema/private-storage/worker topology and
+    real provider limits. Rehearse schema/checksum verification and recovery with
+    flags off, then validate the restricted pilot before broader enablement.
+  - The farmer production flow and its documentation remain the fixed regression
+    baseline. No institution acceptance result substitutes for its existing checks.
+
+================================================================================
+END OF DOCUMENT — v4.0
+================================================================================
+
+================================================================================
+SECTION 37: INSTITUTION IMPLEMENTATION AND RELEASE ADDENDUM
+
+Implementation review date: 2026-10-21 (Asia/Kolkata).
+Scope: additive institution backend in this repository. Farmer business services,
+farmer task application, wallets, minting and demo accounts 1-4 are preserved.
+This addendum supersedes conflicting implementation/configuration details below;
+it does not replace the scientific evidence and release gates in SRS 35-36.
+No production database connection, migration, deployment, real provider request,
+or real checkpoint restore was executed for this implementation review.
+The ordered operator handoff is INSTITUTION_MANUAL_WORK.md in the repository root.
+
+37.1 ACTIVATION AND PRODUCTION SAFETY
+- INSTITUTION_SCHEMA_ENABLED=false is a separate migration gate. The two business
+  feature flags and ENABLE_INSTITUTION_DEMO_ACCOUNTS remain false by default. Import/startup never
+  runs the additive migration tool. Database apply remains an operator action.
+- The institution SQL pool/workers verify TLS certificates independently of the
+  existing farmer pool. Existing farmer authentication still runs its synchronous
+  SDK work in a worker thread. Institution authorization never grants farmer KYC,
+  land, wallet or mint privileges, nor converts a persisted account domain.
+- Keep schema activation on when disabling institution writes so authorized
+  released history and privacy operations remain available.
+- Offline regression checks are implementation evidence, not proof of database
+  trigger execution, cloud integrations, scientific validity or mobile readiness.
+
+37.2 SCIENTIFIC AND FILTERED RESULTS
+- Actual model artifacts, source PDFs, factor values, quality policy thresholds,
+  sampling strata and validation evidence must be commissioned independently.
+  No deployment factor, model score, species density or measured history is seeded.
+- PRETRAINED_DOMAIN and APPROVED_CAMPUS_CALIBRATION both use reviewed immutable
+  artifacts. The latter must bind validation_domain.campus_id to the exact campus;
+  this release does not train a model on the current small campus sample.
+- Unsupported temporal/mask/aggregation rules fail NEEDS_DATA/configuration checks.
+  Coarse source support is disclosed; finer output pixels never create new area.
+- Unknown uncertainty remains UNKNOWN and blocks definitive balance classification.
+  Stock, comparable gain/loss, atmospheric attribution and avoided impacts remain
+  distinct. Unproven transfer/mortality fate is never assumed atmospheric release.
+- Analytics sums only explicitly assigned frozen source contributions for campus
+  subtotals. Unallocated main-meter sources yield NULL for a campus subset.
+  Scope/category intersections use frozen calculation lines, not marginal totals.
+  Uncalculated accessible drafts appear with NULL values. Default selections are
+  trimmed to the five-year limit; explicit out-of-range selections are rejected.
+
+37.3 OPTIONAL GEMINI FREE-TIER ADVISOR
+- User-selected provider: native Gemini API, with GEMINI_API_KEY kept server-side.
+  No LLM is required for operational accounting, stock arithmetic or report export.
+  No paid fallback, default model ID, invented key or assumed quota is provided.
+- Configure the Gemini key and exact generation/embedding model IDs. Provider
+  data-handling rules apply from application code; no policy UUID is needed.
+  Keep the selected AI Studio project on Free Tier for free usage.
+- Raw questions stay private. Generation and query embeddings receive only a
+  bounded server-owned intent phrase, immutable aggregate facts, allowed scalar
+  constraints and reviewed public passages. Names, contacts, raw evidence,
+  institution IDs, geometry and free-form notes are excluded from provider input.
+- Retrieval uses actual licensed PDF bytes, versioned UTF8_BYTES_V1 chunks,
+  pgvector/full-text retrieval, RRF and evaluated local TFIDF_COSINE_V1 reranking.
+  Those named baselines are not claims of a proprietary tokenizer/cross-encoder.
+- Quota exhaustion is explicit. Unknown provider acceptance is durably fenced
+  and cannot be bypassed by a new idempotency key for equivalent input.
+- Site prerequisites without verified support remain SITE_CHECK_REQUIRED or
+  DATA_REQUIRED. Ranking is deterministic by class, known category share, action ID.
+
+37.4 ACCEPTANCE AND MANUAL WORK
+Complete the isolated database, cloud, concurrency, mobile/device, scientific,
+load/recovery and farmer regression acceptance in INSTITUTION_MANUAL_WORK.md.
+Do not enable production based only on passing offline tests or SQL parsing.
+Gemini terms/pricing reference: https://ai.google.dev/gemini-api/docs/pricing
+37.5 FINAL REVIEW TRACEABILITY
+The final offline review is recorded in INSTITUTION_MANUAL_WORK.md. It includes
+farmer regression, institution lifecycle/recovery/provider checks, physical SQL
+type consistency, syntax parsing, route/schema generation and dependency review.
+Scientific results record actual satellite source identities and dates. Reporting
+boundary changes prevent comparable trend claims. Reviewed method policy sources
+and ranking configuration are bound to their immutable accounting/advice context.
+These checks do not waive the live release gates in 35-36 or the manual handoff.
+
+37.6 ADDITIONAL DEPLOYMENT ACCEPTANCE — 21 OCTOBER 2026
+BSDD 23.7 resolves commissioning, temporal matching and configuration ambiguities.
+Global source commissioning must work with tenant writes disabled. All SQL clients
+verify TLS; staging farmer connectivity is a release prerequisite. Stock comparison
+requires the same reviewed plots/policy and seasonal observation support. Offline
+checks do not certify live database/cloud/scientific/mobile readiness. Use the
+concise INSTITUTION_MANUAL_WORK.md sequence and INSTITUTION_MANUAL_WORK.md evidence.
+
+FIVE INSTITUTION DEMOS AND MINIMAL DEPLOYMENT INPUTS — 21 OCTOBER 2026
+demo.md is the authoritative replacement for older four-account wording:
+  5 INSTITUTION_FRESH / +919000000005 / 555555 / NEXT_LOGIN
+  6 INSTITUTION_APPROVED / +919000000006 / 666666 / NEXT_LOGIN
+  7 CAMPUS_READY / +919000000007 / 777777 / NEXT_LOGIN
+  8 BIOMASS_COMPLETE_FORMS_PENDING / +919000000008 / 888888 / NEXT_LOGIN
+  9 ACCOUNTING_COMPLETE_TWO_YEARS / +919000000009 / 999999 / PERSISTENT
+Numbers 1-5 in demo.md are institution-local labels; server numbers 5-9 avoid
+colliding with unchanged farmer accounts 1-4. No fake identities/results seeded.
+Normal /auth/me starts the same durable handoff once per verified auth_time;
+token refresh/resume does not reset. While restoring, DEMO_SESSION_NOT_READY
+includes session_id to poll; explicit /demo/sessions remains supported.
+Persistent account 9 returns READY/reset_performed=false without restore dispatch
+or generation advancement; preserve all subsequent 2026 work. Its initial capture
+requires actual completed 2024/2025 history, accepted compatible stocks, supported
+2025 atmospheric attribution, independent reviews and PDF/CSV/JSON for both years.
+Advisor uses normal optional live functionality and is not a capture prerequisite.
+Account 8 is exactly one accepted baseline/survey with annual forms/audits pending.
+Phase 012 extends the registry and marks old completed account-8 sources NOT_READY;
+recapture at the new stage. Phase 013 closes public grants/enables RLS only for
+the explicit institution table allowlist, preserving farmer policies/defaults.
+Restore locks identity -> registry -> tenant, cleans scoped outbox/receipts and
+temporary registration authorization, and cannot restore persistent accounts.
+Fixed protocol/provider/size/retrieval/chunk/concurrency/deadline constants now live
+in app/institution_config.py; old dotenv knobs cannot override them. This replaces
+older instructions to configure those values in .env. Deployment-specific secrets,
+resource paths and real reviewed registry/policy IDs remain environment inputs.
+INSTITUTION_MANUAL_WORK.md maps every remaining variable to its actual source.
+INSTITUTION_MANUAL_WORK.md gives direct existing-Supabase SQL Editor steps.
+scripts.institution.supabase_setup generates offline checksummed migration and
+migration SQL only; it never contacts Supabase and needs no extra login. Never rerun schema.sql on
+an existing farmer database. No database/cloud/deployment action was performed.
+
+SAME DATABASE AND USB LOCAL TESTING CLARIFICATION — 21 OCTOBER 2026
+Ordinary users and demo accounts use the SAME existing Supabase database, tables,
+buckets and real providers. A local/development backend may connect to that existing
+database; do not create a second project, restore database URL, login or password.
+Phase 014 replaces historical role-based trigger exceptions with a transaction-
+local demo_restore_session guard: current RESTORING session, registered Firebase
+institution identity/phone, account 5-8 NEXT_LOGIN, matching generation/latest
+session and exact owned tenant or personal-upload scope. Method/global scientific
+sources and farmer rows never enter that exception. Account 9 stays persistent.
+The restore worker uses the ordinary DATABASE_URL and worker engine. Prior 001-013
+SQL remains checksummed; apply the new forward phase rather than editing ledgers.
+Retired env inputs: INSTITUTION_DEMO_DATABASE_URL, DEPLOYMENT_ENV,
+INSTITUTION_DEMO_DEPLOYMENT_ID, INSTITUTION_COMMISSIONING_UID and BIOMASS_MODEL_BACKEND.
+Use existing ENVIRONMENT; derive deployment identity from Firebase/Supabase project
+identity; pass --actor-firebase-uid to checkpoint CLI; use approved model engine.
+Registered legacy checkpoint source identities remain valid; never rebind a persistent account.
+The sibling mobile client still requires the supplied five-account integration
+patch before testing account 9. It accepts PERSISTENT/reset_performed=false without
+purging the current device account. Frontend files are outside this writable backend
+workspace, so the patch is reviewable in frontend-integration/ and applied manually.
+INSTITUTION_MANUAL_WORK.md gives actual React Native CLI, ADB reverse 8000/8081, local API,
+Linux worker and same-database validation steps. No services or database were changed.
+================================================================================
+
+
+===============================================================================
+2026-10-22 BACKEND CONFIGURATION AND MANUAL SQL CLARIFICATION
+===============================================================================
+- ENABLE_FARMER_DEMO_ACCOUNTS controls only existing farmer accounts 001-004.
+- ENABLE_INSTITUTION_DEMO_ACCOUNTS controls only institution accounts 005-009.
+  Any development combination is valid; both flags must be false in production.
+- Legacy backend ENABLE_DEMO_ACCOUNTS falls back to the farmer setting only;
+  explicit ENABLE_FARMER_DEMO_ACCOUNTS wins. Old backend AUDIT_DEMO_MODE is ignored.
+- API wire keys audit_demo_mode/client_audit_demo_mode retain their existing names;
+  their institution value comes only from ENABLE_INSTITUTION_DEMO_ACCOUNTS.
+- Institution 005-008 reset once per new verified sign-in; 009 remains persistent.
+  All use real services and the ordinary DATABASE_URL, login and tables.
+- The SQL bundle creates institution objects and extends shared public.users:
+  account_domain defaults to FARMER; onboarding/deleted-identity fields are added;
+  domain becomes immutable. Identity CHECK retains non-null phone/Firebase UID for
+  farmers and allows unlinking only deleted institution identities. Farmer IDs,
+  roles/wallets and business tables are preserved. Schema changes acquire locks.
+- Bundle preflight rejects incompatible users columns/types and unexpected table
+  overlap with institution access rules. Checksummed phases 001-014 are unchanged.
+  Apply the entire refreshed institution_migrations.sql manually after backup and
+  restored-copy testing; never rerun schema.sql on the existing production project.
+- Native Windows local command: python scripts/run_local.py; solo workers are a
+  local testing option, not a supported Windows production deployment. Use ADB
+  reverse for ports 8000/8081. Exact steps: INSTITUTION_MANUAL_WORK.md.
+- All automated edits are confined to this backend repository. Mobile integration
+  changes are supplied as a reviewable backend artifact for manual application.
+- No live database/provider/device operation or migration was performed.
+
+
+===============================================================================
+2026-10-22 INSTITUTION ENVIRONMENT SIMPLIFICATION (LATEST USER CLARIFICATION)
+===============================================================================
+- The biomass estimation implementation is unchanged by this revision. Reuse of
+  implementation does not mean using farmer results as institution results.
+- Fixed private storage names are institution-evidence and institution-reports;
+  create them once using generated institution_storage.sql. No bucket env inputs.
+- Upload completion validates actual size, checksum, MIME/extension and parsed
+  file content before immutable promotion. No external file-scanning service is
+  required. Existing format/active-PDF-content restrictions remain.
+- Provider, personal-deletion and public-retrieval behaviour is owned by code in
+  app/institution_rules.py and services/advisory/ingestion_rules.py. No external
+  PROVIDER/RETENTION/RETRIEVAL policy commissioning or UUID inputs are required.
+  Existing historical policy rows/columns are preserved for old accepted plans.
+- New personal-deletion requests store the complete code-rule snapshot and hash;
+  old requests keep their exact accepted rules. No invented legal retention term
+  or provider backup-expiry guarantee is introduced.
+- Optional CAMPUS_SAMPLE_QUALITY_POLICY and SATELLITE_FEATURE_SCHEMA environment
+  pins are removed; the selected method/model already provides those exact values.
+  This removes duplicate configuration; numerical estimation logic is unchanged.
+- New institution assessments train through services.fusion_engine.run_fusion,
+  exactly as farmer assessments do, using their own accepted survey and campus.
+  Model, method and corpus environment UUID pins are removed. Internal IDs and
+  configuration checksums are assigned automatically; operators do not enter them.
+- Reranking weights/version derive from actual ingested text; no reranker env pin
+  or separate retrieval-policy record is required. Public licensed source and
+  corpus activation checks remain. Gemini receives bounded public/aggregate data.
+- DATABASE_SSL_CA_FILE is an optional trust-store override, omitted from the env
+  template. Existing trusted connections need no extra file; TLS stays verified.
+- Both domains use the farmer fusion function's existing NISAR attempt/fallback
+  and shared asset/type/HH/HV configuration. The duplicate NISAR_ENABLED setting
+  is retired. Existing farmer defaults and active .env are unchanged.
+- All edits are confined to backend. No production SQL/provider operation occurred.
+
+
+================================================================================
+22 OCTOBER 2026 AMENDMENT: SHARED BIOMASS AND SIMPLE DATABASE CONFIGURATION
+================================================================================
+This amendment governs new institution calculations and supersedes earlier
+pretrained-model, environment UUID-pin and cloud receipt-key setup requirements.
+Historical accepted jobs/results and optional legacy registry APIs are retained.
+
+1. New institution tree audits call services.fusion_engine.run_fusion with their
+   own accepted species/DBH/height/GPS observations, eligible geometry and dates.
+   The shared GEE pipeline chooses its existing NISAR/Sentinel/GEDI fallbacks,
+   computes Chave training targets, trains smileGradientTreeBoost per run
+   (100 trees, shrinkage 0.05, sampling rate 0.7; at least 9 usable samples), and
+   integrates the same 10 m prediction grid. No farmer result/credit is reused.
+   Tree AGB_kg=0.0673*(rho*DBH_cm^2*height_m)^0.976; training t/ha=(kg/1000)/0.01.
+   Carbon conversion uses the existing farmer constants 0.47 and 3.667. Farmer
+   date defaults and behavior remain unchanged; institution uses accepted dates.
+   Unquantified uncertainty/coverage stays unknown; standing stock is not annual
+   removal. Institution baselines/attribution remain institution-owned.
+2. BIOMASS_MODEL_VERSION, ACTIVE_ACCOUNTING_METHOD_VERSION, ACTIVE_CORPUS_VERSION,
+   INSTITUTION_RECEIPT_KMS_KEY_ID and duplicate NISAR_ENABLED are retired/ignored.
+   API preparation assigns the implementation ID; no trained model upload is
+   needed for new institution jobs. Legacy artifact jobs keep their frozen path.
+3. Forward phase 015 adds institution_calculation_settings (CURRENT config),
+   institution_formula_values (editable numeric coefficient/unit/applicability),
+   and institution_knowledge_sources (private public-guidance PDF locations).
+   These tables are backend-only/RLS protected. Operators edit actual values in
+   Supabase; code formulas remain allowlisted Python. No source PDF, approval
+   ceremony, UUID entry or manual hash is required for administrator-maintained
+   calculation constants. Scientific/site inputs remain explicit; missing values
+   fail clearly and are never guessed. IDs/checksums/history are automatic.
+   Fresh settings start empty; use the generated template and supply actual GPS,
+   dimension, sampling, mask and stratum inputs. Prior real published settings
+   are imported. New selections snapshot current values; accepted jobs, existing
+   drafts and finalized results retain their selected/frozen configuration.
+4. Public searchable licensed PDFs are uploaded under knowledge/ in the fixed
+   private institution-evidence bucket. List enabled/public_licensed source rows,
+   then run scripts.institution.sync_knowledge with a KNOWLEDGE_REVIEW operator.
+   One durable job validates/copies bytes, extracts all configured sources,
+   generates Gemini embeddings, and automatically activates the complete corpus
+   only on successful fenced publication. Parser/source changes block activation.
+   Latest compatible active corpus selection is automatic; edits require reindex.
+   No tenant/private PDF is an eligible free-tier guidance source. No independent
+   review or scientific validation is asserted for administrator-listed sources.
+5. Invitation receipts use project-local AES-256-GCM through cryptography.AESGCM;
+   random 12-byte nonces and AAD bind scope, request hash and expiry. Create one
+   32-byte key using scripts.institution.create_receipt_key; preserve the private
+   .institution-private/receipt.key across deployments and API instances. Key
+   creation refuses overwrite; missing/wrong keys or tampered/expired ciphertext
+   fail closed. No cloud KMS call or custom cipher exists. Older cloud-encrypted
+   receipts require authorized invitation reissue after this change.
+6. StockReconciliation is exactly the six BSDD fields: opening_quantity,
+   purchased_quantity, closing_quantity, other_in_quantity, other_out_quantity,
+   evidence_ids. Unrelated activity fields and recursive self-reference were
+   removed from the compiled dictionary.
+7. Manual steps: INSTITUTION_MANUAL_WORK.md; actual env sources:
+   INSTITUTION_MANUAL_WORK.md; editable configuration:
+   INSTITUTION_MANUAL_WORK.md; algorithm explanation:
+   INSTITUTION_MANUAL_WORK.md. No live database/provider action or frontend
+   modification is performed by preparing these backend files.
+
+FILE-BASED INSTITUTION DEMO CORRECTION — 22 OCTOBER 2026
+This amendment supersedes earlier requirements for dedicated demo control tables,
+mandatory session polling and generation headers. Institution checkpoints are
+private server files (.institution-private/demo/account-N.json), analogous to
+farmer code checkpoints. Every new business operation uses normal institution
+tables, authorization, providers and calculations in the existing database.
+Normal /auth/me restores accounts 5-8 once per verified Firebase auth_time;
+refresh/resume preserve work and account 9 never resets. Like farmer middleware,
+the local API process holds sign-in markers in memory; an ordinary DB transaction
+and identity row lock protect each restore. Use one local demo API process.
+Session endpoints/header remain compatible and optional; stale sign-ins/jobs are
+still rejected. Source files are server-managed and contain real captured states.
+Forward migration 016 replaces demo_restore_session authorization with a trusted
+transaction-local demo_restore_uid guard restricted to exact institution phones
+005-008 and their exclusively owned institutions/personal uploads. It drops only
+the two historical control tables. Export registered sources before running it;
+keep prior applied migration files/checksums. Farmer implementation is unchanged.
+Follow INSTITUTION_MANUAL_WORK.md section 0; no live SQL was executed by this review.

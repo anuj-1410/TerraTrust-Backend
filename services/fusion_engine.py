@@ -180,6 +180,8 @@ def run_fusion(
     land_boundary_geojson: Dict[str, Any],
     audit_year: int,
     sampling_zones: Optional[List[Dict[str, Any]]] = None,
+    *,
+    observation_window: Optional[tuple[str, str]] = None,
 ) -> Dict[str, Any]:
     """Run the multi-source data fusion and biomass estimation.
 
@@ -223,6 +225,10 @@ def run_fusion(
     # Annual composite window: calendar year of the audit
     date_start = f"{audit_year}-01-01"
     date_end = f"{audit_year}-12-31"
+    # Existing farmer callers retain their original annual window. Institutions
+    # pass their accepted observation dates (end exclusive for Earth Engine).
+    if observation_window is not None:
+        date_start, date_end = observation_window
 
     # -----------------------------------------------------------------------
     # 1. NISAR L-band SAR (HH, HV, HH/HV ratio) — Primary SAR layer

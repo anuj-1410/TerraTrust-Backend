@@ -1,17 +1,45 @@
 # Env & secrets
 .env
+.env.*
+!.env.example
+secrets/
+**/*service-account*.json
+**/*service_account*.json
+*.key
+*.pem
+*.p12
+*.pfx
 backend-google-service-account.json
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
+
 # uv manages the venv — use .venv (not venv)
-.venv/
+.venv*/
+.venv-review
+venv/
+env/
 *.egg-info/
 dist/
 build/
 .pytest_cache/
+.test-artifacts/
+.ruff_cache/
+.mypy_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Local workers and logs
+*.log
+*.pid
+celerybeat-schedule*
+celerybeat.pid
 
 # uv — DO NOT ignore uv.lock; it must be committed for reproducible builds
 # uv.lock  <-- intentionally tracked in git
@@ -39,3 +67,6 @@ contracts/.env*
 # OS
 .DS_Store
 Thumbs.db
+.institution-private/
+institution-checkpoints/
+.local-runtime/

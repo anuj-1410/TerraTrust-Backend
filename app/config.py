@@ -4,21 +4,23 @@ import os
 import re
 from typing import Literal, Optional
 
-from pydantic import field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from app.institution_config import InstitutionSettings
 
 EVM_ADDRESS_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
 HEX_PRIVATE_KEY_RE = re.compile(r"^0x[a-fA-F0-9]{64}$")
 HEX_PRIVATE_KEY_WITH_OPTIONAL_PREFIX_RE = re.compile(r"^(?:0x)?[a-fA-F0-9]{64}$")
 
 
-class Settings(BaseSettings):
+class Settings(InstitutionSettings, BaseSettings):
     """TerraTrust-AR application settings loaded from environment / .env file."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
+        hide_input_in_errors=True,
     )
 
     # --- Firebase Authentication -------------------------------------------
@@ -28,6 +30,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str
     SUPABASE_SERVICE_KEY: str
     DATABASE_URL: Optional[str] = None
+    DATABASE_SSL_CA_FILE: str = ""
 
     # --- Google integrations -----------------------------------------------
     FIREBASE_CREDENTIALS_PATH: str = ""
@@ -68,10 +71,17 @@ class Settings(BaseSettings):
 
     # --- App ----------------------------------------------------------------
     ENVIRONMENT: Literal["development", "production"] = "development"
-    ENABLE_DEMO_ACCOUNTS: bool = False
+    ENABLE_FARMER_DEMO_ACCOUNTS: bool = Field(False, validation_alias=AliasChoices("ENABLE_FARMER_DEMO_ACCOUNTS", "ENABLE_DEMO_ACCOUNTS"))
     WEB_CORS_ORIGINS: str = ""
     MAINTENANCE_MODE: bool = False
     MAINTENANCE_MESSAGE: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def farmer_demo_alias_precedence(cls, values):
+        if isinstance(values, dict) and "ENABLE_FARMER_DEMO_ACCOUNTS" in values and "ENABLE_DEMO_ACCOUNTS" in values:
+            values = {key: value for key, value in values.items() if key != "ENABLE_DEMO_ACCOUNTS"}
+        return values
 
     @field_validator("ADMIN_WALLET_ADDRESS", "CONTRACT_ADDRESS")
     @classmethod
@@ -111,12 +121,12 @@ settings = Settings()  # type: ignore[call-arg]
 # -- Demo account production safety guard ------------------------------
 if (
     settings.ENVIRONMENT == "production"
-    and settings.ENABLE_DEMO_ACCOUNTS
+    and settings.ENABLE_FARMER_DEMO_ACCOUNTS
 ):
     raise RuntimeError(
         "\n\nCRITICAL SECURITY ERROR:\n"
-        "ENABLE_DEMO_ACCOUNTS=true is set in production.\n"
+        "ENABLE_FARMER_DEMO_ACCOUNTS=true is set in production.\n"
         "Demo phone numbers (+91 9000000001 etc.) are short and guessable.\n"
-        "Set ENABLE_DEMO_ACCOUNTS=false in production .env and redeploy.\n"
+        "Set ENABLE_FARMER_DEMO_ACCOUNTS=false in production .env and redeploy.\n"
     )
 # ---------------------------------------------------------------------

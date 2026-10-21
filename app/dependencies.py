@@ -64,9 +64,11 @@ def _extract_phone_number(decoded_token: Dict[str, Any]) -> Optional[str]:
 
 def _fetch_user_by(field: str, value: str) -> Optional[Dict[str, Any]]:
     """Return the first user row matching a field/value pair."""
+    from app.config import settings
+    select = USER_SELECT + (", account_domain, role" if getattr(settings, "INSTITUTION_SCHEMA_ENABLED", False) else "")
     response = (
         supabase_client.table("users")
-        .select(USER_SELECT)
+        .select(select)
         .eq(field, value)
         .limit(1)
         .execute()
@@ -171,7 +173,12 @@ def get_current_user(authorization: Optional[str] = Header(None)) -> Dict[str, A
         )
 
     try:
-        return _provision_user(firebase_uid=firebase_uid, phone_number=phone_number)
+        user = _provision_user(firebase_uid=firebase_uid, phone_number=phone_number)
+        if user.get("account_domain", "FARMER") != "FARMER":
+            raise HTTPException(status_code=403, detail="This endpoint requires the Farmer flow.")
+        return user
+    except HTTPException:
+        raise
     except UserIdentityConflict as exc:
         logger.warning("User provisioning conflict for Firebase uid %s: %s", firebase_uid, exc)
         raise HTTPException(

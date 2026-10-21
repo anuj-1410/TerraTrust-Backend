@@ -3,11 +3,149 @@ FRONTEND DESIGN DOCUMENT (FDD)
 PROJECT: TERRATRUST-AR
 ================================================================================
 
-Version       : 3.1 (Firebase Auth + Pinata + Maps strategy updated)
+Version       : 4.0 (Institution extension; farmer v3.1 retained)
 Platform      : Android (Primary), iOS (Future Scope)
-Framework     : React Native CLI (0.84.1)
+Framework     : React Native CLI (0.86.2)
+React         : 19.2.3
 Language      : TypeScript 5.9.x (Strict Mode)
-Last Updated  : April 2026
+Android Build : compileSdk/targetSdk 36, minSdk 26, buildTools 36.0.0,
+                NDK 27.1.12297006, AGP 8.13.2, Kotlin 2.2.0,
+                Gradle 9.3.1, Google Services plugin 4.4.4
+Last Updated  : 10 October 2026
+
+
+
+
+
+
+
+Documentation review : 19 October 2026
+
+TABLE OF CONTENTS — SEARCH AND LINE NAVIGATION
+--------------------------------------------------------------------------------
+Use Ctrl+G with the line number, or Ctrl+F with the exact heading below.
+Search again (F3) to move from this contents entry to its body heading.
+Farmer chapters retain their existing text; institution chapters follow them.
+
+IMPLEMENTATION QUICK LINKS
+  Line  4334 | 22.3 INSTITUTION MODULE AND REUSE CONTRACT
+
+CHAPTERS AND INSTITUTION DETAILS
+  Line   251 | SECTION 1: ARCHITECTURE OVERVIEW
+  Line   391 | SECTION 2: FOLDER STRUCTURE
+  Line   517 | SECTION 3: MODULE 1 — AUTHENTICATION
+  Line   657 | SECTION 4: MODULE 2 — LAND VERIFICATION
+  Line   854 | SECTION 5: MODULE 3 — AR TREE SCANNING (AUDIT)
+  Line  1138 | SECTION 6: MODULE 4 — DASHBOARD
+  Line  1256 | SECTION 7: STATE MANAGEMENT (REDUX TOOLKIT)
+  Line  1363 | SECTION 8: API INTEGRATION
+  Line  1618 | SECTION 9: UI/UX DESIGN SYSTEM
+  Line  1748 | SECTION 10: NATIVE AR BRIDGE (KOTLIN)
+  Line  1899 | SECTION 11: SECURITY
+  Line  1953 | SECTION 12: OFFLINE STRATEGY
+  Line  1988 | SECTION 13: TESTING STRATEGY
+  Line  2037 | SECTION 14: ENVIRONMENT SETUP AND BUILD
+  Line  2310 | SECTION 15: COMPLETE SCREEN FLOW SUMMARY
+  Line  2401 | SECTION 16: v4.0 — SHARED LOGIN AND DOMAIN ROUTING DESIGN
+    Line  2404 | 16.1 REUSE THE CURRENT APP
+    Line  2421 | 16.2 LoginScreen EXTENSION
+    Line  2448 | 16.3 BOOTSTRAP DISPATCH ORDER
+    Line  2486 | 16.4 ROUTING STATES
+  Line  2505 | SECTION 17: v4.0 — INSTITUTION SHELL AND SCREEN CONTRACTS
+      Line  2562 | SCREEN: InstitutionSetupScreen
+      Line  2609 | SCREEN: InstitutionAccessStatusScreen
+      Line  2636 | SCREEN: InstitutionSelectorScreen
+      Line  2664 | SCREEN: InstitutionMembersScreen
+      Line  2693 | SCREEN: InstitutionDashboardScreen
+      Line  2733 | SCREEN: InstitutionAuditListScreen
+      Line  2759 | SCREEN: InstitutionProfileScreen
+      Line  2789 | SCREEN: InstitutionSettingsScreen
+      Line  2813 | SCREEN: InstitutionNotificationsScreen
+      Line  2838 | SCREEN: InstitutionSyncScreen
+    Line  2868 | 17.1 SHARED SCREEN AND NAVIGATION CONTRACT
+    Line  2898 | 17.2 REQUIRED SHEETS WITHIN EXISTING INSTITUTION SCREENS
+  Line  2950 | SECTION 18: v4.0 — CAMPUS TREE UX AND MEASUREMENT REUSE
+      Line  2955 | SCREEN: CampusListScreen
+      Line  2983 | SCREEN: CampusDetailScreen
+      Line  3013 | SCREEN: CampusBoundaryScreen
+      Line  3041 | SCREEN: CampusVegetationScreen
+      Line  3069 | SCREEN: CampusSamplingScreen
+      Line  3095 | SCREEN: CampusTreeInventoryScreen
+      Line  3124 | SCREEN: CampusSurveyStartScreen
+      Line  3150 | SCREEN: CampusPlotNavigationScreen
+      Line  3179 | SCREEN: CampusTreeScanScreen
+      Line  3209 | SCREEN: CampusManualMeasureScreen
+      Line  3237 | SCREEN: CampusTreeMeasurementReviewScreen
+      Line  3267 | SCREEN: CampusSurveyReviewScreen
+      Line  3297 | SCREEN: CampusTreeProgressScreen
+      Line  3321 | SCREEN: CampusTreeResultScreen
+      Line  3352 | SCREEN: CampusTreeHistoryScreen
+  Line  3379 | SECTION 19: v4.0 — ANNUAL AUDIT, FORMS AND RESULT DESIGN
+      Line  3384 | SCREEN: InstitutionAuditPeriodScreen
+      Line  3412 | SCREEN: InstitutionAuditOverviewScreen
+      Line  3443 | SCREEN: InstitutionElectricityScreen
+      Line  3471 | SCREEN: InstitutionTransportScreen
+      Line  3502 | SCREEN: InstitutionStationaryFuelScreen
+      Line  3530 | SCREEN: InstitutionWasteScreen
+      Line  3559 | SCREEN: InstitutionWaterScreen
+      Line  3593 | SCREEN: InstitutionSolarScreen
+      Line  3628 | SCREEN: InstitutionRainwaterScreen
+      Line  3662 | SCREEN: InstitutionBiogasScreen
+      Line  3697 | SCREEN: InstitutionCompostingScreen
+      Line  3754 | SCREEN: InstitutionEvidenceScreen
+      Line  3783 | SCREEN: InstitutionCSVImportScreen
+      Line  3816 | SCREEN: InstitutionTreeAssessmentScreen
+      Line  3845 | SCREEN: InstitutionAuditValidationScreen
+      Line  3873 | SCREEN: InstitutionCalculationProgressScreen
+      Line  3900 | SCREEN: InstitutionCarbonResultScreen
+    Line  3934 | 19.1 LARGE/PAGED CATEGORY AND MEASUREMENT INPUT DETAILS
+  Line  3953 | SECTION 20: v4.0 — TRENDS, EXPORTS AND GROUNDED ADVISORY
+      Line  3958 | SCREEN: InstitutionTrendsScreen
+      Line  3985 | SCREEN: InstitutionReportDownloadsScreen
+      Line  4015 | SCREEN: InstitutionAdvisorScreen
+      Line  4052 | SCREEN: RecommendationDetailScreen
+      Line  4079 | SCREEN: AdvisorySourceScreen
+      Line  4104 | SCREEN: InstitutionAdviceHistoryScreen
+      Line  4141 | SCREEN: AdviceDetailScreen
+  Line  4181 | SECTION 21: v4.0 — STATE, REQUEST OWNERSHIP, OFFLINE AND AUTHORIZATION
+    Line  4244 | 21.1 INSTITUTIONCONFLICTSHEET — DRAFT RECOVERY
+  Line  4262 | SECTION 22: v4.0 — IMPLEMENTATION BOUNDARIES AND VERIFICATION
+    Line  4290 | 22.1 DOCUMENT-TO-IMPLEMENTATION CHECKPOINTS
+    Line  4302 | 22.2 INDEPENDENT DEMO FLAGS AND STAGED INSTITUTION USERS
+    Line  4334 | 22.3 INSTITUTION MODULE AND REUSE CONTRACT
+    Line  4668 | 22.4 REQUIRED VERIFICATION AND DELIVERY BOUNDARY
+
+END OF CONTENTS
+
+REVISION 4.0 — INSTITUTION EXTENSION
+--------------------------------------------------------------------------------
+Purpose: Add institution accounting and campus tree assessment to the same app.
+
+Institution entry:
+  LoginScreen -> choose Institution -> existing Firebase phone OTP -> server profile.
+
+Reuse:
+  Existing authentication, API transport, theme, UI controls, AR, GPS, species
+  detection and shared satellite/biomass utilities through institution adapters.
+
+Separate records:
+  Institution profiles, memberships, campuses, surveys, annual audits and advice.
+  Farmer KYC, land, wallet, audits, credits and production flow remain unchanged.
+
+Document responsibilities:
+  SRS   : Requirements and acceptance.
+  BSDD  : Database, APIs, formulas, server jobs and environment configuration.
+  FDD   : Screens, components, state and storage.
+  FFC   : Navigation, actions, return paths and complete journeys.
+  Demo  : Test accounts, checkpoint content, setup and reset behavior.
+
+Reading rule:
+  Keep the existing farmer sections as the baseline. Use the institution chapters
+  below for the upgrade; the older upgrade proposal is background material.
+
+Status:
+  Specifications are implementation contracts. Live deployment/device readiness
+  still requires SRS 35–36 evidence. This edit changes documentation only.
 
 --------------------------------------------------------------------------------
 WHAT CHANGED FROM PREVIOUS VERSION (v3.0)
@@ -131,7 +269,7 @@ type.
 
 Component             | Technology                  | Version  | Reason
 ----------------------|-----------------------------|---------|--------------------------
-Core Framework        | React Native CLI            | 0.84.1  | Required for Native ARCore
+Core Framework        | React Native CLI            | 0.86.2  | Required for Native ARCore
                       |                             |         | bridge and react-native-
                       |                             |         | mmkv. Use the plain RN
                       |                             |         | app with New Architecture.
@@ -160,6 +298,7 @@ Satellite Imagery     | Google Earth Engine (GEE)   | Backend | Sentinel-2 true 
                       |                             |         | PNG URL to the app.
 AR Bridge             | Native Modules (Kotlin)     | Custom  | Direct ARCore Depth API.
                       |                             |         | No JS library can do this.
+ARCore                | Google ARCore               | 1.54.0  | Native Android AR runtime.
 Camera                | react-native-vision-camera  | v4.7.x  | High-quality document and
                       |                             |         | AR frame capture.
 Form Validation       | Zod + React Hook Form       | Latest  | Type-safe form validation.
@@ -182,7 +321,7 @@ Authentication        | @react-native-firebase/app | Latest  | Firebase app boot
 Data Access           | FastAPI REST API            | Backend | App never connects directly
                       |                             |         | to Supabase tables or
                       |                             |         | storage buckets.
-Species Detection     | TensorFlow Lite             | 2.14.x  | On-device tree species
+Species Detection     | TensorFlow Lite             | 2.15.0  | On-device tree species
                       |                             |         | identification. No internet
                       |                             |         | required.
 Background Sync       | react-native-background-    | Latest  | Auto-uploads pending audits
@@ -197,7 +336,7 @@ Haptics               | react-native-haptic-        | Latest  | Vibration feedba
 Config / Env          | react-native-config         | Latest  | Loads .env variables into app.
 Animations            | lottie-react-native         | Latest  | Loading states (spinning leaf),
                       |                             |         | scan success, token mint.
-Motion Animations     | react-native-reanimated     | 4.3.x   | AR overlay transitions and
+Motion Animations     | react-native-reanimated     | 4.4.2   | AR overlay transitions and
                       |                             |         | smooth screen animations.
 Charting              | react-native-chart-kit      | Latest  | Bar chart on
                       | + react-native-svg          |         | CreditHistoryScreen.
@@ -376,6 +515,9 @@ TerraTrustAR/
 
 ================================================================================
 SECTION 3: MODULE 1 — AUTHENTICATION
+
+v4.0 update: this remains farmer auth detail after shared selector/bootstrap.
+Section 16 defines institution routing and guards before farmer KYC/wallet.
 ================================================================================
 
 3.1 OVERVIEW
@@ -1112,6 +1254,9 @@ What farmer sees:  Year-by-year list of all carbon credit audits.
 
 ================================================================================
 SECTION 7: STATE MANAGEMENT (REDUX TOOLKIT)
+
+v4.0: retain farmer slices; add separate institution state and tenant namespaces
+per Section 21. This baseline store is not the complete upgraded store.
 ================================================================================
 
 7.1 STORE STRUCTURE
@@ -1187,7 +1332,7 @@ MMKV must be used instead of AsyncStorage because:
   - Synchronous API — tree scan data saves instantly when farmer taps "Save"
   - Optional encryption support when the key is sourced securely at runtime
   - Intended for persisted app state, not private keys or backend secrets
-  - Current repo baseline uses react-native-mmkv 3.3.x on React Native 0.84.1
+  - Current repo baseline uses react-native-mmkv 3.3.x on React Native 0.86.2
   - New Architecture stays enabled
 
 The following state slices MUST be persisted to MMKV:
@@ -1216,6 +1361,9 @@ The following must NOT be persisted:
 
 ================================================================================
 SECTION 8: API INTEGRATION
+
+v4.0: farmer API contracts below are unchanged; institution repositories reuse
+transport with the new BSDD 18 contracts and revision/job ownership guards.
 ================================================================================
 
 8.1 AXIOS CONFIGURATION
@@ -1740,10 +1888,10 @@ In android/app/src/main/AndroidManifest.xml:
 
   dependencies {
     // ARCore SDK
-    implementation 'com.google.ar:core:1.42.0'
+    implementation 'com.google.ar:core:1.54.0'
 
     // TensorFlow Lite for on-device species detection
-    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
+    implementation 'org.tensorflow:tensorflow-lite:2.15.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
   }
 
@@ -2084,7 +2232,7 @@ IMPORTANT: Never commit .env files to git. Add both to .gitignore.
 14.3 PROJECT INITIALISATION
 -----------------------------
 
-  npx @react-native-community/cli@20.1.3 init TerraTrustAR --version 0.84.1 --template react-native-template-typescript
+  npx react-native@0.86.2 init TerraTrustAR --version 0.86.2 --template react-native-template-typescript
   cd TerraTrustAR
 
   # TerraTrustAR baseline assumes Node.js 22.11+ and the New Architecture.
@@ -2092,8 +2240,8 @@ IMPORTANT: Never commit .env files to git. Add both to .gitignore.
   # In android/gradle.properties set: newArchEnabled=true
 
   # Core platform alignment
-  npm install react@19.2.4
-  npm install --save-dev react-test-renderer@19.2.4 @types/react@^19.2.14
+  npm install react@19.2.3
+  npm install --save-dev react-test-renderer@19.2.3 @types/react@^19.2.14
   npm install --save-dev jest@^29.7.0 @types/jest@^29.5.14
   npm install --save-dev typescript@^5.9.3
 
@@ -2114,7 +2262,7 @@ IMPORTANT: Never commit .env files to git. Add both to .gitignore.
   npm install react-native-background-fetch@^4.3.0
   npm install react-native-chart-kit@^6.12.0 react-native-svg@^15.15.4
   npm install lottie-react-native@^7.3.6
-  npm install react-native-reanimated@^4.3.0
+  npm install react-native-reanimated@4.4.2
   npm install react-native-haptic-feedback@^2.3.4
   npm install react-native-device-info@^15.0.2
   npm install nativewind@^4.2.3
@@ -2160,6 +2308,9 @@ IMPORTANT: Never commit .env files to git. Add both to .gitignore.
 
 ================================================================================
 SECTION 15: COMPLETE SCREEN FLOW SUMMARY
+
+Farmer-only historical summary. OTPDrawer is the current modal component, not
+an OTPScreen route. Institution screen flow is in Sections 16–22 / FFC 12–17.
 ================================================================================
 
 COMPLETE SCREEN LIST:
@@ -2243,5 +2394,2561 @@ LARGE FARM FLOW (above 10 acres — multi-day):
   All Session 1 data persisted in MMKV.
 
 ================================================================================
-END OF DOCUMENT
+END OF PRESERVED FARMER BASELINE
 ================================================================================
+
+================================================================================
+SECTION 16: v4.0 — SHARED LOGIN AND DOMAIN ROUTING DESIGN
+================================================================================
+
+16.1 REUSE THE CURRENT APP
+--------------------------
+
+  - Retain the current React Native/TypeScript stack, Android build settings, shared
+    light/dark tokens, neutral backgrounds, green actions, responsive safe insets,
+    fixed headers outside scrolling content, reduced motion, accessible sheets and
+    floating tab bar behavior.
+  - Do not redesign farmer screens.
+  - Institution route/component names are the required contract in FFC 12.5.
+  - Existing Android integration was recorded in prior handoffs; this review does
+    not infer deployed readiness from source presence.
+  - Add a sibling institution branch when implemented; "FarmerNavigator" is a
+    conceptual adapter around the existing HomeScreen root, not a required rename of
+    farmer routes.
+  - Keep src/types/navigation.ts farmer parameters, originTab handling and existing
+    modal/back behavior intact.
+
+16.2 LoginScreen EXTENSION
+--------------------------
+
+  - Show a two-option selector labeled "Farmer" and "Institution" above phone entry.
+  - Default Farmer; selected state, text labels and accessibility role/state are
+    explicit.
+  - Phone format/validation, OTPDrawer, six-digit auto-submit/autofill, automatic
+    Firebase verification, loading/retry/dismissal and branding retain current
+    behavior.
+  - No institutional email/password auth stack or second app.
+  - Selector is part of phone/domain attempt identity.
+  - Switching cancels/closes OTP, invalidates callbacks and begins a new attempt.
+  - Announce the new selected flow.
+  - After Firebase verification send optional X-TerraTrust-Flow header to /auth/me;
+    identity/domain/permissions are server-approved, not trusted from selection.
+  - Mismatch message: "This account uses the Farmer flow.
+  - Select Farmer to continue." Use the corresponding Institution wording for that
+    domain.
+  - Remain at login, preserve safe phone entry and clear the pending attempt.
+  - Offer the matching flow selection.
+  - Do not provision the other domain.
+  - On cold launch, resolve fresh server account_domain without requiring selection.
+  - New/unconfirmed bootstrap failure shows Retry.
+  - A confirmed returning institution may restore a bounded same-boot offline grant
+    only on transport failure under BSDD 21.2; explicit denial/demo handoff cannot
+    use that grant.
+
+16.3 BOOTSTRAP DISPATCH ORDER
+-----------------------------
+
+  - Use one bootstrap coordinator for LoginScreen and the root Firebase auth
+    observer.
+  - Record the pending non-secret flow/attempt intent before starting phone
+    verification; all /auth/me requests for that interactive attempt use the same
+    flow header until the server confirms account_domain.
+  - Root auto-bootstrap must not race an institution login with a headerless call
+    that provisions the legacy default farmer account.
+  - Persist pending intent safely for interrupted sign-in; bind it to the restored
+    verified UID/expected phone attempt before resuming, then clear on
+    success/cancel.
+  - Intent is not authorization and is never a substitute for the server response.
+  - Ordinary returning sessions without pending intent restore the existing domain.
+
+1. Restore/verify Firebase UID; maintenance override applies to both domains.
+
+2. Fetch profile and server capability/domain/membership/onboarding response.
+
+3. Validate UID/session/attempt; discard stale responses on logout/selection.
+
+4. FARMER -> existing KYC/onboarding/HomeScreen four-tab branch and
+   farmer-only wallet registration/background audit retry/credit polling.
+
+5. INSTITUTION -> setup/status, authorized institution selector if >1 active
+   membership, otherwise institution tabs. Never call
+   completeAuthenticatedWallet, register-wallet, recover-wallet or farmer
+   credit/sync jobs for this domain.
+
+6. Staff profiles use approved operator tooling; no implicit mobile staff
+   branch. Legacy missing-domain response is treated as FARMER only for legacy
+   Farmer request/session compatibility. Institution requests require explicit
+   domain; missing institution support -> "Institution access is not available
+   yet." No fallback to farmer KYC. Server feature flag/capability gates new
+   institution registration; approved users retain authorized released read-only
+   access while institution_flow is disabled (BSDD 15.4).
+
+16.4 ROUTING STATES
+-------------------
+
+  - REQUIRED -> InstitutionSetupScreen (create registration or accept invitation).
+  - PENDING_REVIEW -> InstitutionAccessStatusScreen (status/evidence corrections).
+  - REJECTED -> status with reason and resubmit correction action.
+  - COMPLETE + active memberships -> InstitutionSelectorScreen if multiple;
+    otherwise InstitutionDashboardScreen.
+  - No active membership/suspended tenant -> status/request-access or logout; do not
+    redirect to farmer onboarding.
+  - State names here are canonical institution_onboarding_status values.
+  - Membership PENDING/ACTIVE/REVOKED and tenant PENDING/APPROVED/REJECTED/SUSPENDED
+    are separate.
+  - Existing users' farmer onboardingComplete remains farmer-only.
+  - Institution intro is inline on its setup/dashboard, not the existing farmer
+    tutorial.
+
+================================================================================
+
+SECTION 17: v4.0 — INSTITUTION SHELL AND SCREEN CONTRACTS
+================================================================================
+
+INSTITUTIONNAVIGATOR
+--------------------
+
+  - five primary tabs Dashboard / Audits / Campus Trees /AI Advisor / Profile.
+  - Reuse floating tab primitives with five accessible targets, responsive labels
+    and current safe-inset/reduced-motion rules.
+  - No farmer CTT balance, My Lands, HistoryTab or wallet alerts appear in
+    institution tabs.
+  - Stack prefixes distinguish institution flows; full-screen scan/form/import flows
+    open above institution tabs, hide tab bar and return to their source
+    campus/audit.
+  - Shared NotificationsScreen needs domain-filtered data/route adapter; Maintenance
+    and shell/error primitives reuse existing behavior with authorized destinations.
+
+ROUTE GROUPS (EACH SCREEN SHOWS SELECTED INSTITUTION; CAMPUS/PERIOD WHERE RELEVANT)
+------------------------------------------------------------------------------
+
+DASHBOARD
+---------
+
+  - InstitutionDashboardScreen -> InstitutionCarbonResultScreen,
+    InstitutionTrendsScreen, InstitutionReportDownloadsScreen or
+    CampusTreeResultScreen.
+
+AUDITS
+------
+
+  - InstitutionAuditListScreen -> InstitutionAuditOverviewScreen -> forms, tree
+    assessment selection, validation, calculation progress, submit/result.
+
+CAMPUS TREES
+------------
+
+  - CampusListScreen -> CampusDetailScreen -> boundary/vegetation,
+    inventory/plots/survey/progress/results/history.
+  - CampusDetail is its own hub.
+
+AI ADVISOR
+----------
+
+  - InstitutionAdvisorScreen -> RecommendationDetailScreen, AdvisorySourceScreen,
+    InstitutionAdviceHistoryScreen and AdviceDetailScreen.
+
+PROFILE
+-------
+
+  - InstitutionProfileScreen -> InstitutionMembersScreen (OWNER),
+    InstitutionSettingsScreen (theme/notifications reuse),
+    InstitutionSelectorScreen, InstitutionNotificationsScreen, InstitutionSyncScreen
+    and logout.
+  - No Aadhaar/wallet recovery or farmer identity settings.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionSetupScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Create or correct an institution registration.
+
+  What institution sees:
+    - Name, type, address and contact fields.
+    - Reporting timezone and period convention.
+    - Optional student count, staff count and floor area.
+    - Authority-evidence picker with upload/READY status.
+    - Save draft, Submit registration and Accept invitation actions.
+
+  On Save draft:
+    Step 1: Save edits locally with their original server revision.
+    Step 2: On the first server save, POST /institutions once.
+            Store institutionId, registrationId and inputRevision.
+    Step 3: Later saves PATCH the own registration draft; do not create another tenant.
+
+  On Submit registration:
+    Step 1: Finish saving the matching profile/evidence to the server.
+    Step 2: Verify that selected evidence is READY under the authorized parent.
+    Step 3: POST submit-registration with the saved input hash and If-Match revision.
+    Step 4: Open InstitutionAccessStatusScreen while independent review runs.
+
+  On Accept invitation:
+    Select INVITE mode, paste the one-time code and explicitly accept.
+    An accepted invitation to an APPROVED tenant activates its reviewed membership.
+
+  Backend API:
+    GET  /institutions/{iid}/registration
+    POST /institutions
+    PATCH /institutions/{iid} (own pending registration)
+    POST /institutions/{iid}/submit-registration
+    POST /institution-invitations/accept
+
+  Saved identifiers:   API registration_id -> navigation registrationId.
+                       API input_revision -> the draft's original inputRevision.
+  Evidence parent:     Before create: REGISTRATION_DRAFT, parent_id=users.id.
+                       After create: the returned registration/tenant.
+  Validation:          Save does not submit or approve. Reopen the existing draft
+                       after retry/restart. Role/onboarding never grants tenant access.
+  On success:          Submitted registration -> AccessStatus.
+                       Accepted invite -> authorized Selector/Dashboard.
+  On Back:             Guard edits; stay in setup/status or explicitly log out.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionAccessStatusScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Explain pending, rejected or suspended access.
+
+  What institution sees:
+    - Current authority review state and reviewer reason.
+    - Evidence correction, Refresh and Log Out actions.
+    - Accept invitation and Delete my account remain available where applicable.
+
+  Actions:             Refresh / Correct evidence / Log out
+
+  Backend API:
+    GET /auth/me
+    GET /institutions/{iid}/registration.
+
+  Access:              own status; no unauthorized tenant data.
+
+  Validation / logic:
+    - Prevent duplicate institution creation on retry.
+
+  On success:          Setup correction or authorized institution Dashboard.
+
+  On Back:             restricted root; app-exit guard.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionSelectorScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Select one of the user's authorized institutions.
+
+  What institution sees:
+    - Only active, authorized institution memberships.
+    - The permission for each listed institution.
+
+  Actions:             Select institution
+
+  Backend API:
+    GET /institutions
+    GET /auth/me.
+
+  Access:              approved ACTIVE memberships only.
+
+  Validation / logic:
+    - Switch confirms unsynced-work handling, invalidates requests and old tenant
+      caches, then loads fresh membership/snapshot.
+    - If one active tenant, omit selector step.
+
+  On success:          InstitutionDashboardScreen.
+
+  On Back:             existing authorized tab or access status; no switch.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionMembersScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Manage institution invitations and permissions.
+
+  What institution sees:
+    - Members and their permissions.
+    - Pending invitations.
+
+  Actions:             Invite / Change permission / Revoke
+
+  Backend API:
+    GET/POST /institutions/{iid}/members
+    PATCH /institutions/{iid}/members/{uid}
+    GET /institutions/{iid}/invitations
+    DELETE /institutions/{iid}/invitations/{invite_id}.
+
+  Access:              OWNER only; last-owner invariant.
+
+  Validation / logic:
+    - Only OWNER can invite, change permissions or revoke members.
+    - The server blocks removal of the last active owner.
+
+  On success:          InstitutionProfileScreen.
+
+  On Back:             InstitutionProfileScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionDashboardScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show the selected annual audit and next required task.
+
+  What institution sees:
+    - Selected reporting period and revision.
+    - Review and data-completeness badges.
+    - Actual emissions by category and scope.
+    - Tree stock, eligible period removal/release and known project balance.
+    - Avoided impact, campus survey status and the next missing-data task.
+
+  Actions:             Open audit / Campus survey / Report / Advisor
+
+  Backend API:
+    GET /institutions/{iid}/analytics
+    GET /institutions/{iid}/audits
+    GET /institutions/{iid}/campuses.
+
+  Access:              OWNER/MANAGER operational; VIEWER released snapshots.
+
+  Validation / logic:
+    - actual emissions by scopes/categories, tree stock separately from eligible
+      period removal/release, project assessment balance when known, separate
+      avoided impact, campus survey/satellite status and next missing-data task.
+    - First audit displays "Tree carbon baseline recorded; period removal not yet
+      available." NULL values render "Not available", never 0.
+    - Actions open audits, campus survey, report/advisor.
+    - VIEWER sees finalized records and published advice only; editing/new advice
+      hidden.
+    - Empty states: no campus -> add campus (OWNER/MANAGER); no audit -> create
+      period; pending authority -> status screen; no final audit -> viewer
+      explanatory state.
+
+  On success:          Selected institution feature.
+
+  On Back:             tab root; existing Android app-exit interaction.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionAuditListScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             List the selected institution's audits and revisions.
+
+  What institution sees:
+    - Reporting period, revision, review state and result availability.
+
+  Actions:
+    - Create a period -> InstitutionAuditPeriodScreen.
+    - Open an audit -> InstitutionAuditOverviewScreen.
+
+  Backend API:
+    GET /institutions/{iid}/audits
+    GET /institution- audits/{aid}/revisions.
+
+  Access:              OWNER/MANAGER drafts; VIEWER released history.
+
+  Access:
+    - OWNER/MANAGER can create and open their drafts.
+    - VIEWER sees released FINALIZED and previously finalized SUPERSEDED records.
+
+  On Back:             tab root; existing app-exit interaction.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionProfileScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show institution profile and account actions.
+
+  What institution sees:
+    - Selected institution and verified membership permission.
+
+  Actions:
+    - Edit profile (OWNER) -> InstitutionProfileEditSheet.
+    - Members (OWNER only) -> InstitutionMembersScreen.
+    - Delete my institution account -> InstitutionDeleteAccountSheet.
+    - Settings -> InstitutionSettingsScreen.
+    - Switch institution, when multiple memberships exist ->
+      InstitutionSelectorScreen.
+    - Log out -> pending-work decision, Firebase signOut and local cleanup.
+
+  Backend API:
+    GET/PATCH /institutions/{iid}
+    GET /auth/me.
+
+  Access:              members; profile write OWNER; personal privacy own account.
+
+  Restrictions:
+    - No farmer Aadhaar, wallet or wallet-recovery controls.
+
+  On Back:             tab root; existing app-exit interaction.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionSettingsScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Reuse theme and notification preferences in the institution
+                       flow.
+
+  What institution sees:
+    - Existing shared theme and notification controls.
+
+  Backend API:
+    existing personal theme/notification adapter; no tenant write.
+
+  Access:              own verified account, including VIEWER.
+
+  Restrictions:
+    - These preferences do not change membership permissions or audit data.
+
+  On return:
+    - Go back to InstitutionProfileScreen.
+
+  On Back:             InstitutionProfileScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionNotificationsScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Read safe account/institution status notifications.
+
+  What institution sees:paginated summaries, read state, created time,
+                       refresh/empty/error.
+
+  Actions:             mark read; open record through FFC 12.5 authorization
+                       resolver.
+
+  Backend API:
+    GET /institution-account/notifications
+    PATCH /institution-account/notifications/{notification_id}.
+
+  Access:              own verified institution identity; no active tenant required.
+
+  Behavior:            no invitation codes/evidence contents. Inaccessible record
+                       shows protected unavailable message; marking read never
+                       grants resource access.
+
+  On Back:             Profile when authorized; AccessStatus when restricted.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionSyncScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Find/resume saved work and reconcile unknown outcomes across
+                       institutions.
+
+  What institution sees:grouped institution/campus/audit/registration drafts;
+                       local/server revisions,
+                       PENDING/SENDING/ACKED/CONFLICT/BLOCKED, bytes and unfinished
+                       form steps.
+
+  Actions:             Open original form; Retry unchanged request; Compare
+                       conflict; explicitly Discard local work. Uncertain SENDING
+                       request resolves original receipt first.
+
+  Backend API:
+    encrypted local forms/files/queue + normal owned-resource APIs; no sync-all
+    endpoint. Fresh /auth/me and per-resource If-Match before network mutations.
+
+  Access:              own UID/context; W for business sync, own pending
+                       registration allowed.
+
+  Behavior:            no automatic submission of incomplete forms/reviews. VIEWER
+                       has no business sync button; own privacy/status and sign-out
+                       remain available. Expired context locks sensitive contents
+                       until revalidation; revocation purges affected namespace.
+
+  On Back:             Profile or CampusDetail origin; restricted root returns
+                       AccessStatus.
+
+17.1 SHARED SCREEN AND NAVIGATION CONTRACT
+-------------------------------------------
+  - Data/API cards abbreviate the /api/v1 prefix; all route definitions and exact
+    schemas are BSDD 18.6–18.10.
+  - No abbreviated path is a second endpoint.
+  - Route identity: institutionId; campusId/surveyId/treeId/auditId/jobId/queryId as
+    applicable; inputRevision for draft writes; snapshotId for result/export.
+  - auditId is ONE revision row.
+  - Correct -> revisions POST -> replace it with the returned NEW ID. inputRevision
+    is a separate concurrency number.
+  - originRoute is an allowed institution route plus identifiers, never arbitrary
+    executable navigation.
+  - Validate origin/ancestry; fallback uses card's parent.
+  - Use decimal strings for API quantities; parse/format for display only.
+  - Backend performs authoritative calculations.
+  - Display NULL as unavailable.
+  - Loading: skeleton/progress with accessible status; empty: explain next valid
+    action; stale: date/revision badge; failed: actionable retry/error code.
+  - Lists use stable server cursors; changed page snapshot -> refresh page 1.
+  - 401 -> one token refresh then sign-in; domain mismatch -> Login switch-flow;
+    403/access revoke -> restricted status and cleanup; 409 -> conflict sheet; 422
+    -> exact field errors; 429 -> Retry-After; 503 -> unavailable/read-only.
+  - Feature-off preserves authorized released reads and own account/privacy
+    controls; hide mutation buttons.
+  - Advisor-off preserves readable history.
+  - VIEWER 'finalized' includes previously finalized SUPERSEDED history; current
+    campus/survey/bill drafts remain inaccessible.
+  - No private-bill download button.
+  - On pending/restricted root, do not navigate back into a protected cached tab.
+
+17.2 REQUIRED SHEETS WITHIN EXISTING INSTITUTION SCREENS
+--------------------------------------------------------
+InstitutionProfileEditSheet — Profile, OWNER:
+  - Edit allowed ProfileData fields; save PATCH with If-Match; unchanged audit
+    snapshots retain original denominators.
+  - Unapproved registration edits use Setup and its correction revision instead of
+    modifying approved history.
+
+InstitutionInviteSheet — Members, OWNER:
+  - Verified E.164 target, OWNER/MANAGER/VIEWER permission; explicit Create.
+  - Show one-time invitation code and 7-day expiry; copy/share is explicit.
+  - Recipient selects Institution and pastes code in Setup INVITE mode.
+  - GET invitations lists masked targets; revoke pending invitation or member
+    separately.
+  - POST reissue atomically returns a new code (BSDD 18.11).
+  - Last OWNER transfer/blocker is explained before change/revoke/deletion.
+
+CampusCreateSheet — Campus list, OWNER/MANAGER:
+  - Save name/address with empty control evidence -> POST pending campus -> returned
+    campusId -> upload CAMPUS evidence READY -> PATCH evidence IDs creates
+    CAMPUS_CONTROL review case -> independent approval, then boundary.
+  - Show pending control review; boundary submission may be pending, while boundary
+    approval/mask/plot jobs require matching approved control/inputs.
+  - Cancel leaves list; edited sheet has Save/Discard/Stay guard.
+
+CampusTreeEventSheet — Inventory, OWNER/MANAGER:
+  - Stable tag/tree ID, event type/date, previous/new condition/location, reason,
+    evidence; PATCH tree appends event.
+  - Accepted measurements remain immutable.
+  - Draft measurement edit/delete uses PUT/DELETE measurement with new operation
+    UUID and expected survey revision.
+  - Submitted/accepted corrections create a NEW survey ID through revisions; no
+    historical field overwrite.
+
+InstitutionScenarioSheet — Recommendation detail, OWNER/MANAGER:
+  - Select supported action; display units, known baseline/project assumptions,
+    linked source factors and unknown required fields from the approved method.
+  - Calculate online -> deterministic scenario ID/results or field errors.
+  - Label Hypothetical; never write inventory; no unsourced savings/payback.
+
+InstitutionDeleteAccountSheet — Profile and Access status, own account:
+  - Explain affected personal account, ownership transfer and retained shared
+    records/policy link; verify recent phone authentication with shared OTP
+    purpose=REAUTHENTICATE, same UID; do not start a new demo reset.
+  - POST deletion request -> status/actions; cancellation before PROCESSING.
+  - Last-owner blocker -> Members transfer, or support from restricted status.
+  - Pending/revoked users retain own deletion/status access; no tenant data leak.
+  - Display policy external deletion URL only after commissioned host is configured.
+  - Completion signs out and purges vault/cache; no farmer account-domain change.
+
+================================================================================
+
+SECTION 18: v4.0 — CAMPUS TREE UX AND MEASUREMENT REUSE
+================================================================================
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusListScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             List the selected institution's campuses.
+
+  What institution sees:
+    - Campus name and control status.
+    - Boundary revision, eligible area and survey summary.
+    - Campus tree assessment history.
+
+  Actions:             Add campus / Open campus
+
+  Backend API:
+    GET/POST /institutions/{iid}/campuses.
+
+  Access:              OWNER/MANAGER writes; VIEWER released linked snapshots.
+
+  Validation / logic:
+    - OWNER/MANAGER can add campus with control evidence.
+    - New campus does not ask for farmer land document/survey number or register a
+      land_parcels row.
+
+  On success:          CampusDetailScreen or its selected feature.
+
+  On Back:             tab root; existing app-exit interaction.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusDetailScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Open boundary, inventory, surveys and results for one campus.
+
+  What institution sees:
+    - Campus name and control status.
+    - Boundary revision, eligible area and survey summary.
+    - Campus tree assessment history.
+
+  Actions:             Open boundary / Inventory / Survey / Result / History
+
+  Backend API:
+    GET/PATCH /campuses/{cid}
+    GET /campuses/{cid}/tree-surveys
+    GET /campuses/{cid}/tree-audits.
+
+  Access:              OWNER/MANAGER operations; VIEWER released linked snapshots.
+
+  Validation / logic:
+    - OWNER/MANAGER can add campus with control evidence.
+    - New campus does not ask for farmer land document/survey number or register a
+      land_parcels row.
+
+  On success:          CampusDetailScreen or its selected feature.
+
+  On Back:             CampusListScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusBoundaryScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Submit or inspect a campus boundary revision.
+
+  What institution sees:
+    - GeoJSON body/file selection and separately READY campus control evidence.
+    - Boundary map, including polygon holes.
+    - Server-computed area, revision and review status.
+
+  Actions:             Upload boundary and control evidence
+
+  Backend API:
+    GET/POST /campuses/{cid}/boundaries.
+
+  Access:              OWNER/MANAGER draft; independent operator approval.
+
+  Validation / logic:
+    - Each replacement POST creates a NEW boundary revision; never overwrite
+      accepted geometry.
+    - Operator digitization/review occurs in scoped tooling.
+
+  On success:          CampusDetailScreen; vegetation assessment after approval.
+
+  On Back:             CampusDetailScreen; guard unsaved boundary.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusVegetationScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show the campus area eligible for tree assessment.
+
+  What institution sees:
+    - Tree-bearing mask and eligible area.
+    - Building, road and water exclusions.
+    - Classification, review status and coverage warnings.
+
+  Actions:             Request assessment / View review status
+
+  Backend API:
+    POST/GET /campuses/{cid}/vegetation-assessments
+    GET /jobs/{jid}.
+
+  Access:              OWNER/MANAGER; VIEWER released map only.
+
+  Validation / logic:
+    - Approved boundary + mask required before generating reviewed plots and
+      accepted survey.
+
+  On success:          CampusSamplingScreen after boundary and mask approval.
+
+  On Back:             CampusDetailScreen; accepted job continues.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusSamplingScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show reviewed sampling plots and field progress.
+
+  What institution sees:
+    - Sampling plot geometry and vegetation strata.
+    - Measured plot area, progress and operator-approval state.
+
+  Actions:             Generate plots / View approved plots
+
+  Backend API:
+    GET /campuses/{cid}/sampling-plots
+    POST /campuses/{cid}/sampling-plots/generate.
+
+  Access:              OWNER/MANAGER; operator reviews candidate.
+
+  Validation / logic:
+    - Do not copy farmer fixed 3-zone completion rule.
+
+  On success:          CampusSurveyStartScreen after operator approval.
+
+  On Back:             CampusDetailScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusTreeInventoryScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Identify trees consistently across survey years.
+
+  What institution sees:
+    - Stable tree tag and matched identity.
+    - Species, condition, plot/block and previous measurements.
+    - Search and pagination.
+
+  Actions:             Add tree / Match existing identity
+
+  Backend API:
+    GET/POST /campuses/{cid}/trees
+    PATCH /campuses/{cid}/trees/{tid}
+    GET /campuses/{cid}/trees/{tid}/events.
+
+  Access:              OWNER/MANAGER operational trees; VIEWER released tree
+                       snapshot only.
+
+  Validation / logic:
+    - Add or match a tree without creating duplicate identities.
+
+  On success:          CampusDetailScreen or the current campus survey.
+
+  On Back:             CampusDetailScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusSurveyStartScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Prepare or resume an authorized campus survey.
+
+  What institution sees:
+    - Survey dates and selected campus.
+    - Approved boundary, mask and sampling plots.
+    - Downloaded offline assets and quality policy.
+    - Begin and Resume actions after permission checks.
+
+  Actions:             Begin / Resume survey
+
+  Backend API:
+    GET/POST /campuses/{cid}/tree-surveys
+    GET /tree-surveys/{sid}
+    GET /campuses/{cid}/assessment-config.
+
+  Access:              OWNER/MANAGER; approved lineage required.
+
+  On success:          CampusPlotNavigationScreen.
+
+  On Back:             CampusDetailScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusPlotNavigationScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Guide the operator to the selected sampling plot.
+
+  What institution sees:
+    - Cached, authorized plot map and GPS position.
+    - Plot progress, arrival guidance and GPS-accuracy warnings.
+
+  Actions:             Walk to plot / Start tree measurement
+
+  Backend API:
+    GET /tree-surveys/{sid}
+    GET /tree-surveys/{sid}/measurements; approved downloaded plots.
+
+  Access:              OWNER/MANAGER; valid bounded offline context.
+
+  Validation / logic:
+    - Reuse the existing map and GPS utilities.
+    - Server campus policy controls GPS/coverage; farmer geofence thresholds remain
+      unchanged.
+    - Show accuracy warning/retry.
+
+  On success:          CampusTreeScanScreen.
+
+  On Back:             CampusDetailScreen; save current capture guard.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusTreeScanScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Measure a campus tree with the existing AR tools.
+
+  What institution sees:
+    - Shared camera preview and AR measurement controls.
+    - Species detection and confidence guidance.
+    - Tier 1/Tier 2 or manual-assistance path.
+
+  Actions:             Measure / Use manual assistance
+
+  Backend API:
+    shared native AR bridge; local MeasurementItem, then measurement batch.
+
+  Access:              OWNER/MANAGER; camera consent; institution queue.
+
+  Validation / logic:
+    - Reuse the existing AR bridge, camera and species-confidence UI.
+    - Never pass campusId as landId or write into farmer auditSlice.
+    - Reuse Tier 1/2 capability/manual assistance; denied camera/ARCore
+      install/update/temp failure have existing clear recovery states.
+
+  On success:          CampusTreeMeasurementReviewScreen or
+                       CampusManualMeasureScreen.
+
+  On Back:             CampusPlotNavigationScreen; unsaved capture guard.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusManualMeasureScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Use shared circumference and height measurement tools.
+
+  What institution sees:
+    - Shared circumference and height measurement tools.
+    - Supported species/method or a needs-review message.
+
+  Actions:             Save measurement / Return to scan
+
+  Backend API:
+    local MeasurementItem in cm/m; measurement batch on sync.
+
+  Access:              OWNER/MANAGER; height/density provenance required.
+
+  Validation / logic:
+    - No default 10m height/0.55 density for authoritative result; require supported
+      height/species/method or show needs review.
+    - Species outside approved model list may be inventoried, but unsupported
+      allometry is excluded pending reviewed support.
+
+  On success:          CampusTreeScanScreen or measurement review.
+
+  On Back:             CampusTreeScanScreen; preserve capture draft.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusTreeMeasurementReviewScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Review one capture before saving its local UUID.
+
+  What institution sees:
+    - Matched tree and captured dimensions with units.
+    - Species/method, height source and GPS accuracy.
+    - Evidence, Save and Retake actions.
+
+  Actions:             Save / Retake
+
+  Backend API:
+    POST /tree-surveys/{sid}/measurements/batch
+    PUT/DELETE /tree-surveys/{sid}/measurements/{mid}.
+
+  Access:              OWNER/MANAGER; edit/delete DRAFT only.
+
+  Validation / logic:
+    - Save one local UUID or retake; duplicates never inflate plot labels.
+    - Keep the raw item/hash and separate server derivation. Missing GPS remains
+      NULL/NEEDS_DATA until actual capture or an allowed reviewed exclusion.
+    - Existing farmer TreeResultScreen remains unchanged.
+
+  On success:          CampusPlotNavigationScreen or the same tree capture.
+
+  On Back:             capture origin; retake same tree UUID.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusSurveyReviewScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Check plot coverage and evidence before submission.
+
+  What institution sees:
+    - Plots, tree count and measured coverage.
+    - Missing-data and quality errors.
+    - Unsynced evidence and submission readiness.
+
+  Actions:             Sync / Submit survey for review
+
+  Backend API:
+    GET /tree-surveys/{sid}
+    GET /tree-surveys/{sid}/measurements
+    POST /tree-surveys/{sid}/submit
+    POST /tree-surveys/{sid}/revisions.
+
+  Access:              OWNER/MANAGER; submit requires all evidence READY.
+
+  Validation / logic:
+    - Sync and submit for review; cannot finalize while offline.
+
+  On success:          CampusDetailScreen and survey review status; calculation
+                       after acceptance.
+
+  On Back:             last plot for DRAFT; CampusDetailScreen after submit.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusTreeProgressScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Track the accepted campus satellite job.
+
+  What institution sees:
+    - Imagery, feature, prediction, aggregation and evidence stages.
+    - Accepted input revision and retriable FAILED/NEEDS_DATA state.
+
+  Actions:             View stage / Retry retriable failure
+
+  Backend API:
+    GET /jobs/{jid}
+    GET /campus-tree-audits/{taid}
+    POST /jobs/{jid}/retry.
+
+  Access:              authorized tenant actor; same frozen input hash.
+
+  On success:          CampusTreeResultScreen; Back returns to CampusDetailScreen.
+
+  On Back:             CampusDetailScreen; job badge preserves same job ID.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusTreeResultScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show stock, quality and any compatible period change.
+
+  What institution sees:
+    - Biomass, stock, map and eligible area.
+    - Actual model name, sensor coverage and observation window.
+    - Carbon pools, uncertainty and quality flags.
+    - Baseline-only result or compatible method-attributed removal/release.
+    - Stock gain/loss and unresolved fate/transfer warnings remain separate;
+      unavailable atmospheric attribution never renders as automatic emission.
+
+  Actions:             View map / History / Return to campus
+
+  Backend API:
+    GET /campus-tree-audits/{taid}
+    GET /artifacts/{artifact_id}/download.
+
+  Access:              OWNER/MANAGER; VIEWER approved linked released snapshot.
+
+  Validation / logic:
+    - Never a CTT issuance screen.
+
+  On success:          CampusDetailScreen or CampusTreeHistoryScreen.
+
+  On Back:             CampusTreeHistoryScreen if origin, otherwise
+                       CampusDetailScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: CampusTreeHistoryScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Inspect accepted assessment revisions and comparisons.
+
+  What institution sees:
+    - Immutable assessment revisions.
+    - Approved comparison candidates and noncomparable-period warnings.
+
+  Actions:             Open assessment / Compare compatible periods
+
+  Backend API:
+    GET /campuses/{cid}/tree-audits.
+
+  Access:              scoped versions; VIEWER released links only.
+
+  Validation / logic:
+    - Ground-only fallback is labeled provisional and not satellite success.
+    - Unknown uncertainty and tiny/mixed-pixel restrictions are visible on
+      result/report.
+
+  On success:          CampusTreeResultScreen or CampusDetailScreen.
+
+  On Back:             CampusDetailScreen.
+
+================================================================================
+
+SECTION 19: v4.0 — ANNUAL AUDIT, FORMS AND RESULT DESIGN
+================================================================================
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionAuditPeriodScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Define the annual audit period and covered campuses.
+
+  What institution sees:
+    - Explicit start/end dates, timezone and reporting label.
+    - Included campuses and operational-control sources.
+    - Coverage and exclusions.
+
+  On submit:           Save period
+
+  Backend API:
+    POST /institutions/{iid}/audits
+    PATCH /institution-audits/{aid}.
+
+  Access:              OWNER/MANAGER DRAFT; no overlapping period family.
+
+  Validation / logic:
+    - Overlapping period rejected; edits carry revision and corrections link old
+      audit.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditListScreen; unsaved form guard.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionAuditOverviewScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show draft category completion, evidence and tree links.
+
+  What institution sees:
+    - Category cards: REPORTED, ZERO_CONFIRMED, NOT_APPLICABLE or MISSING.
+    - Mitigation actions, evidence and campus tree links.
+    - Draft revision, last sync and unsynced status.
+
+  Actions:             Open input / Validate / Calculate / Submit
+
+  Backend API:
+    GET /institution-audits/{aid}
+    GET /institution-audits/{aid}/validation
+    GET /institution-audits/{aid}/tree-links
+    GET /institution-audits/{aid}/revisions; input lists use the category form
+    contracts.
+
+  Access:              OWNER/MANAGER operations; VIEWER released result only.
+
+  Validation / logic:
+    - Save incomplete draft.
+    - Show draft revision, last sync and unsynced state; submitted data read-only.
+
+  On success:          Selected form, validation or calculation progress.
+
+  On Back:             InstitutionAuditListScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionElectricityScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Enter imported electricity and meter evidence.
+
+  What institution sees:
+    - Imported grid electricity in kWh.
+    - Covered dates, meter/source and supporting bills.
+    - Total load, when metered.
+    - Solar self-use/export and main/submeter inclusion.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE /institution-audits/{aid}/emission-inputs
+    GET /emission- factors.
+
+  Calculation:         BSDD 17.3.1 / EM-GRID-01. E_grid = sum(imported_kWh *
+                       approved_kgCO2e_per_kWh / 1000)
+
+  Access:              OWNER/MANAGER DRAFT; category-specific 18.7 variant.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionTransportScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Enter controlled vehicle fuel consumption.
+
+  What institution sees:
+    - Controlled vehicle and fuel type.
+    - Fuel in litres, CNG kilograms or documented standard m3.
+    - Covered period and fuel logs.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE /institution-audits/{aid}/emission-inputs
+    GET /emission- factors.
+
+  Calculation:         BSDD 17.3.2 / EM-TRANSPORT-01. E_transport =
+                       sum(consumed_fuel_qty * compatible_kgCO2e_per_unit / 1000)
+
+  Access:              OWNER/MANAGER DRAFT; category-specific 18.7 variant.
+
+  Validation / logic:
+    - Uncollected commuting remains explicitly excluded.
+    - EV charging belongs to electricity; no duplicate.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionStationaryFuelScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Enter fuel used by kitchens, generators and boilers.
+
+  What institution sees:
+    - Kitchen, generator or boiler purpose.
+    - Fuel quantity, unit and evidence.
+    - Verified net fuel mass for any LPG cylinder conversion.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE /institution-audits/{aid}/emission-inputs
+    GET /emission- factors.
+
+  Calculation:         BSDD 17.3.3 / EM-STATIONARY-01. LPG_kg = cylinder_count *
+                       verified_net_fuel_kg_each E_stationary =
+                       sum(consumed_fuel_qty * compatible_kgCO2e_per_unit / 1000)
+
+  Access:              OWNER/MANAGER DRAFT; category-specific 18.7 variant.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionWasteScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Enter waste quantities and actual treatment routes.
+
+  What institution sees:
+    - Material quantity in tonnes.
+    - Actual treatment route and evidence, including composting/digestion.
+    - Duplicate feedstock or treatment-period warnings.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE /institution-audits/{aid}/emission-inputs
+    GET /emission- factors.
+
+  Calculation:         BSDD 17.3.4 / EM-WASTE-01. E_waste =
+                       sum(actual_treated_tonnes * approved_tCO2e_per_tonne)
+                       Gas-specific onsite treatment uses BSDD 17.3.7 instead of
+                       duplicate factors.
+
+  Access:              OWNER/MANAGER DRAFT; category-specific 18.7 variant.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionWaterScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Enter pumping energy and supported water activity.
+
+  What institution sees:
+    - Pumping electricity in kWh.
+    - Included-in-main-meter or separate consumption choice.
+    - Optional supply/treatment m3 when an approved factor exists.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE /institution-audits/{aid}/emission-inputs
+    GET /emission- factors.
+
+  Calculation:         BSDD 17.3.5–17.3.6 / EM-PUMP-01 and EM-WATER-01. Pump
+                       attribution = pumping_kWh * approved_kgCO2e_per_kWh / 1000
+                       Extra inventory contribution = 0 if included in main meter;
+                       attribution otherwise. Optional supply/treatment = actual_m3
+                       * matching_kgCO2e_per_m3 / 1000
+
+  Access:              OWNER/MANAGER DRAFT; category-specific 18.7 variant.
+
+  Validation / logic:
+    - Breakdown clearly states "Included in electricity total" instead of adding to
+      inventory.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionSolarScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Record generation, self-use and export separately.
+
+  What institution sees:
+    - Generated, self-consumed and exported electricity in kWh.
+    - Meter references and reconciliation.
+    - Eligible displacement, measured losses and renewable-attribute evidence.
+    - Selected project boundary and included incremental project-emission evidence.
+    - Actual electricity and separate avoided-impact information.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE
+    /institution-audits/{aid}/mitigation-inputs
+    GET /carbon-methodologies.
+
+  Calculation:         BSDD 17.4.1 / MIT-SOLAR-01. Avoided self-use =
+                       eligible_displaced_kWh * avoided_grid_factor / 1000 -
+                       included_project_emissions_tCO2e The factor uses kgCO2e/kWh.
+                       - Export has its own separately displayed assessment.
+
+  Access:              OWNER/MANAGER DRAFT; baseline/project/overlap fields in 18.7.
+
+  Validation / logic:
+    - No second solar deduction.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionRainwaterScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Record utilized rainwater and its energy baseline.
+
+  What institution sees:
+    - Rainwater actually utilized, in kL.
+    - Baseline source/energy intensity and project energy.
+    - Project energy source and included pumping/treatment/other component evidence.
+    - Read-only factor units for the selected energy or supplier-process method.
+    - Supporting evidence.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE
+    /institution-audits/{aid}/mitigation-inputs
+    GET /carbon-methodologies.
+
+  Calculation:         BSDD 17.4.2 / MIT-RAIN-01. Baseline energy = utilized_kL *
+                       approved_baseline_kWh_per_kL Avoided impact = matched
+                       baseline emissions - actual project emissions.
+
+  Access:              OWNER/MANAGER DRAFT; baseline/project/overlap fields in 18.7.
+
+  Validation / logic:
+    - Storage capacity alone does not quantify a benefit.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionBiogasScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Record utilized gas and a supported displacement method.
+
+  What institution sees:
+    - Gas actually utilized and its standard unit/composition.
+    - Displaced fuel, losses, evidence and reviewed method.
+    - Heat or electricity route; metered useful output or sourced energy estimate.
+    - For estimates: heating values, baseline/project efficiencies and provenance.
+    - Selected treatment boundary, feedstock, auxiliary energy and required
+      combustion/leakage gas inputs; actual-gas calculation uses BSDD 17.3.7.
+    - Unquantified label when baseline data is absent.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE
+    /institution-audits/{aid}/mitigation-inputs
+    GET /carbon-methodologies.
+
+  Calculation:         BSDD 17.4.3 / MIT-BIOGAS-01. Useful heat = utilized_std_m3 *
+                       sourced_MJ_per_std_m3 * useful_heat_efficiency Displaced fuel
+                       = useful_heat / (fuel_MJ_per_unit * baseline_efficiency)
+                       Avoided impact = baseline energy + included baseline
+                       treatment - matched actual project emissions.
+
+  Access:              OWNER/MANAGER DRAFT; baseline/project/overlap fields in 18.7.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionCompostingScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Record feedstock and actual/baseline treatment.
+
+  What institution sees:
+    - Feedstock quantity in tonnes.
+    - Actual pathway, baseline disposal route and evidence.
+    - Matched mass basis, factor boundaries and additional included
+      energy/transport.
+    - Digestion/composting overlap warning.
+
+  On submit:           Save draft
+
+  Backend API:
+    GET/PUT plus bounded POST/PATCH/DELETE
+    /institution-audits/{aid}/mitigation-inputs
+    GET /carbon-methodologies.
+
+  Calculation:         BSDD 17.4.4 / MIT-COMPOST-01. Baseline = composted_tonnes *
+                       baseline_tCO2e_per_tonne + other_baseline_tCO2e Project =
+                       composted_tonnes * actual_tCO2e_per_tonne +
+                       other_project_tCO2e Avoided impact = baseline - project.
+
+  Access:              OWNER/MANAGER DRAFT; baseline/project/overlap fields in 18.7.
+
+  Validation / logic:
+    - Keep actual composting treatment emissions in the inventory.
+    - Do not count the same feedstock as composting and digestion.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; Save/Discard/Stay. SHARED
+                       RULES — ALL ACTIVITY AND MITIGATION FORMS
+                       --------------------------------------------------------------------------------
+
+    Calculation details:
+    - Display backend formula_key, method version, normalized quantities/units,
+      factor value/unit/source, result terms and missing-data reasons.
+    - Use BSDD 17.3–17.6 as the canonical calculation contract.
+    - Details come from the calculation preview for the matching input revision;
+      saving a form alone does not calculate or finalize the annual result.
+    - Factor values are read-only; applicable-factor ID choice may resolve ambiguity
+      under server validation.
+    - Method-dependent inputs have explicit units.
+    - Unsupported methods show the missing input/exclusion, not a fabricated value.
+    - Validation:
+    - Nonnegative compatible quantities, covered dates within audit, source
+      reference, measured/estimated label/notes, evidence.
+    - Approved factor/source is displayed read-only.
+    - Unknown fields remain blank/unknown; no hardcoded factors.
+    - Allocation children and monthly entries do not add to already-entered annual
+      totals.
+    - Field errors point to the row/source and explain correction plainly.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionEvidenceScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Upload and link protected source documents.
+
+  What institution sees:
+    - Protected document upload and draft replacement.
+    - File size/type limits, byte hash and upload state.
+    - Document date and its linked record.
+
+  Actions:             Upload / Replace draft reference
+
+  Backend API:
+    POST /evidence/uploads
+    POST /evidence/uploads/{eid}/complete
+    GET /evidence/{eid}
+    GET /evidence/{eid}/download.
+
+  Access:              authorized parent; VIEWER no private bills or upload.
+
+  Validation / logic:
+    - Do not expose raw private/public storage URLs.
+
+  On success:          The originating setup, campus, survey or audit screen.
+
+  On Back:             explicit originating setup/campus/survey/audit route.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionCSVImportScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Validate activity rows before an explicit commit.
+
+  What institution sees:
+    - Emission-only template download, upload and paginated normalized-row preview.
+    - Preview/batch ID reopens status; expired/stale preview requires re-preview.
+    - Duplicate, date, unit and permission errors.
+    - Commit action and batch/job/revision state.
+
+  Actions:             Preview / Commit valid batch
+
+  Backend API:
+    GET /institution-audits/{aid}/imports/template
+    POST /institution-audits/{aid}/imports/preview
+    POST /institution-audits/{aid}/imports/commit
+    GET /institution-audits/{aid}/imports/{batch_id}.
+
+  Access:              OWNER/MANAGER DRAFT; emissions-only schema.
+
+  Validation / logic:
+    - Import errors block commit; no silent drops.
+    - Import/job/revision visible; cancellation changes nothing server-side before
+      commit.
+    - Bill OCR is not in initial delivery.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; no mutation before commit.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionTreeAssessmentScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Select this institution's applicable campus assessments.
+
+  What institution sees:
+    - This institution's accepted campus assessments.
+    - Assessment period, baseline and comparability.
+    - Missing campus coverage and unknown-removal warnings.
+
+  Actions:             Save tree links
+
+  Backend API:
+    GET campus tree-audits
+    GET/PUT /institution-audits/{aid}/tree-links.
+
+  Access:              OWNER/MANAGER DRAFT; same-tenant accepted snapshots.
+
+  Validation / logic:
+    - First stock can link as baseline with unknown removal; farmer audit selection
+      is never offered.
+    - Explain absent campus coverage.
+
+  On success:          InstitutionAuditOverviewScreen.
+
+  On Back:             InstitutionAuditOverviewScreen; save guard.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionAuditValidationScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show the issues that prevent covered-data submission.
+
+  What institution sees:
+    - Missing categories, factors or evidence.
+    - Duplicates and period/campus issues.
+    - Explicit exclusions and provisional-preview status.
+
+  Actions:             Correct data / Calculate preview
+
+  Backend API:
+    GET /institution-audits/{aid}/validation
+    POST calculate.
+
+  Access:              OWNER/MANAGER; proposed exclusions decided at review.
+
+  Validation / logic:
+    - Preview can be provisional; submission needs covered-category validity and
+      explicit proposed exclusions for reviewer decision.
+
+  On success:          Input screen or InstitutionCalculationProgressScreen.
+
+  On Back:             InstitutionAuditOverviewScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionCalculationProgressScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Track calculation of a frozen input revision.
+
+  What institution sees:
+    - Frozen input revision and scoped calculation job.
+    - Processing stage and retry action, when allowed.
+
+  Actions:             View stage / Retry if allowed
+
+  Backend API:
+    GET /jobs/{jid}
+    GET /institution-audits/{aid}/result?snapshot_id=...
+
+  Access:              OWNER/MANAGER; exact accepted revision/hash.
+
+  Validation / logic:
+    - Navigation away does not cancel accepted server work.
+
+  On success:          InstitutionCarbonResultScreen; Back returns to audit
+                       overview.
+
+  On Back:             InstitutionAuditOverviewScreen; job continues.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionCarbonResultScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show actual inventory and the separate tree assessment.
+
+  What institution sees:
+    - Actual inventory first.
+    - Tree stock, period removal and release.
+    - Nullable project balance and separate avoided impacts.
+    - Sign convention, quality and review state.
+
+  Actions:             Submit / Open report, trends or Advisor
+
+  Backend API:
+    GET /institution-audits/{aid}/result
+    POST /institution-audits/{aid}/submit
+    POST /institution-audits/{aid}/revisions.
+
+  Access:              OWNER/MANAGER drafts; VIEWER released snapshots; no
+                       self-finalize.
+
+  Validation / logic:
+    - NET_EMITTER/BALANCED_ESTIMATE/REMOVAL_SURPLUS only for supported complete
+      comparison; baseline/missing/noncomparable/unknown uncertainty -> appropriate
+      flags, no neutral claim.
+    - Under-review/FINALIZED refers to project review, not certification.
+    - Submit freezes revision, returns to overview/status.
+    - Reviewer works in operator tooling; corrections produce new draft.
+    - OWNER/MANAGER cannot self-finalize.
+
+  On success:          Audit overview or the selected result feature.
+
+  On Back:             origin Dashboard or InstitutionAuditOverviewScreen.
+
+19.1 LARGE/PAGED CATEGORY AND MEASUREMENT INPUT DETAILS
+-------------------------------------------------------
+  - Category forms load all selected rows through stable paging before full
+    replacement.
+  - More than 200 rows -> row-edit/delete mode using the bounded POST append and
+    PATCH/DELETE emission-input line routes in BSDD 18.10.
+  - Never submit a visible page as replace=true for the whole category.
+  - Deleting a referenced meter/project source shows dependent inputs requiring
+    correction first; no silent dangling mitigation or allocation reference.
+  - Measurement review includes measurement height/protocol, original circumference
+    where used, and supported stem details.
+  - Unsupported multistem/allometry stays NEEDS_DATA; no invisible farmer
+    height/density fallback or combined diameter.
+  - Raw evidence byte hashes map from local queue to server IDs before hashing
+    upload payload.
+  - Keep stable local identity and explicit sync acknowledgment.
+
+================================================================================
+
+SECTION 20: v4.0 — TRENDS, EXPORTS AND GROUNDED ADVISORY
+================================================================================
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionTrendsScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Compare compatible periods and disclosed assumptions.
+
+  What institution sees:
+    - Selected comparable reporting periods.
+    - Scope/category emissions, stock versus removal, mitigation and balance.
+    - Boundary/factor/revision changes and N/A percentages when prior value is zero.
+
+  Actions:             Choose periods / View category trend
+
+  Backend API:
+    GET /institutions/{iid}/analytics with period/campus filters.
+
+  Access:              scoped audited periods; VIEWER released only.
+
+  Validation / logic:
+    - Intensity denominators must be known.
+    - Reuse chart primitives, not farmer credit chart data semantics.
+
+  On success:          The originating Dashboard or result screen.
+
+  On Back:             origin Dashboard/result, fallback Dashboard.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionReportDownloadsScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Generate and download the exact chosen result.
+
+  What institution sees:
+    - PDF, CSV and JSON export jobs.
+    - Chosen revision, coverage, Ready/Retry states and protected download.
+    - Public pinning/anchoring is LATER; no initial report control.
+
+  Actions:             Request PDF, CSV or JSON / Download / Retry export
+
+  Backend API:
+    GET/POST /institution-audits/{aid}/exports
+    GET /artifacts/{artifact_id}/download.
+
+  Access:              OWNER/MANAGER creates; VIEWER existing released exports only.
+
+  Validation / logic:
+    - Export must match chosen result hash; failure does not reset audit.
+    - bytes_available=false/410 RESOURCE_BYTES_PURGED shows unavailable under the
+      disclosed policy; do not retry a deleted link or fabricate an empty download.
+    - Reports have no Pinata/blockchain dependency.
+
+  On success:          The originating Dashboard or result screen.
+
+  On Back:             origin Dashboard/result, fallback result.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionAdvisorScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Ask a question using the selected authorized audit context.
+
+  What institution sees:
+    - Selected institution, audit, revision, date and quality.
+    - Question and optional known constraints.
+    - Request state, answer, ranked actions and source cards.
+    - Assumptions, warnings and missing information.
+
+  Actions:             Ask / Open recommendation, source or history
+
+  Backend API:
+    POST /advisory/ask
+    GET /advisory/{qid}
+    GET /jobs/{jid}.
+
+  Access:              OWNER/MANAGER asks; VIEWER published-history read only.
+
+  Validation / logic:
+    - Default context is the latest FINALIZED audit.
+    - OWNER/MANAGER can choose clearly provisional draft.
+    - Topics/constraints optionally selected; absent budget/site facts unknown.
+    - Request state: idle/sending/retrieving/generating/ready/partial/failed;
+      cancellation stops UI request ownership, preserves accepted job/history if
+      already created.
+    - Typed answer shows summary, factual basis, ranked actions, assumptions/missing
+      data and source cards.
+    - Unsupported scope/provider/evidence yields useful bounded state.
+
+  On success:          RecommendationDetailScreen or advice history/detail.
+
+  On Back:             tab root, or selected result if opened from result.
+
+--------------------------------------------------------------------------------
+
+SCREEN: RecommendationDetailScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Explain an action, its evidence and its prerequisites.
+
+  What institution sees:
+    - Action, category and priority rationale.
+    - Cited sources, context facts and prerequisites.
+    - Constraints, existing-action overlap and any calculated scenario.
+
+  Actions:             Open source / Review scenario assumptions
+
+  Backend API:
+    GET /advisory/{qid}
+    POST /institution-audits/{aid}/scenarios.
+
+  Access:              authorized answer; new scenario OWNER/MANAGER only.
+
+  Validation / logic:
+    - Do not show fictitious savings/payback or confidence percentages.
+
+  On success:          AdvisorySourceScreen or the original answer.
+
+  On Back:             original answer/detail; fallback advice history.
+
+--------------------------------------------------------------------------------
+
+SCREEN: AdvisorySourceScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Show the actual public source supporting a cited claim.
+
+  What institution sees:
+    - Actual source title, publisher, date and version.
+    - Page/section, licensed excerpt and original public link.
+
+  Actions:             Open validated original source
+
+  Backend API:
+    source metadata/citation in GET /advisory/{qid}; validated public URL.
+
+  Access:              same authorized answer; no private evidence URL.
+
+  Validation / logic:
+    - Bill URLs are not sources.
+
+  On success:          The answer or recommendation that opened the source.
+
+  On Back:             original recommendation/answer; fallback advice history.
+
+--------------------------------------------------------------------------------
+
+SCREEN: InstitutionAdviceHistoryScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Read the original advice and its stored context.
+
+  What institution sees:
+    - Paginated original advice and its saved context.
+    - Audit/corpus dates, citations and warnings.
+    - Regenerate with current data action for OWNER/MANAGER only.
+
+  Actions:             Open saved answer -> AdviceDetailScreen
+
+  Backend API:
+    GET /institutions/{iid}/advisory-history.
+
+  Access:              OWNER/MANAGER shared history; VIEWER PUBLISHED final-context.
+
+  Validation / logic:
+    - VIEWER reads existing published FINALIZED-context advice only.
+    - Feedback optional useful/not useful + reason.
+    - No automatic changes to factors.
+    - Scenario preview requires explicit assumptions and calls deterministic
+      backend; results labeled hypothetical, separate from audit.
+    - Publication requires that exact context hash to match the approved final
+      snapshot.
+    - Otherwise regenerate into a NEW record; old advice stays private.
+    - VIEWER cannot feedback, publish, regenerate or run a scenario.
+    - Research fixtures/metrics must be labeled measured vs synthetic; no
+      performance claims until experiments.
+    - Provider failure does not block tree/accounting/report.
+
+  On success:          AdviceDetailScreen or a NEW advisory request.
+
+  On Back:             InstitutionAdvisorScreen.
+
+--------------------------------------------------------------------------------
+
+SCREEN: AdviceDetailScreen
+--------------------------------------------------------------------------------
+
+  Purpose:             Inspect one original answer and its saved evidence/context.
+
+  What institution sees:
+    - Paginated original advice and its saved context.
+    - Audit/corpus dates, citations and warnings.
+    - Regenerate with current data action for OWNER/MANAGER only.
+
+  Actions:             Open answer / Regenerate with current data
+
+  Backend API:
+    GET /advisory/{qid}
+    POST /advisory/{qid}/feedback
+    POST /advisory/{qid}/publish
+    POST /advisory/ask on regenerate.
+
+  Access:              OWNER/MANAGER actions; VIEWER authorized read only.
+
+  Validation / logic:
+    - VIEWER reads existing published FINALIZED-context advice only.
+    - Feedback optional useful/not useful + reason.
+    - No automatic changes to factors.
+    - Scenario preview requires explicit assumptions and calls deterministic
+      backend; results labeled hypothetical, separate from audit.
+    - Publication requires that exact context hash to match the approved final
+      snapshot.
+    - Otherwise regenerate into a NEW record; old advice stays private.
+    - VIEWER cannot feedback, publish, regenerate or run a scenario.
+    - Research fixtures/metrics must be labeled measured vs synthetic; no
+      performance claims until experiments.
+    - Provider failure does not block tree/accounting/report.
+
+  On success:          AdviceDetailScreen or a NEW advisory request.
+
+  On Back:             InstitutionAdviceHistoryScreen or recorded advisor origin.
+
+================================================================================
+
+SECTION 21: v4.0 — STATE, REQUEST OWNERSHIP, OFFLINE AND AUTHORIZATION
+================================================================================
+
+  - Keep farmer auth/land/audit/credits/profile/notifications/UI behavior
+    compatible.
+INSTITUTION MEMORY STATE
+--------------------------
+  Slice                 | Stores
+  ----------------------|--------------------------------------------
+  institutionSlice      | Profiles, memberships, onboarding, current
+                        | institution and capabilities
+  campusSlice           | Campus, boundary, mask, plots, current
+                        | campus and scoped paging
+  campusTreeSlice       | Inventory, survey drafts, measurements,
+                        | evidence sync and tree jobs
+  institutionAuditSlice | Period/revisions, draft inputs, links,
+                        | errors, results and history
+  advisorySlice         | Context, queries, answers, citations,
+                        | rank information and history
+
+PERSISTENCE AND REQUEST RULES
+-----------------------------
+  - temporary loading not persisted.
+  - Domain/server role added to auth state only as confirmed identity.
+  - Namespace storage by UID + account_domain + institution + campus/audit +
+    revision.
+  - Institution memory state is hydrated from the dedicated vault after access
+    checks; persisted profile/context/forms/files/queue never use farmer MMKV.
+  - Never serialize wallet/private/server keys or Firebase ID tokens into
+    Redux/MMKV.
+  - Existing MMKV use alone does not establish encrypted campus drafts; explicit key
+    management/encryption and cleanup must be implemented before sensitive offline
+    use.
+  - Auth bootstrap, every job callback and slice write check request owner, UID,
+    domain, tenant, audit revision and focused context.
+  - Discard obsolete results after switch, logout or revocation.
+  - API helpers reuse transport but not farmer-specific thunks.
+
+OFFLINE MATRIX
+--------------
+  - Local draft forms/capture/evidence require approved downloaded context and
+    encryption.
+  - Context expires after 24 hours; display authorization age.
+  - Fresh access/status is required for sync, submission, jobs, calculations,
+    imports, downloads, reviews and live advice.
+  - Never authorize from cached role.
+  - Expired context locks local views/capture until fresh verification.
+  - Known revocation destroys affected vault/key and clears views; no
+    export-after-revoke.
+  - Reconnect: refresh membership/revision -> create stable identities -> complete
+    evidence READY -> batch measurements/draft writes -> acknowledge revision.
+  - Sync is single-flight per resource.
+  - Use exact UUID/hash and dependency graph, not old queued If-Match values
+    replayed as unconditional writes.
+  - Same-UID tenant switch: Stay / Save encrypted and switch / Discard and switch.
+  - Retain encrypted drafts only with explicit choice; clear old visible caches.
+  - Logout: Sync and log out / Discard and log out / Stay.
+  - Sync failure stays in guard; successful logout destroys institution vault/keys
+    and ordinary caches.
+  - No tokens/private keys in MMKV.
+  - Dedicated AES-256-GCM vault with OS key storage is specified in BSDD 21.2;
+    encryption is not assumed from current MMKV.
+
+21.1 INSTITUTIONCONFLICTSHEET — DRAFT RECOVERY
+--------------------------------------------
+  - Show exact base/local/server revision and field differences after 409.
+  - Reload server discards edits only after confirmation; retain encrypted local
+    copy for comparison while still authorized.
+  - Stay permits review without sync.
+  - Merge selected edits into the current DRAFT; validate then use fresh If-Match
+    and new operation UUID.
+  - Never blindly retry stale replace/category payloads.
+  - Frozen business revision -> Create correction through revisions API; replace
+    route/resource ID with returned NEW ID, then merge permitted edits.
+  - Do not create a new business revision merely to bypass draft concurrency.
+  - Evidence IDs/parent links must be revalidated before merging into a correction.
+  - Accepted server job continues after navigation; callback must match current
+    UID/domain/tenant/resource/revision ownership before writing visible state.
+
+================================================================================
+
+SECTION 22: v4.0 — IMPLEMENTATION BOUNDARIES AND VERIFICATION
+================================================================================
+
+  - Use the institution responsibility map in 22.3 under src/features/institution/.
+  - There is one module contract, not four competing proposed folder layouts.
+  - No wholesale relocation of farmer folders or dependency upgrades.
+  - Shared extraction is limited to UI/measurement utilities; campus screens use
+    their own route types and persistence adapters.
+  - Pin versions only after inspecting installed package/backend compatibility.
+  - External provider secrets remain server.
+  - Backend capability flags drive institutional availability; a stale client flag
+    cannot authorize access.
+  - Advisor flag is independent from institution accounting.
+  - Validate selector/OTP cancellation/returning-session/mismatch routing,
+  - no institution wallet side effects,
+  - five-tab layout on small devices,
+  - shared light/dark/reduced motion/accessibility,
+  - plot/measurement recovery,
+  - baseline/missing-data result copy,
+  - forms/CSV revision conflicts,
+  - protected report access,
+  - Q&A sources/abstention,
+  - tenant switch/stale callbacks/offline sync and permission-driven actions.
+  - Retain existing farmer regression/device checks and recent UI validation rules.
+  - No tests or application implementation are claimed to run in this document edit.
+  - Requirement traceability and delivery gates: SRS Sections 35–36; canonical
+    payload/status/error contracts: BSDD Sections 15–22; transitions: FFC 12–17.
+
+22.1 DOCUMENT-TO-IMPLEMENTATION CHECKPOINTS
+--------------------------------------------
+  - Each screen's Data/API, Access rule, Back behavior and error pattern must be
+    verified against BSDD schemas/lifecycle; sheets reuse the host screen stack.
+  - Implement privacy controls, safe upload validation and encrypted offline work
+    before enabling sensitive institution data; verify on supported devices.
+  - Claims of satellite accuracy, calibrated ranking or standards certification
+    require independent evidence, not UI badges or synthetic demo output.
+  - Release commissioning owners/evidence are SRS 36.4; runtime acceptance cases are
+    SRS 35.1 and Demo 16.1/18.
+  - These requirements do not modify current app code.
+
+22.2 INDEPENDENT DEMO FLAGS AND STAGED INSTITUTION USERS
+--------------------------------------------------------
+  - Use ENABLE_INSTITUTION_DEMO_ACCOUNTS for institution handoff; reuse only the
+    boolean parser. ENABLE_FARMER_DEMO_ACCOUNTS remains independent.
+  - Demo login still uses Farmer/Institution selector, normal phone/OTPDrawer and
+    real Firebase/API state.
+  - Wait for authenticated reset READY before /auth/me.
+  - User's server checkpoint determines starting screen: 5 Setup; 6 Dashboard empty
+    campus; 7 Dashboard ready campus; 8 baseline/forms pending; 9 completed periods.
+  - These are the same screens/components/actions described in Sections 16–21.
+  - Do not preload fake Redux results or return mock satellite/calculation/advice.
+  - Use normal real AR/manual capture, backend jobs, reviewed factors, exports and
+    live advisor.
+  - Institution capture retains real GPS, protocol quality and authorization;
+    the institution flag does not enable farmer GPS assistance.
+  - Account 6 next action Add campus; account 7 Start survey/Create period; account
+    8 baseline/forms pending; 9 Results/Reports/Advisor and persistent new work.
+  - Role permissions are unchanged.
+  - Fresh logins for 5-8 restore stage; 9 is persistent and preserves later work.
+    Ordinary session resume/token refresh does not reset.
+  - Clear obsolete encrypted queue/cache after reset READY; old generation cannot
+    sync into restored state.
+  - Reset failure/config mismatch/checkpoint NOT READY gets actionable Retry/setup
+    error and blocks stale branch entry.
+  - Provider failures remain real error states.
+  - No public VIEWER/second-tenant accounts 10/11; role/isolation QA uses controlled
+    test fixtures.
+  - Stage definitions and existing-versus-missing data are Demo 13/16.3.
+  - Existing frontend integration does not establish deployed checkpoint readiness.
+  - Demo 18 contains provisioning and verification; env is untouched.
+
+================================================================================
+
+22.3 INSTITUTION MODULE AND REUSE CONTRACT
+-----------------------------------------
+Purpose: Give a fresh implementation an exact file layout and integration order.
+All institution feature paths are under src/features/institution/. Existing
+equivalent modules may be retained behind these interfaces; do not relocate farmer
+files. Screen names below match the 49 cards in 17-20 and FFC 12.5 exactly.
+
+MOBILE FILE TREE
+----------------
+src/features/institution/
+|-- navigation/
+|   |-- InstitutionNavigator.tsx         Stack owner: access, tabs, modal branch
+|   |-- InstitutionAccessNavigator.tsx   Setup/status/tenant selector
+|   |-- InstitutionTabNavigator.tsx      Five tab roots, existing floating-tab adapter
+|   |-- InstitutionModalNavigator.tsx    Nonroot screen registration, tabs hidden
+|   |-- types.ts                         Exact params in FFC 12.5/12.6
+|   |-- guards.ts                        Fresh domain/member/snapshot/dirty checks
+|   `-- linkResolver.ts                  Allowed resource-link parsing/authorization
+|-- screens/
+    |-- InstitutionSetupScreen.tsx
+    |-- InstitutionAccessStatusScreen.tsx
+    |-- InstitutionSelectorScreen.tsx
+    |-- InstitutionMembersScreen.tsx
+    |-- InstitutionDashboardScreen.tsx
+    |-- InstitutionAuditListScreen.tsx
+    |-- InstitutionProfileScreen.tsx
+    |-- InstitutionSettingsScreen.tsx
+    |-- InstitutionNotificationsScreen.tsx
+    |-- InstitutionSyncScreen.tsx
+    |-- CampusListScreen.tsx
+    |-- CampusDetailScreen.tsx
+    |-- CampusBoundaryScreen.tsx
+    |-- CampusVegetationScreen.tsx
+    |-- CampusSamplingScreen.tsx
+    |-- CampusTreeInventoryScreen.tsx
+    |-- CampusSurveyStartScreen.tsx
+    |-- CampusPlotNavigationScreen.tsx
+    |-- CampusTreeScanScreen.tsx
+    |-- CampusManualMeasureScreen.tsx
+    |-- CampusTreeMeasurementReviewScreen.tsx
+    |-- CampusSurveyReviewScreen.tsx
+    |-- CampusTreeProgressScreen.tsx
+    |-- CampusTreeResultScreen.tsx
+    |-- CampusTreeHistoryScreen.tsx
+    |-- InstitutionAuditPeriodScreen.tsx
+    |-- InstitutionAuditOverviewScreen.tsx
+    |-- InstitutionElectricityScreen.tsx
+    |-- InstitutionTransportScreen.tsx
+    |-- InstitutionStationaryFuelScreen.tsx
+    |-- InstitutionWasteScreen.tsx
+    |-- InstitutionWaterScreen.tsx
+    |-- InstitutionSolarScreen.tsx
+    |-- InstitutionRainwaterScreen.tsx
+    |-- InstitutionBiogasScreen.tsx
+    |-- InstitutionCompostingScreen.tsx
+    |-- InstitutionEvidenceScreen.tsx
+    |-- InstitutionCSVImportScreen.tsx
+    |-- InstitutionTreeAssessmentScreen.tsx
+    |-- InstitutionAuditValidationScreen.tsx
+    |-- InstitutionCalculationProgressScreen.tsx
+    |-- InstitutionCarbonResultScreen.tsx
+    |-- InstitutionTrendsScreen.tsx
+    |-- InstitutionReportDownloadsScreen.tsx
+    |-- InstitutionAdvisorScreen.tsx
+    |-- RecommendationDetailScreen.tsx
+    |-- AdvisorySourceScreen.tsx
+    |-- InstitutionAdviceHistoryScreen.tsx
+    |-- AdviceDetailScreen.tsx
+|-- components/
+|   |-- InstitutionContextHeader.tsx     Tenant/campus/period/revision/quality labels
+|   |-- ActivityLineEditor.tsx           Method-schema fields, nested rows and units
+|   |-- CategoryDeclaration.tsx          REPORTED/ZERO/NOT_APPLICABLE/MISSING
+|   |-- EvidencePicker.tsx               Parent-bound READY evidence and upload status
+|   |-- CalculationDetails.tsx           Read-only server terms/factors/source versions
+|   |-- InstitutionProfileEditSheet.tsx  Profile edits; owned by Profile
+|   |-- InstitutionInviteSheet.tsx       Create/reissue/share; owned by Members
+|   |-- CampusCreateSheet.tsx            Pending campus creation; owned by CampusList
+|   |-- CampusTreeEventSheet.tsx         Tree/event edits; owned by Inventory
+|   |-- InstitutionScenarioSheet.tsx     Deterministic inputs; owned by Recommendation
+|   |-- InstitutionDeleteAccountSheet.tsx Personal request/status/cancel
+|   `-- InstitutionConflictSheet.tsx     Original/local/server comparison and merge
+|-- contracts/
+|   |-- api.ts                          BSDD public request/response types
+|   |-- schemas.ts                      Runtime validation and shared scalar guards
+|   |-- serializers.ts                  Explicit write allowlists, nested schema checks
+|   `-- local.ts                        Local-only draft, queue, owner and grant types
+|-- services/
+|   |-- repository.ts                   Typed institution calls through existing API
+|   |-- access.ts                       Fresh bootstrap/member/capability ownership
+|   |-- captureAdapter.ts               Shared raw AR/species/GPS -> MeasurementItem
+|   |-- canonicalJson.ts                MCJ1/SCJ1 normalization and native hash bridge
+|   `-- reports.ts                      Private download/byte verification/share cleanup
+|-- hooks/
+|   |-- useInstitutionRequest.ts        Owner checks on every async continuation
+|   `-- useInstitutionDirtyGuard.ts     Save draft / Discard edits / Stay
+|-- state/
+|   |-- institutionSlice.ts             Bootstrap, memberships and selected context
+|   |-- campusSlice.ts                  Campus/geometry/plot paging
+|   |-- campusTreeSlice.ts              Trees/surveys/observations/jobs
+|   |-- institutionAuditSlice.ts        Period/inputs/links/results
+|   `-- advisorySlice.ts                Context/query/history/citations
+|-- storage/
+|   |-- vault.ts                        Native encrypted namespace adapter
+|   |-- drafts.ts                       Original edit base/local capture/form state
+|   `-- context.ts                      Same-boot <=24h exact-survey authorization
+`-- sync/
+    |-- queue.ts                        Durable original operation/key/body/hash
+    |-- coordinator.ts                  Single dependency-chain owner per resource
+    `-- conflicts.ts                    409 pause/compare/explicit merged operation
+
+SHARED FILE INTEGRATION
+------------------------
+Existing file or area                 | Institution addition / reused behavior
+--------------------------------------|--------------------------------------------
+src/services/firebase.ts              | Same Firebase phone session/cancellation
+src/services/authBootstrap.ts         | Flat /auth/me domain and onboarding dispatch
+src/services/loginCoordinator.ts      | One attempt owner; SIGN_IN vs resume handling
+src/services/api.ts                   | Same base URL/token/header/error transport
+src/app/App.tsx                       | Sibling institution branch; FFC 12.6
+src/types/navigation.ts               | Import typed institution branch params
+src/store/index.ts                    | Register five institution memory-only reducers
+src/app/FloatingTabBar.tsx            | Five institution items; farmer four unchanged
+src/common/components + common/theme  | Header/sheet/form/map/chart/loading/insets
+src/services/ar-bridge.ts             | Raw AR measurements, same device integration
+Bundled species/GPS/photo utilities   | Reuse raw output/versions/bytes, no farmer rows
+src/common/utils/chave.ts             | Eligible preview only; final method is BSDD 17
+src/types/env.d.ts + .env.example     | Three public URL keys; BSDD 21.6
+
+Repository contract:
+  - repository.ts exports one named operation per endpoint card in BSDD 18.
+    Use verb + resource names: getCampus, createCampus, patchCampus,
+    getSurvey, appendMeasurements, patchMeasurement, getAudit, patchAudit,
+    appendEmissionLine, patchEmissionLine, deleteEmissionLine, calculateAudit,
+    requestExport, askAdvisory and getJob follow that convention.
+  - Each operation accepts its typed params/body plus RequestOwner and AbortSignal.
+    Send Idempotency-Key and quoted If-Match exactly as the endpoint requires.
+  - Decode Success<T>/Page<T> with contracts/schemas.ts. Keep flat /auth/me parsing
+    and farmer request/response behavior in the existing transport unchanged.
+  - Line append/PATCH decodes LineMutationResult<T>; DELETE decodes
+    DeleteMutationResult. Read the returned parent input_revision before saving
+    the category declaration; retain an unfinished declaration locally.
+  - Resolve named wire types from BSDD 18.6, registry configs from 18.9 and exact
+    activity fields from 18.11. Never serialize a Redux/SQL object as a write DTO.
+  - Decimal inputs remain strings. Convert to display numbers only for charts;
+    never round an outgoing ledger input or calculate an authoritative result in JS.
+
+State and lifecycle:
+  1. Confirm UID/domain; load fresh bootstrap/membership and the authorized parent.
+     Access branch handles pending/no-tenant accounts before tab context exists.
+  2. Increment sessionEpoch on sign-out, domain/tenant change or demo generation
+     replacement. Abort old requests and reject late responses by owner identity.
+  3. Hydrate only that authorized vault namespace, then populate memory reducers.
+     Keep institution state outside the farmer Redux/MMKV persistence whitelist.
+  4. Capture original input_revision with the first edit. Store base/local content
+     separately; refresh never replaces that original base or unsaved edits.
+  5. Persist queue state before network dispatch. Disable competing edits while a
+     mutation is pending; acknowledge server state only after its typed receipt.
+  6. Represent local-only, server-saved, queued, SENDING/unknown, conflict and frozen
+     as distinct states. A local save does not mean uploaded or submitted.
+  7. Retry an unknown outcome using the same saved body/key. A 409 pauses dependents;
+     explicit merge creates a new operation from the newly reviewed server base.
+  8. On Back/tenant change/logout inspect all own namespaces, not only visible tab.
+     useInstitutionDirtyGuard.ts offers Save draft / Discard edits / Stay.
+
+Local records in contracts/local.ts (camelCase; never send as API payload):
+  RequestOwner:
+    firebaseUid TEXT; domain literal INSTITUTION; institutionId UUID|null;
+    resourceId UUID|null; inputRevision INTEGER|null; snapshotId UUID|null;
+    fixtureGeneration INTEGER|null; sessionEpoch INTEGER.
+  DraftRecord:
+    schemaVersion=1; draftId UUID; owner RequestOwner; resourceType TEXT;
+    baseInputRevision INTEGER|null; baseBody JSON|null; localBody JSON;
+    localFileIds UUID[]; updatedAt UTC timestamp; dirty BOOLEAN.
+    resourceType selects a known schema; JSON is not an arbitrary network body.
+  QueueOperation:
+    schemaVersion=1; operationId UUID; owner RequestOwner; method POST|PUT|PATCH|DELETE;
+    path TEXT; canonicalBody TEXT|null; bodySha256 SHA-256; idempotencyKey UUID;
+    ifMatch TEXT|null; baseInputRevision INTEGER|null; dependsOn UUID[]; state PENDING|SENDING|ACKED|CONFLICT|BLOCKED;
+    attempts INTEGER; createdAt UTC timestamp; lastErrorCode TEXT|null;
+    responseReceipt JSON|null; evidenceFileIds UUID[].
+    ACKED stores the validated public response. BLOCKED retains its dependency or
+    access/validation reason; PENDING is the visible queued state.
+    Path must match the allowed institution endpoint catalog, never an arbitrary URL.
+  OfflineGrant:
+    schemaVersion=1; owner RequestOwner; campusId UUID; surveyId UUID;
+    boundaryId UUID; plotSetId UUID; grantedAt UTC timestamp;
+    bootId TEXT; grantedElapsedMs INTEGER; expiresElapsedMs INTEGER;
+    methodId UUID; captureConfig JSON; authorizedTreeIds UUID[].
+    Capture config is the exact verified config from BSDD 18.10; no guessed defaults.
+    Grant validity and revocation behavior are BSDD 21.2, including the 24h maximum.
+
+PRODUCTION RESPONSE AND RECOVERY RULES
+---------------------------------------
+  - Runtime DTOs use the exact BSDD wire fields, including Error.details and
+    MeasurementResource.derivation. Keep a capture's raw write item separately.
+    Display derived DBH as server-derived; never overwrite raw dimensions or the
+    MCJ1-acknowledged body with a display value.
+  - Missing GPS saves a visibly incomplete draft: location/gps_accuracy_m and
+    capture_quality.gps_recorded_at are NULL with GPS_NOT_CAPTURED. Never send a
+    fake point, zero accuracy or current time as a captured GPS observation.
+    Complete GPS/protocol support or an allowed reviewed exclusion before submit.
+  - Decimal validation matches NUMERIC(24,12): <=12 integer and <=12 fractional
+    digits, with the field's sign/range. Keep strings; reject overflow before save.
+  - A PENDING operation can resolve local IDs/READY evidence, then freeze its exact
+    canonical body/key/base before SENDING. Never patch a SENDING record in place.
+  - 409 IDEMPOTENCY_RECEIPT_EXPIRED carries a matched committed tombstone in
+    Error.details. mutation_committed=true plus accepted_revision acknowledges the
+    ORIGINAL request; it does not execute it again. DELETE_ACK/ACK_ONLY mark ACKED
+    without trying to fetch a deleted row. RESOURCE_GET refreshes authorized state;
+    SECRET_REISSUE keeps code delivery blocked until explicit owner reissue.
+  - Advance a dependency only to that original accepted_revision. A later unrelated
+    server revision still needs reconciliation. Missing proof stays BLOCKED; never
+    silently choose a new key or duplicate an uncertain mutation.
+  - Lost invitation create/reissue can replay its encrypted server receipt during
+    TTL. Once expired, refresh Members and explicitly revoke/reissue. No automatic
+    invitation creation, raw token persistence, analytics or app clipboard history.
+  - Close native leases before clearing UI/session context on logout, revocation,
+    tenant switch or demo reset. Invalidate owner callbacks; then destroy the
+    namespaces that the existing logout/revocation rules require.
+  - Logout must persist its local cleanup intent before Firebase signOut. On cold
+    start, finish pending cleanup before allowing offline hydration or a new lease.
+    Retrying cleanup is idempotent; do not offer stale encrypted work as a session.
+  - RAW_CAPTURE_UNAVAILABLE does not reconstruct original MCJ1 from rounded
+    historical fields. Show the retained result read-only and require the documented
+    resurvey/correction path; keep that error distinct from a replay conflict.
+  - EXTERNAL_OUTCOME_UNKNOWN has no Retry action. Show the existing job/reference
+    for operator reconciliation. A new request/key cannot bypass its unresolved job.
+  - Use X-TerraTrust-Demo-Generation on all accounts-5..9 tenant business reads and
+    writes; validate the response generation before state/storage writes. Bootstrap
+    and own session polling recover current context without triggering a reset.
+
+METHOD FORMS AND CAPTURE
+------------------------
+  - ActivityLineEditor reads the approved method's versioned activity_schemas.
+    Support nested objects, arrays, conditional variants, enums, Decimal patterns,
+    dates and exact units. Show server field_errors at their JSON-pointer fields.
+  - Unknown schema/version disables the affected action with an update message.
+    Do not silently omit a required field or substitute a generic free-text field.
+  - Factor/source values are read-only; a proposed factor ID is revalidated server-side.
+  - Paged edits append or PATCH/DELETE one selected line. A <=200-row full replace
+    is permitted only after loading the complete stable category, never one page.
+  - captureAdapter binds raw observations to campus/plot/tree/survey and records
+    source versions/units. No landId alias, auditSlice reuse or farmer height default.
+  - Reopen scan/manual/review using the same captureId and latest saved draft.
+    Already-synced observations use explicit PUT with their original survey base;
+    do not append an edited saved observation as a new batch capture.
+
+ANDROID NATIVE FILES AND VAULT INTERFACE
+----------------------------------------
+Paths relative to android/app/src/main/. Reuse the baseline com.terratrustar
+namespace and existing native modules. These paths name the fresh-build layout;
+an already-existing vault module can satisfy it through the vault.ts adapter.
+
+  java/com/terratrustar/institution/InstitutionVaultModule.kt
+  java/com/terratrustar/institution/InstitutionVaultPackage.kt
+  java/com/terratrustar/institution/InstitutionCrypto.kt
+  java/com/terratrustar/institution/InstitutionFileStore.kt
+  java/com/terratrustar/institution/InstitutionClock.kt
+  java/com/terratrustar/institution/InstitutionVaultLeaseRegistry.kt
+  res/xml/institution_file_paths.xml
+  res/xml/institution_backup_rules.xml
+  res/xml/institution_data_extraction_rules.xml
+
+Existing MainApplication.kt registers InstitutionVaultPackage once using the
+baseline bridge mechanism. Existing AndroidManifest.xml registers FileProvider,
+backup rules and the exact institution resource-link filter in FFC 12.5.
+Merge backup exclusions with the baseline rules; do not replace farmer exclusions.
+
+Native module name: InstitutionVault. All methods return a Promise.
+  openNamespace(namespace, sessionEpoch) -> opaque leaseToken
+  closeLease(leaseToken) -> void
+  writeRecord(namespace, leaseToken, recordKey, canonicalJson) -> void
+  readRecord(namespace, leaseToken, recordKey) -> canonicalJson|null
+  listKeys(namespace, leaseToken, prefix) -> TEXT[]
+  removeRecord(namespace, leaseToken, recordKey) -> void
+  writeFile(namespace, leaseToken, fileId, privateSourceUri, expectedSha256) -> vaultFileId
+  readFile(namespace, leaseToken, vaultFileId) -> private temporary file URI
+  destroyNamespace(namespace) -> void
+  getBootClock() -> {bootId:TEXT,elapsedRealtimeMs:INTEGER}
+  namespace = {firebaseUid:TEXT,domain:INSTITUTION,
+               institutionId:UUID or literal own-registration,
+               fixtureGeneration:INTEGER or NULL}.
+  Use own-registration before tenant creation; NULL generation outside demo.
+
+Native lease rules (InstitutionVaultLeaseRegistry.kt):
+  - vault.ts opens a lease only after fresh access checks or the valid same-boot
+    cached allowance in BSDD 21.2. Native lease is a race guard, not server authority.
+  - Bind the opaque random lease to namespace/sessionEpoch. All record/file work
+    checks it under that namespace's native mutex before key creation, final rename,
+    decrypted temp publication and response completion, including after I/O awaits.
+  - closeLease invalidates that session's pending work before tenant/epoch changes.
+    destroyNamespace invalidates ALL its leases before deleting keys/files/temps.
+    An old write cannot recreate a deleted key or rename staged data afterward.
+  - A new authorized session may explicitly reopen the namespace. Native process
+    restart forgets all leases; it cannot revive old asynchronous work.
+  - Registration-to-tenant migration opens both authorized leases, copies drafts
+    atomically and records a migration journal. Resume it after a crash; delete the
+    source records only after destination hash/receipt checks. Do not mutate SENDING
+    request bodies or rewrite their original pretenant operation scope.
+
+Hash reuse:
+  - canonicalJson.ts serializes MCJ1/SCJ1, UTF-8 encodes those exact bytes and sends
+    their base64 representation to the existing HashModule.sha256(base64Data).
+  - Reuse common/utils/hash.ts for evidence bytes. Do not hash the base64 text or
+    add a second crypto dependency. Unicode uses real UTF-8 encoding, not btoa(text).
+  - InstitutionCrypto.kt uses the same MessageDigest SHA-256 for namespace/file
+    verification internally; keys and decrypted bytes remain private.
+
+Storage and failure rules:
+  - Encode namespace as canonical JSON; SHA-256 becomes its directory/key suffix.
+    Keystore alias terratrust.institution.v1.<namespace-hash>.
+    Store encrypted files under context.noBackupFilesDir/institution/v1/<hash>/.
+    Record prefixes: draft/, queue/, grant/, receipt/, file/; record key is AAD.
+  - AES-256-GCM; fresh cryptographic 96-bit nonce per write, 128-bit tag.
+    Stored envelope: version=1, nonce, ciphertext+tag; no plaintext sensitive header.
+    AAD binds schema version, canonical namespace and record/file key.
+  - Write private staging then atomic rename. A failed write retains the previous
+    committed record. Changed AAD/tag or unavailable key rejects; no plaintext fallback.
+  - Stream large files; verify bytes before committing. readFile creates only an
+    app-private temporary decrypted file and schedules deletion after its consumer.
+    Never put a device path, content URI or vault metadata in an API request.
+  - destroyNamespace invalidates native leases, then removes key/files/private
+    decrypted temps. JS never receives raw keys. Check session owner before/after
+    every bridge call as well as the native commit checks.
+    Bound all key/file names to generated IDs; reject path traversal.
+  - FileProvider authority ${applicationId}.institution.files; exported=false,
+    grantUriPermissions=true. Its paths XML exposes only cache/institution-share/.
+    reports.ts places a verified report there, grants a read-only URI temporarily,
+    and removes files on completion/timeout/startup cleanup.
+  - Exact-survey grant requires matching bootId and elapsed monotonic expiry;
+    wall-clock changes cannot extend access. Reboot requires online reauthorization.
+  - Native/public-env changes require an Android rebuild. iOS has no institution
+    storage fallback in this release.
+
+22.4 REQUIRED VERIFICATION AND DELIVERY BOUNDARY
+------------------------------------------------
+  - Required: shared OTP cancellation/instant verification, immutable domain,
+    tenant/VIEWER guards, five-tab small-screen/accessibility/theme/reduced motion.
+  - Required: pending setup and evidence ownership, campus control/boundary cases,
+    offline expiry/reboot/revocation, exact-survey preparation and partial capture.
+  - Required: row/category/CSV conflicts, uncertain network receipts, correction ID
+    remapping, stale job/generation callback rejection, report bytes/share cleanup.
+  - Required: notification resource reauthorization, invitation paste/reissue,
+    privacy ownership blocker and all-tenant logout guard.
+  - Required: raw-capture MCJ1 round trip after circumference derivation and GPS-
+    missing draft recovery; numeric overflow fails before persistence.
+  - Required: native write/destroy race, interrupted logout cleanup, receipt expiry
+    reconciliation, concurrent finalization and obsolete external task publication.
+  - Farmer regression uses its existing contract/device suite without changing its
+    expected behavior.
+  - This documentation review runs no application tests.
+  - Backend schemas/config/processes are BSDD 15–22; implementation sequence and
+    deployment evidence are SRS 35–36; Firebase/checkpoint setup is Demo 18.
+  - The five documents contain required commissioning steps.
+  - The older external manual setup note is historical assistance, not an additional
+    source of rules.
+
+================================================================================
+END OF DOCUMENT — v4.0
+================================================================================
+
+================================================================================
+SECTION 23: BACKEND INTEGRATION ADDENDUM
+
+Implementation review date: 2026-10-21 (Asia/Kolkata).
+Scope: additive institution backend in this repository. Farmer business services,
+farmer task application, wallets, minting and demo accounts 1-4 are preserved.
+This addendum supersedes conflicting implementation/configuration details below;
+it does not replace the scientific evidence and release gates in SRS 35-36.
+No production database connection, migration, deployment, real provider request,
+or real checkpoint restore was executed for this implementation review.
+The ordered operator handoff is INSTITUTION_MANUAL_WORK.md in the repository root.
+
+- This checkout implements backend APIs. Mobile screens/native encrypted vault,
+  same-boot monotonic offline handling, capture adapters and device verification
+  remain work in the mobile repository under 22.3-22.4.
+- Bootstrap stays flat; send X-TerraTrust-Flow: INSTITUTION. Persisted account-domain
+  mismatches are rejected without role conversion or farmer wallet/KYC provisioning.
+  Capability false means the relevant feature/configuration is unavailable.
+- Send stable Idempotency-Key for every mutation and original quoted If-Match
+  for the documented resource. ReviewRequest.current_revision is a case counter;
+  FinalizeRequest.case_input_revision is distinct from the resource ETag.
+- Use the exact upload_url returned by UploadResource, with authenticated binary
+  PUT, declared Content-Type and stable Idempotency-Key, then call complete. The
+  backend enforces a five-minute lease and scans actual bytes before READY. Never
+  expose a long-lived Supabase signed-upload token as a five-minute capability.
+- Delta measurement responses use the parent survey counter and may contain
+  deleted_at/last_survey_input_revision metadata. Neither field enters raw_input or
+  its MCJ1 hash. Correction copies use new IDs/local UUIDs and counter 1.
+- VIEWER list discovery can return only id/permission/membership_status plus
+  released_snapshot_id=NULL before the first release. Show a waiting-for-release
+  state. After release, profiles/campus fields come from authorized frozen history;
+  private evidence/case links are not available to that viewer.
+- Analytics includes accessible uncalculated drafts with NULL quantities. Exact
+  campus subtotals require explicitly assigned frozen sources. Unallocated campus
+  shares, absent denominators and incompatible trends remain unavailable with flags.
+- Gemini is optional. The free-form question remains private; a bounded server
+  intent phrase and aggregate facts support public-source retrieval/generation.
+  Show source/citation/support state, unknowns, quota errors and PARTIAL abstentions.
+  Do not display unsupported site checks as verified or recommendations as measured
+  savings. Accounting and exports do not require a Gemini key.
+- Operator digitization uses the scoped administrative boundary route in BSDD23.2,
+  followed by approval from another independent reviewer. It is not a mobile grant.
+- Follow INSTITUTION_MANUAL_WORK.md for API integration and real-device acceptance.
+- With institution writes disabled, discovery projects released history for all
+  operational roles. A supplied campus snapshot_id selects only that release.
+  Inventory campuses without tree assessments remain visible with NULL eligible
+  area/latest stock reference. Honor the released response context_id.
+- OpenAPI now declares path/filter/auth/idempotency/precondition inputs. Keep the
+  documented quoted ETag and repeated campus_ids/audit_ids transport unchanged.
+
+23.1 ADDITIONAL API FILTER CLARIFICATIONS — 21 OCTOBER 2026
+BSDD 23.7 is the backend clarification for source commissioning and stock temporal
+compatibility. Tree search matches tag/species case-insensitively; supported sort
+values are stable_tag, -stable_tag, created_at and -created_at (default stable_tag).
+Released mask and plot lists honor boundary_id/plot_set_id within the selected
+released snapshot. Do not substitute draft trees or fabricate comparable stock.
+Published report advice excludes private question/constraints. Deployment steps
+are maintained in INSTITUTION_MANUAL_WORK.md; device acceptance remains required.
+
+FIVE INSTITUTION DEMOS AND MINIMAL DEPLOYMENT INPUTS — 21 OCTOBER 2026
+demo.md is the authoritative replacement for older four-account wording:
+  5 INSTITUTION_FRESH / +919000000005 / 555555 / NEXT_LOGIN
+  6 INSTITUTION_APPROVED / +919000000006 / 666666 / NEXT_LOGIN
+  7 CAMPUS_READY / +919000000007 / 777777 / NEXT_LOGIN
+  8 BIOMASS_COMPLETE_FORMS_PENDING / +919000000008 / 888888 / NEXT_LOGIN
+  9 ACCOUNTING_COMPLETE_TWO_YEARS / +919000000009 / 999999 / PERSISTENT
+Numbers 1-5 in demo.md are institution-local labels; server numbers 5-9 avoid
+colliding with unchanged farmer accounts 1-4. No fake identities/results seeded.
+Normal /auth/me starts the same durable handoff once per verified auth_time;
+token refresh/resume does not reset. While restoring, DEMO_SESSION_NOT_READY
+includes session_id to poll; explicit /demo/sessions remains supported.
+Persistent account 9 returns READY/reset_performed=false without restore dispatch
+or generation advancement; preserve all subsequent 2026 work. Its initial capture
+requires actual completed 2024/2025 history, accepted compatible stocks, supported
+2025 atmospheric attribution, independent reviews and PDF/CSV/JSON for both years.
+Advisor uses normal optional live functionality and is not a capture prerequisite.
+Account 8 is exactly one accepted baseline/survey with annual forms/audits pending.
+Phase 012 extends the registry and marks old completed account-8 sources NOT_READY;
+recapture at the new stage. Phase 013 closes public grants/enables RLS only for
+the explicit institution table allowlist, preserving farmer policies/defaults.
+Restore locks identity -> registry -> tenant, cleans scoped outbox/receipts and
+temporary registration authorization, and cannot restore persistent accounts.
+Fixed protocol/provider/size/retrieval/chunk/concurrency/deadline constants now live
+in app/institution_config.py; old dotenv knobs cannot override them. This replaces
+older instructions to configure those values in .env. Deployment-specific secrets,
+resource paths and real reviewed registry/policy IDs remain environment inputs.
+INSTITUTION_MANUAL_WORK.md maps every remaining variable to its actual source.
+INSTITUTION_MANUAL_WORK.md gives direct existing-Supabase SQL Editor steps.
+scripts.institution.supabase_setup generates offline checksummed migration and
+migration SQL only; it never contacts Supabase and needs no extra login. Never rerun schema.sql on
+an existing farmer database. No database/cloud/deployment action was performed.
+
+SAME DATABASE AND USB LOCAL TESTING CLARIFICATION — 21 OCTOBER 2026
+Ordinary users and demo accounts use the SAME existing Supabase database, tables,
+buckets and real providers. A local/development backend may connect to that existing
+database; do not create a second project, restore database URL, login or password.
+Phase 014 replaces historical role-based trigger exceptions with a transaction-
+local demo_restore_session guard: current RESTORING session, registered Firebase
+institution identity/phone, account 5-8 NEXT_LOGIN, matching generation/latest
+session and exact owned tenant or personal-upload scope. Method/global scientific
+sources and farmer rows never enter that exception. Account 9 stays persistent.
+The restore worker uses the ordinary DATABASE_URL and worker engine. Prior 001-013
+SQL remains checksummed; apply the new forward phase rather than editing ledgers.
+Retired env inputs: INSTITUTION_DEMO_DATABASE_URL, DEPLOYMENT_ENV,
+INSTITUTION_DEMO_DEPLOYMENT_ID, INSTITUTION_COMMISSIONING_UID and BIOMASS_MODEL_BACKEND.
+Use existing ENVIRONMENT; derive deployment identity from Firebase/Supabase project
+identity; pass --actor-firebase-uid to checkpoint CLI; use approved model engine.
+Registered legacy checkpoint source identities remain valid; never rebind a persistent account.
+The sibling mobile client still requires the supplied five-account integration
+patch before testing account 9. It accepts PERSISTENT/reset_performed=false without
+purging the current device account. Frontend files are outside this writable backend
+workspace, so the patch is reviewable in frontend-integration/ and applied manually.
+INSTITUTION_MANUAL_WORK.md gives actual React Native CLI, ADB reverse 8000/8081, local API,
+Linux worker and same-database validation steps. No services or database were changed.
+================================================================================
+
+
+===============================================================================
+2026-10-22 BACKEND CONFIGURATION AND MANUAL SQL CLARIFICATION
+===============================================================================
+- ENABLE_FARMER_DEMO_ACCOUNTS controls only existing farmer accounts 001-004.
+- ENABLE_INSTITUTION_DEMO_ACCOUNTS controls only institution accounts 005-009.
+  Any development combination is valid; both flags must be false in production.
+- Legacy backend ENABLE_DEMO_ACCOUNTS falls back to the farmer setting only;
+  explicit ENABLE_FARMER_DEMO_ACCOUNTS wins. Old backend AUDIT_DEMO_MODE is ignored.
+- API wire keys audit_demo_mode/client_audit_demo_mode retain their existing names;
+  their institution value comes only from ENABLE_INSTITUTION_DEMO_ACCOUNTS.
+- Institution 005-008 reset once per new verified sign-in; 009 remains persistent.
+  All use real services and the ordinary DATABASE_URL, login and tables.
+- The SQL bundle creates institution objects and extends shared public.users:
+  account_domain defaults to FARMER; onboarding/deleted-identity fields are added;
+  domain becomes immutable. Identity CHECK retains non-null phone/Firebase UID for
+  farmers and allows unlinking only deleted institution identities. Farmer IDs,
+  roles/wallets and business tables are preserved. Schema changes acquire locks.
+- Bundle preflight rejects incompatible users columns/types and unexpected table
+  overlap with institution access rules. Checksummed phases 001-014 are unchanged.
+  Apply the entire refreshed institution_migrations.sql manually after backup and
+  restored-copy testing; never rerun schema.sql on the existing production project.
+- Native Windows local command: python scripts/run_local.py; solo workers are a
+  local testing option, not a supported Windows production deployment. Use ADB
+  reverse for ports 8000/8081. Exact steps: INSTITUTION_MANUAL_WORK.md.
+- All automated edits are confined to this backend repository. Mobile integration
+  changes are supplied as a reviewable backend artifact for manual application.
+- No live database/provider/device operation or migration was performed.
+
+
+===============================================================================
+2026-10-22 INSTITUTION ENVIRONMENT SIMPLIFICATION (LATEST USER CLARIFICATION)
+===============================================================================
+- The biomass estimation implementation is unchanged by this revision. Reuse of
+  implementation does not mean using farmer results as institution results.
+- Fixed private storage names are institution-evidence and institution-reports;
+  create them once using generated institution_storage.sql. No bucket env inputs.
+- Upload completion validates actual size, checksum, MIME/extension and parsed
+  file content before immutable promotion. No external file-scanning service is
+  required. Existing format/active-PDF-content restrictions remain.
+- Provider, personal-deletion and public-retrieval behaviour is owned by code in
+  app/institution_rules.py and services/advisory/ingestion_rules.py. No external
+  PROVIDER/RETENTION/RETRIEVAL policy commissioning or UUID inputs are required.
+  Existing historical policy rows/columns are preserved for old accepted plans.
+- New personal-deletion requests store the complete code-rule snapshot and hash;
+  old requests keep their exact accepted rules. No invented legal retention term
+  or provider backup-expiry guarantee is introduced.
+- Optional CAMPUS_SAMPLE_QUALITY_POLICY and SATELLITE_FEATURE_SCHEMA environment
+  pins are removed; the selected method/model already provides those exact values.
+  This removes duplicate configuration; numerical estimation logic is unchanged.
+- New institution assessments train through services.fusion_engine.run_fusion,
+  exactly as farmer assessments do, using their own accepted survey and campus.
+  Model, method and corpus environment UUID pins are removed. Internal IDs and
+  configuration checksums are assigned automatically; operators do not enter them.
+- Reranking weights/version derive from actual ingested text; no reranker env pin
+  or separate retrieval-policy record is required. Public licensed source and
+  corpus activation checks remain. Gemini receives bounded public/aggregate data.
+- DATABASE_SSL_CA_FILE is an optional trust-store override, omitted from the env
+  template. Existing trusted connections need no extra file; TLS stays verified.
+- Both domains use the farmer fusion function's existing NISAR attempt/fallback
+  and shared asset/type/HH/HV configuration. The duplicate NISAR_ENABLED setting
+  is retired. Existing farmer defaults and active .env are unchanged.
+- All edits are confined to backend. No production SQL/provider operation occurred.
+
+
+================================================================================
+22 OCTOBER 2026 AMENDMENT: SHARED BIOMASS AND SIMPLE DATABASE CONFIGURATION
+================================================================================
+This amendment governs new institution calculations and supersedes earlier
+pretrained-model, environment UUID-pin and cloud receipt-key setup requirements.
+Historical accepted jobs/results and optional legacy registry APIs are retained.
+
+1. New institution tree audits call services.fusion_engine.run_fusion with their
+   own accepted species/DBH/height/GPS observations, eligible geometry and dates.
+   The shared GEE pipeline chooses its existing NISAR/Sentinel/GEDI fallbacks,
+   computes Chave training targets, trains smileGradientTreeBoost per run
+   (100 trees, shrinkage 0.05, sampling rate 0.7; at least 9 usable samples), and
+   integrates the same 10 m prediction grid. No farmer result/credit is reused.
+   Tree AGB_kg=0.0673*(rho*DBH_cm^2*height_m)^0.976; training t/ha=(kg/1000)/0.01.
+   Carbon conversion uses the existing farmer constants 0.47 and 3.667. Farmer
+   date defaults and behavior remain unchanged; institution uses accepted dates.
+   Unquantified uncertainty/coverage stays unknown; standing stock is not annual
+   removal. Institution baselines/attribution remain institution-owned.
+2. BIOMASS_MODEL_VERSION, ACTIVE_ACCOUNTING_METHOD_VERSION, ACTIVE_CORPUS_VERSION,
+   INSTITUTION_RECEIPT_KMS_KEY_ID and duplicate NISAR_ENABLED are retired/ignored.
+   API preparation assigns the implementation ID; no trained model upload is
+   needed for new institution jobs. Legacy artifact jobs keep their frozen path.
+3. Forward phase 015 adds institution_calculation_settings (CURRENT config),
+   institution_formula_values (editable numeric coefficient/unit/applicability),
+   and institution_knowledge_sources (private public-guidance PDF locations).
+   These tables are backend-only/RLS protected. Operators edit actual values in
+   Supabase; code formulas remain allowlisted Python. No source PDF, approval
+   ceremony, UUID entry or manual hash is required for administrator-maintained
+   calculation constants. Scientific/site inputs remain explicit; missing values
+   fail clearly and are never guessed. IDs/checksums/history are automatic.
+   Fresh settings start empty; use the generated template and supply actual GPS,
+   dimension, sampling, mask and stratum inputs. Prior real published settings
+   are imported. New selections snapshot current values; accepted jobs, existing
+   drafts and finalized results retain their selected/frozen configuration.
+4. Public searchable licensed PDFs are uploaded under knowledge/ in the fixed
+   private institution-evidence bucket. List enabled/public_licensed source rows,
+   then run scripts.institution.sync_knowledge with a KNOWLEDGE_REVIEW operator.
+   One durable job validates/copies bytes, extracts all configured sources,
+   generates Gemini embeddings, and automatically activates the complete corpus
+   only on successful fenced publication. Parser/source changes block activation.
+   Latest compatible active corpus selection is automatic; edits require reindex.
+   No tenant/private PDF is an eligible free-tier guidance source. No independent
+   review or scientific validation is asserted for administrator-listed sources.
+5. Invitation receipts use project-local AES-256-GCM through cryptography.AESGCM;
+   random 12-byte nonces and AAD bind scope, request hash and expiry. Create one
+   32-byte key using scripts.institution.create_receipt_key; preserve the private
+   .institution-private/receipt.key across deployments and API instances. Key
+   creation refuses overwrite; missing/wrong keys or tampered/expired ciphertext
+   fail closed. No cloud KMS call or custom cipher exists. Older cloud-encrypted
+   receipts require authorized invitation reissue after this change.
+6. StockReconciliation is exactly the six BSDD fields: opening_quantity,
+   purchased_quantity, closing_quantity, other_in_quantity, other_out_quantity,
+   evidence_ids. Unrelated activity fields and recursive self-reference were
+   removed from the compiled dictionary.
+7. Manual steps: INSTITUTION_MANUAL_WORK.md; actual env sources:
+   INSTITUTION_MANUAL_WORK.md; editable configuration:
+   INSTITUTION_MANUAL_WORK.md; algorithm explanation:
+   INSTITUTION_MANUAL_WORK.md. No live database/provider action or frontend
+   modification is performed by preparing these backend files.
+
+FILE-BASED INSTITUTION DEMO CORRECTION — 22 OCTOBER 2026
+This amendment supersedes earlier requirements for dedicated demo control tables,
+mandatory session polling and generation headers. Institution checkpoints are
+private server files (.institution-private/demo/account-N.json), analogous to
+farmer code checkpoints. Every new business operation uses normal institution
+tables, authorization, providers and calculations in the existing database.
+Normal /auth/me restores accounts 5-8 once per verified Firebase auth_time;
+refresh/resume preserve work and account 9 never resets. Like farmer middleware,
+the local API process holds sign-in markers in memory; an ordinary DB transaction
+and identity row lock protect each restore. Use one local demo API process.
+Session endpoints/header remain compatible and optional; stale sign-ins/jobs are
+still rejected. Source files are server-managed and contain real captured states.
+Forward migration 016 replaces demo_restore_session authorization with a trusted
+transaction-local demo_restore_uid guard restricted to exact institution phones
+005-008 and their exclusively owned institutions/personal uploads. It drops only
+the two historical control tables. Export registered sources before running it;
+keep prior applied migration files/checksums. Farmer implementation is unchanged.
+Follow INSTITUTION_MANUAL_WORK.md section 0; no live SQL was executed by this review.

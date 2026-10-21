@@ -1,16 +1,108 @@
 ================================================================================
      TERRATRUST-AR: DEMO ACCOUNTS SPECIFICATION & IMPLEMENTATION GUIDE
-     Aligned to: SRS v3.1 (April 2026) | BSDD v3.1 | FDD v3.1 | Flow v3.1
+     Aligned to: SRS/BSDD/FDD/FFC v4.0 | farmer demo v3.1 retained
 ================================================================================
 Document Type : Addendum — Demo Account System
-Date          : April 2026
-Controlled by : ENABLE_DEMO_ACCOUNTS env variable (backend only)
+Date          : 10 October 2026
+Controlled by : ENABLE_FARMER_DEMO_ACCOUNTS / ENABLE_INSTITUTION_DEMO_ACCOUNTS — independent
 Key principle : ALL demo code lives in dedicated demo/ folders.
-                Zero changes to main project files except 3 minimal additions.
+                Old farmer example: 3 integrations; v4.0 demo integration in Part 15.
 ================================================================================
+
+
+
+
+
+
+
+Documentation review : 19 October 2026
+
+TABLE OF CONTENTS — SEARCH AND LINE NAVIGATION
+--------------------------------------------------------------------------------
+Use Ctrl+G with the line number, or Ctrl+F with the exact heading below.
+Search again (F3) to move from this contents entry to its body heading.
+Farmer chapters retain their existing text; institution chapters follow them.
+
+IMPLEMENTATION QUICK LINKS
+  Line  2185 | 18.2 IMMUTABLE CHECKPOINT MANIFEST FORMAT
+  Line  2426 | 18.6 DEMO FILE LAYOUT AND COMMISSIONING COMMANDS
+
+CHAPTERS AND INSTITUTION DETAILS
+  Line    99 | PART 0 — HOW THE RESET WORKS (READ THIS FIRST)
+  Line   144 | PART 1 — THE 4 DEMO ACCOUNTS
+  Line   185 | PART 2 — CHECKPOINT STATE DEFINITIONS
+  Line   247 | PART 3 — SEPARATE DEMO FOLDER STRUCTURE
+  Line   276 | PART 4 — BACKEND DEMO FOLDER: COMPLETE CODE
+  Line  1011 | PART 5 — MOBILE DEMO FOLDER: COMPLETE CODE
+  Line  1269 | PART 6 — EXACT MINIMAL ADDITIONS TO EXISTING PROJECT FILES
+  Line  1347 | PART 7 — NEW ENVIRONMENT VARIABLES TO ADD
+  Line  1481 | PART 11 — v4.0 SHARED DEMO MODE AND REAL-APP BEHAVIOR
+  Line  1544 | PART 12 — v4.0 FIVE INSTITUTION CHECKPOINT ACCOUNTS
+  Line  1596 | PART 13 — INSTITUTION STAGES AND CHECKPOINT CONTENTS
+    Line  1717 | 13.1 INDEPENDENT FORMULA REFERENCE TEST — NOT AN ACCOUNT SEED
+    Line  1818 | 13.2 NEGATIVE / INCOMPLETE TEST CASES
+  Line  1854 | PART 14 — NEXT-LOGIN RESET AND CHECKPOINT RESTORE
+    Line  1857 | 14.1 SAME LOGIN SEMANTICS AS RESETTABLE FARMER ACCOUNTS
+    Line  1880 | 14.2 SERVER RESET BOUNDARY
+    Line  1912 | 14.3 CONCURRENCY, FILES AND DEVICE STATE
+  Line  1940 | PART 15 — SHARED CONFIGURATION AND REAL SERVICE PREPARATION
+    Line  1943 | 15.1 MODE AND SERVICE CONFIGURATION
+    Line  1960 | 15.2 PREPARE THE FIVE CHECKPOINTS
+    Line  1980 | 15.3 REQUIRED INTEGRATION POINTS
+  Line  1994 | PART 16 — SETUP, VERIFICATION AND SESSION CONTRACTS
+    Line  2023 | 16.1 QA FIXTURES AND REQUIRED METADATA
+    Line  2054 | 16.2 SHARED DEMO SESSION API — DEVELOPMENT ONLY
+    Line  2115 | 16.3 SIMPLE STARTING-STATE SUMMARY
+  Line  2131 | PART 17 — ALIGNMENT AND IMPLEMENTATION STATUS
+  Line  2148 | PART 18 — COMPLETE INSTITUTION DEMO COMMISSIONING
+    Line  2153 | 18.1 FIREBASE AND PUBLIC BUILD SETUP
+    Line  2185 | 18.2 IMMUTABLE CHECKPOINT MANIFEST FORMAT
+    Line  2333 | 18.3 PREPARATION ORDER AND READINESS ASSERTIONS
+    Line  2355 | 18.4 RESTORE TRANSACTION AND FAILURE RECOVERY
+    Line  2402 | 18.5 VERIFICATION RECORD — REQUIRED, NOT A CLAIM OF EXECUTION
+    Line  2426 | 18.6 DEMO FILE LAYOUT AND COMMISSIONING COMMANDS
+    Line  2502 | 18.7 PRODUCTION SEPARATION AND UPDATED CHECKPOINT VALIDATION
+
+END OF CONTENTS
+
+REVISION 4.0 — INSTITUTION EXTENSION
+--------------------------------------------------------------------------------
+Purpose: Add institution accounting and campus tree assessment to the same app.
+
+Institution entry:
+  LoginScreen -> choose Institution -> existing Firebase phone OTP -> server profile.
+
+Reuse:
+  Existing authentication, API transport, theme, UI controls, AR, GPS, species
+  detection and shared satellite/biomass utilities through institution adapters.
+
+Separate records:
+  Institution profiles, memberships, campuses, surveys, annual audits and advice.
+  Farmer KYC, land, wallet, audits, credits and production flow remain unchanged.
+
+Document responsibilities:
+  SRS   : Requirements and acceptance.
+  BSDD  : Database, APIs, formulas, server jobs and environment configuration.
+  FDD   : Screens, components, state and storage.
+  FFC   : Navigation, actions, return paths and complete journeys.
+  Demo  : Test accounts, checkpoint content, setup and reset behavior.
+
+Reading rule:
+  Keep the existing farmer sections as the baseline. Use the institution chapters
+  below for the upgrade; the older upgrade proposal is background material.
+
+Status:
+  Specifications are implementation contracts. Live deployment/device readiness
+  still requires SRS 35–36 evidence. This edit changes documentation only.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PART 0 — HOW THE RESET WORKS (READ THIS FIRST)
+
+Current demo contract: explicit farmer and institution demo flags are independent.
+Parts 11–16 define real-app checkpoints and once-per-new-login resets. Historical
+ENABLE_DEMO_ACCOUNTS/DEMO_MODE/mock examples below are not additional institution
+modes; keep Farmer 1–4 checkpoints and use the corrected session rule in Part 14.
+The old process-wide UID set does not enforce a reset on every fresh login.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 The updated FDD and Frontend Flow documents show that logout in TerraTrust
@@ -33,9 +125,17 @@ Reset flow (accounts 1, 2, 3):
   5. The normal /auth/me route handler then runs and reads the clean
      checkpoint state. The app receives the clean state as the response.
 
-Important: The reset runs ONCE per login session. DemoResetMiddleware tracks
-which UIDs have been reset in the current server process. Subsequent /auth/me
-calls (e.g. from background token refresh) do not re-trigger the reset.
+Intended rule: reset ONCE per new login session, without resetting on repeated
+/auth/me calls during that same login.
+
+IMPLEMENTATION REVIEW — 10 OCTOBER 2026:
+The middleware example below tracks UIDs in _reset_done_this_session for the
+entire server PROCESS. As written, a second login with the same UID does not
+reset until server restart or invalidate_demo_session is called. This differs
+from the next-login rule in the account table. The deployed backend must be
+checked and must distinguish new authenticated sessions to enforce that rule.
+This frontend repository does not contain the deployed middleware and does
+not perform destructive database resets locally.
 
 Account 4 (persistent): The middleware checks the UID and does nothing for it.
 
@@ -145,6 +245,9 @@ WHAT RESETS vs WHAT DOES NOT (accounts 1, 2, 3 on each login):
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PART 3 — SEPARATE DEMO FOLDER STRUCTURE
+
+Historical farmer-only proposed folder layout; these demo folders are not in
+this frontend checkout. Institution future responsibilities are in Part 15.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 All demo code lives in dedicated folders. Main project files are never modified
@@ -171,6 +274,11 @@ MOBILE DEMO FOLDER:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PART 4 — BACKEND DEMO FOLDER: COMPLETE CODE
+
+Historical farmer example only, NOT runnable authoritative institution code.
+Inspect deployed implementation first. Placeholder wallets/UIDs and process-only
+reset tracking are not production-ready. Preserve farmer fixture intent; use
+Parts 11–17 for institution checkpoints, isolation and corrected session policy.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 --------------------------------------------------------------------------------
@@ -185,7 +293,7 @@ FILE: backend/demo/config.py
 
   import os
 
-  ENABLE_DEMO_ACCOUNTS = os.getenv('ENABLE_DEMO_ACCOUNTS', 'false').lower() == 'true'
+  ENABLE_DEMO_ACCOUNTS = os.getenv('ENABLE_FARMER_DEMO_ACCOUNTS', 'false').lower() == 'true'
 
   # -------------------------------------------------------------------------
   # STEP REQUIRED ONCE BEFORE FIRST USE:
@@ -523,7 +631,7 @@ FILE: backend/demo/middleware.py
   class DemoResetMiddleware(BaseHTTPMiddleware):
       """
       Resets resettable demo accounts before GET /api/v1/auth/me responds.
-      Only active when ENABLE_DEMO_ACCOUNTS=true.
+      Only active when ENABLE_FARMER_DEMO_ACCOUNTS=true.
       All other routes pass through with zero overhead added.
       """
 
@@ -598,7 +706,7 @@ FILE: backend/demo/router.py
 
   """
   Demo-only API endpoints mounted at /demo/* prefix.
-  Registered in main.py ONLY when ENABLE_DEMO_ACCOUNTS=true.
+  Registered in main.py ONLY when ENABLE_FARMER_DEMO_ACCOUNTS=true.
   Never reachable in production.
   """
 
@@ -1159,6 +1267,9 @@ FILE: src/demo/README.md
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PART 6 — EXACT MINIMAL ADDITIONS TO EXISTING PROJECT FILES
+
+The three-edit limit applies to the old farmer demo example only. It is not
+the implementation scope for institution demo integration; Part 15 governs that.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 These are the only 3 additions to existing main files. No line is removed
@@ -1173,7 +1284,7 @@ app.include_router(...) calls and after the CORS middleware setup:
 
   # -- Demo account support (development only) ---------------------------
   import os as _os
-  if _os.getenv('ENABLE_DEMO_ACCOUNTS', 'false').lower() == 'true':
+  if _os.getenv('ENABLE_FARMER_DEMO_ACCOUNTS', 'false').lower() == 'true':
       from demo.middleware import DemoResetMiddleware
       from demo.router import router as _demo_router
       app.add_middleware(DemoResetMiddleware)
@@ -1220,12 +1331,12 @@ alongside other env var checks that run when the server starts:
 
   # -- Demo account production safety guard ------------------------------
   if (os.getenv('ENVIRONMENT', 'development') == 'production' and
-          os.getenv('ENABLE_DEMO_ACCOUNTS', 'false').lower() == 'true'):
+          os.getenv('ENABLE_FARMER_DEMO_ACCOUNTS', 'false').lower() == 'true'):
       raise RuntimeError(
           "\n\nCRITICAL SECURITY ERROR:\n"
-          "ENABLE_DEMO_ACCOUNTS=true is set in production.\n"
+          "ENABLE_FARMER_DEMO_ACCOUNTS=true is set in production.\n"
           "Demo phone numbers (+91 9000000001 etc.) are short and guessable.\n"
-          "Set ENABLE_DEMO_ACCOUNTS=false in production .env and redeploy.\n"
+          "Set ENABLE_FARMER_DEMO_ACCOUNTS=false in production .env and redeploy.\n"
       )
   # ----------------------------------------------------------------------
 
@@ -1239,10 +1350,10 @@ PART 7 — NEW ENVIRONMENT VARIABLES TO ADD
 Add to SRS v3.1 Section 20 and BSDD v3.1 Section 1.11:
 
 BACKEND -- backend/.env.development (add):
-  ENABLE_DEMO_ACCOUNTS=true
+  ENABLE_FARMER_DEMO_ACCOUNTS=true
 
 BACKEND -- backend/.env.production (add):
-  ENABLE_DEMO_ACCOUNTS=false   <- MUST always be false in production
+  ENABLE_FARMER_DEMO_ACCOUNTS=false   <- MUST always be false in production
 
 MOBILE -- .env.development (add):
   DEMO_MODE=false
@@ -1261,8 +1372,8 @@ PART 8 -- ONE-TIME SETUP CHECKLIST
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   [ ] Step 1
-      Add ENABLE_DEMO_ACCOUNTS=true  to backend/.env.development
-      Add ENABLE_DEMO_ACCOUNTS=false to backend/.env.production
+      Add ENABLE_FARMER_DEMO_ACCOUNTS=true  to backend/.env.development
+      Add ENABLE_FARMER_DEMO_ACCOUNTS=false to backend/.env.production
 
   [ ] Step 2
       Firebase Console > Authentication > Sign-in method > Phone
@@ -1336,8 +1447,8 @@ EXISTING FILES WITH MINIMAL ADDITIONS:
   src/store/index.ts       3 + 1 lines added (imports + configureStore option)
 
 ENV FILES (add new keys):
-  backend/.env.development     ENABLE_DEMO_ACCOUNTS=true
-  backend/.env.production      ENABLE_DEMO_ACCOUNTS=false
+  backend/.env.development     ENABLE_FARMER_DEMO_ACCOUNTS=true
+  backend/.env.production      ENABLE_FARMER_DEMO_ACCOUNTS=false
   .env.development             DEMO_MODE, DEMO_START_SCREEN, USE_DEMO_API_RESPONSES,
                                MOCK_AR_MEASUREMENTS (all false by default)
   .env.production              Same 3 flags, all false
@@ -1354,7 +1465,7 @@ PART 10 -- SECURITY RULES
    If the flag were on in production, an attacker could log in as account 3
    and run fraudulent audits using the pre-verified land parcel.
 
-3. DemoResetMiddleware is only imported when ENABLE_DEMO_ACCOUNTS=true.
+3. DemoResetMiddleware is only imported when ENABLE_FARMER_DEMO_ACCOUNTS=true.
    In all production deployments the flag is false, the middleware is never
    imported, and zero overhead is added to any request.
 
@@ -1363,5 +1474,1330 @@ PART 10 -- SECURITY RULES
    so the bypass code is unreachable in release APK/AAB builds.
 
 ================================================================================
-END OF DOCUMENT
+END OF PRESERVED FARMER BASELINE
 ================================================================================
+
+================================================================================
+PART 11 — v4.0 SHARED DEMO MODE AND REAL-APP BEHAVIOR
+================================================================================
+
+IMPLEMENTATION BOUNDARY
+------------------------
+  - This is a documentation update.
+  - It does not create Firebase accounts, seed databases, change code/.env or assert
+    that institution features already run.
+  - Existing Farmer 1–4 numbers, OTPs, stages and account-4 persistence remain.
+  - Institution demos use the same app, selector, Firebase OTP and real backend.
+  - A demo account differs by its saved starting stage and next-login reset.
+
+TWO INDEPENDENT CONTROLS — FARMER AND INSTITUTION
+------------------------------------
+  - Use ENABLE_FARMER_DEMO_ACCOUNTS for farmers and
+    ENABLE_INSTITUTION_DEMO_ACCOUNTS for institutions; both default false.
+  - Mobile institution handoff uses its own flag; reuse only parseBooleanEnv.
+  - Backend reads the corresponding domain flag from trusted server configuration.
+  - A client flag, request header or supplied phone number cannot enable a server
+    reset.
+  - True + registered demo Firebase UID + approved development/test deployment
+    enables checkpoint handling.
+  - Institution-flow capability is still required.
+  - False disables institution demo resets/checkpoint access; locally configured demo UIDs
+    receive DEMO_MODE_DISABLED and are not silently provisioned as live accounts.
+  - Mobile/server effective values must match; mismatch -> DEMO_CONFIG_MISMATCH
+    before reset or institution-demo routing.
+  - Regular users keep normal behavior.
+  - The institution flag enables checkpoint handling, not a simulator.
+  - Registry maps each UID to its checkpoint; the login selector selects domain, not
+    starting stage.
+  - Historical ENABLE_DEMO_ACCOUNTS is a farmer-only backend fallback; explicit
+    ENABLE_FARMER_DEMO_ACCOUNTS wins. Never derive it from the institution flag.
+  - Historical DEMO_MODE/auth-bypass/mock examples are not this demo contract.
+  - Existing AUDIT_SKIP_SPECIES_DETECTION remains a separate farmer option; the
+    institution flag does not disable species services or real AR.
+
+REAL APPLICATION SERVICES
+--------------------------
+  - Normal screens/navigation, Firebase login, /auth/me, permissions and API client.
+  - Normal campus/geometry/plot/survey services, native AR/manual measurement,
+    uploads, satellite jobs, approved models/factors, accounting and review.
+  - Normal report generation/downloads and live grounded advisor; old history is
+    actual saved output from those services, with original versions/hashes.
+  - ENABLE_INSTITUTION_DEMO_ACCOUNTS does not return canned success, fake satellite pixels, hardcoded
+    accounting totals, fabricated PDFs or canned provider answers.
+  - Existing farmer GPS assistance stays farmer-only. Institution demos use actual
+    capture/GPS and their approved measurement protocol.
+  - Assisted location is not field-presence proof or a production training label.
+  - Real errors, missing sensors/factors, review requirements and provider failure
+    remain visible; a demo flag does not grant reviewer/owner authority.
+
+INSPECTED PROJECT FACTS
+------------------------
+  - The existing farmer utility supplies zone-centre demo GPS when enabled;
+    farmer audit screens reuse it while retaining the API/native pipeline.
+  - authBootstrap.ts reads /auth/me; api.ts posts audit samples to the backend.
+  - Earlier handoffs record Android integration; no deployed backend/checkpoint or
+    device acceptance is verified by this documentation review.
+  - Historical src/demo and backend/demo examples are not present source modules;
+    deployed reset frequency cannot be verified from this frontend workspace.
+  - No private .env values were read or changed by this update.
+
+================================================================================
+PART 12 — v4.0 FIVE INSTITUTION CHECKPOINT ACCOUNTS
+================================================================================
+
+WHY FIVE
+----------
+  - Match the farmer progression: fresh identity -> approved setup -> ready site ->
+    biomass complete with forms pending -> persistent two-year history.
+  - These are workflow checkpoints, not permission roles.
+  - VIEWER/MANAGER and second-tenant isolation use separately provisioned QA
+    fixtures; they are not extra public stage-demo accounts 10/11.
+
+ACCOUNT MATRIX — FIREBASE TEST NUMBERS TO CONFIGURE
+---------------------------------------------------
+  No. | Login flow  | Phone          | OTP    | Starting checkpoint
+  ----|-------------|----------------|--------|---------------------------
+   1  | Farmer      | +91 9000000001 | 111111 | Existing FRESH
+   2  | Farmer      | +91 9000000002 | 222222 | Existing KYC_DONE
+   3  | Farmer      | +91 9000000003 | 333333 | Existing LAND_VERIFIED
+   4  | Farmer      | +91 9000000004 | 444444 | Existing persistent
+   5  | Institution | +91 9000000005 | 555555 | INSTITUTION_FRESH
+   6  | Institution | +91 9000000006 | 666666 | INSTITUTION_APPROVED
+   7  | Institution | +91 9000000007 | 777777 | CAMPUS_READY
+   8  | Institution | +91 9000000008 | 888888 | BIOMASS_COMPLETE_FORMS_PENDING
+   9  | Institution | +91 9000000009 | 999999 | ACCOUNTING_COMPLETE_TWO_YEARS
+
+Authentication and stage selection:
+  - Configure the proposed institution numbers/OTPs in Firebase test-number
+    settings; resolve actual UIDs into the backend demo registry after verification.
+  - Select Institution for 5–9. Same phone/OTPDrawer, no Firebase bypass.
+  - All approved institution stage accounts are OWNER of independent dedicated
+    development tenants.
+  - Account 5 starts without a tenant or active membership.
+  - Registry stores account number, Firebase UID, domain, checkpoint, owned demo
+    tenant IDs, reset_policy NEXT_LOGIN (5-8) or PERSISTENT (9), and manifest version.
+  - No hardcoded fake UID.
+  - Wrong selector -> ACCOUNT_DOMAIN_MISMATCH before reset; no domain conversion.
+  - Member demo accounts do not receive platform reviewer grants.
+
+RESET POLICY
+--------------
+  - A fresh login to institution account 5,6,7,8 resets ONLY that account to its
+    checkpoint. Account 9 is PERSISTENT and never automatically resets.
+  - New records/edits made during that login work normally.
+  - Logging out and back in removes that session's additions and restores the
+    starting checkpoint.
+  - Logout clears local state; server restore runs BEFORE the next profile load.
+  - Resume/reopen while still signed in, token refresh and repeated /auth/me do not
+    reset.
+  - Lost-response retry restores once, not twice.
+  - Farmer 1–3 keep next-login resets; Farmer 4 remains persistent.
+  - Part 14 defines the session identity/generation implementation contract.
+
+================================================================================
+PART 13 — INSTITUTION STAGES AND CHECKPOINT CONTENTS
+================================================================================
+
+CHECKPOINT PREPARATION — STANDARD BACKEND RECORDS
+-------------------------------------------------
+  - Seed/reference actual institution rows with UUIDs, evidence, versions and
+    permissions; mobile loads them through normal APIs after reset.
+  - Prepare approved stages through actual development registration/control,
+    boundary/mask/plot review and job workflows; capture validated checkpoints.
+  - Names shown here are stage labels.
+  - Seed manifest supplies the approved site, authorized development evidence, real
+    usable geometry and source records.
+  - Sample activity inputs may be labeled REPORTED/ESTIMATED demonstration inputs;
+    real measurements/evidence retain LIVE provenance.
+  - Preserve their actual origin.
+  - Reports identify development/demo use.
+  - Example numbers in 13.1 are independent formula tests; they are not the seeded
+    values of the completed account.
+  - A missing valid checkpoint blocks demo setup; do not substitute fake approvals,
+    unusable coordinates, invented measured data or made-up completed results.
+
+Account 5 / INSTITUTION_FRESH
+-----------------------------
+
+  Login flow:        INSTITUTION
+  Onboarding state:  REQUIRED
+  Institution state: Not created
+  Membership:        No active membership
+  Reset:             Restore only this account on its next fresh SIGN_IN.
+
+Available at login:
+  - Verified Firebase identity; INSTITUTION domain; restricted INSTITUTION_ADMIN.
+  - institution_onboarding_status=REQUIRED; no active membership.
+Not present at login:
+  - Institution registration/profile/evidence, campus, survey, annual audit,
+    activity inputs, results, exports or advisor history.
+Opens at: InstitutionSetupScreen.
+Use it for: Full setup/save/submit/independent-review journey from the beginning.
+Next login: Remove owned development registration/work; return to fresh setup.
+
+Account 6 / INSTITUTION_APPROVED
+--------------------------------
+
+  Login flow:        INSTITUTION
+  Onboarding state:  COMPLETE
+  Institution state: APPROVED
+  Membership:        OWNER / ACTIVE
+  Reset:             Restore only this account on its next fresh SIGN_IN.
+
+Available at login:
+  - Institution profile, authority evidence and completed real development review.
+  - APPROVED institution, ACTIVE OWNER; onboarding COMPLETE.
+Not present at login:
+  - Campus/boundary/mask/plots, tree measurements, annual audit, input lines,
+    result/report or advisor history.
+Opens at: InstitutionDashboardScreen; next task Add campus.
+Use it for: Campus creation/control/boundary -> real vegetation/plots -> survey.
+Next login: Restore approved institution only; remove added campus/audit work.
+
+Account 7 / CAMPUS_READY
+------------------------
+
+  Login flow:        INSTITUTION
+  Onboarding state:  COMPLETE
+  Institution state: APPROVED
+  Membership:        OWNER / ACTIVE
+  Reset:             Restore only this account on its next fresh SIGN_IN.
+
+Available at login:
+  - Own APPROVED institution, authority evidence and ACTIVE OWNER.
+  - One approved campus/control/boundary and reviewed vegetation mask/plot set,
+    produced by normal services, with applicable real method/model configuration.
+  - Stable tree tags/site metadata needed for capture; no prefilled measurements.
+Not present at login:
+  - Submitted/accepted tree survey, biomass assessment or baseline stock result.
+  - Annual accounting period/draft, emission/mitigation inputs, final report or advice.
+Opens at: InstitutionDashboardScreen; next task Start campus survey.
+Use it for:
+  - Real AR/manual capture -> upload/review -> satellite stock baseline.
+  - Create accounting period -> activity/evidence/CSV -> preview -> review/report.
+  - First stock keeps period removal/net unavailable; no fabricated yearly gain.
+Next login: Restore ready campus/plots/tags; remove measurements and new audit work.
+
+Account 8 / BIOMASS_COMPLETE_FORMS_PENDING
+-------------------------------------------
+  Phone/OTP: +919000000008 / 888888. Domain INSTITUTION; OWNER/ACTIVE.
+  Institution/campus/control/boundary/mask/plots are actually approved.
+  One accepted field survey and one calculated, independently accepted baseline
+  stock assessment with actual supporting evidence. Annual removal/release NULL.
+  No annual audit, emission/mitigation input rows, annual exports or advice yet.
+  Remaining: all five operational categories, applicable four mitigation forms,
+  calculation, independent review/finalization and reports through normal services.
+  Next fresh login restores this baseline checkpoint and removes added work.
+
+Account 9 / ACCOUNTING_COMPLETE_TWO_YEARS
+-----------------------------------------
+  Phone/OTP: +919000000009 / 999999. Domain INSTITUTION; OWNER/ACTIVE.
+  PERSISTENT: never automatically reset, restored or rebound after commissioning.
+  2024: actual first accepted stock baseline, full emission/applicable mitigation
+  records, independently finalized calendar-year audit, final PDF/CSV/JSON exports.
+  2025: actual second comparable accepted stock linked to 2024, supported signed
+  change/removal/release, complete inputs/evidence, independent finalized audit
+  and final PDF/CSV/JSON exports. No unresolved annual draft at initial capture.
+  Baseline-only 2024 removal remains unknown; no invented positive removals.
+  Test history/comparisons/classification/dashboard/downloads, optional real
+  advisor and new 2026 work. Preserve both historical years and all later edits.
+  Advisor publication is optional; no preloaded generated answer is required.
+  Missing actual scientific support or a required final report keeps NOT_READY.
+
+COMMON RULES
+--------------
+  - No institution wallet/KYC/CTT mint or farmer audit-result reuse at any stage.
+  - One campus in the initial ready/complete checkpoints; multi-campus is tested by
+    adding another through the normal flow, not implied by the starter seed.
+  - Real provider/imagery/quality/source requirements apply to new work.
+  - Historical completed records remain readable during provider outages; new
+    requests show real failure/unavailability instead of fabricated success.
+  - Before presentation, prepare and validate account 9's actual reports and any optional published citations.
+  - Incomplete preparation means account 9 is NOT READY, not an illustrative answer.
+
+13.1 INDEPENDENT FORMULA REFERENCE TEST — NOT AN ACCOUNT SEED
+-----------------------------------------------------------
+
+  - Unit/reference-test inputs only; never seed these totals into account 9.
+  - Account 9 uses actual completed backend snapshots and approved source factors.
+  - (independent synthetic formula case) Period: 1 January–31 December 2025,
+    Asia/Kolkata.
+  - Stock start/end assessments use matching method/area/pools on 31 December 2024
+    and 31 December 2025.
+  - AGB start 1000 t, end 1100 t, above-ground woody pool only, carbon_fraction 0.47
+    (illustrative fixture selection, production source approval still required).
+    stock_start_tC=470;
+  - stock_end_tC=517;
+  - stock_end_tCO2=1895.6666666667.
+    eligible_period_removal_tCO2=(517-470)*(44/12)=172.3333333333;
+  - release=0 under explicit SYNTHETIC attribution policy: simulated growth is
+    atmospheric, with no tree loss/import/pool transfer during this case.
+  - Store dummy attribution policy/source IDs; this is an arithmetic assumption, not
+    production evidence of atmospheric attribution.
+ILLUSTRATIVE ACTIVITY LINES — SYNTHETIC FACTORS ONLY
+--------------------------------------------------
+All lines below use reference_test_factor=true. They are not production factor values.
+
+  Activity           | Quantity    | Dummy factor        | Included tCO2e
+  -------------------|-------------|---------------------|---------------
+  Imported grid      | 200000 kWh  | 0.5 kgCO2e/kWh      | 100
+  Transport diesel   | 10000 L     | 2.5 kgCO2e/L        | 25
+  Stationary LPG     | 2000 kg     | 3.0 kgCO2e/kg       | 6
+  Actual waste       | 10 t        | 0.2 tCO2e/t         | 2
+  Pumping in grid    | 10000 kWh   | Included above      | 0 extra
+
+  Electricity/fuel lines: quantity * kgCO2e-per-unit / 1000.
+  Waste line: quantity_tonnes * tCO2e_per_tonne.
+  Pumping attribution: 5 tCO2e is already inside the 100 t grid result.
+
+  - Actual covered inventory = 133 tCO2e (illustrative partial scope coverage).
+  - Solar generated 60000 kWh = self-use 50000 + export 10000; illustrative self-use
+    avoided impact = 25 tCO2e, displayed separately.
+  - MIT-SOLAR-01 fixture: eligible displaced self-use=50000 kWh, dummy avoided-grid
+    EF=0.5 kgCO2e/kWh; project self-use term=0 tCO2e under an explicit synthetic
+    operational-only boundary with no auxiliary emissions.
+  - This fixture excludes lifecycle manufacture and export impact; the dummy avoided
+    factor is not approval to reuse an inventory factor in production.
+  - Grid inventory already uses imports.
+  - Assessed project balance = 172.3333333333 - 133 - 0 = 39.3333333333 tCO2e; never
+    add separate 25 t solar benefit again.
+  - Stock is NOT 1895.67 annual removal.
+  - If an aligned hypothetical baseline is 158 t, scenario balance is likewise
+    39.33.
+  - Fixture epsilon/uncertainty policy is explicit SYNTHETIC; any surplus label
+    includes "Demonstration estimate" and partial coverage.
+  - No certified-neutral claim.
+  - Production seed MUST NOT publish these dummy values into approved factor
+    registry.
+  - Fixture computation uses unrounded decimal lines and display-only rounding.
+
+INDEPENDENT MITIGATION FORMULA EXAMPLES — SYNTHETIC ONLY
+--------------------------------------------------------
+Purpose:
+  - These are separate arithmetic cases, not runtime demo-account inventory.
+  - Do not add them to the independent 133 tCO2e reference total.
+  - All parameters below are fictional fixture inputs, not production constants.
+  - Do not combine the four benefits without actual overlap/baseline review.
+
+Solar / BSDD 17.4.1 / MIT-SOLAR-01:
+  Eligible self-use = 50000 kWh; dummy EF = 0.5 kgCO2e/kWh.
+  Included operational project term = 0 tCO2e, as scoped above.
+  A_solar_self = 50000 * 0.5 /1000 - 0 = 25 tCO2e.
+  Export impact is separate and excluded from this value.
+
+Rainwater / BSDD 17.4.2 / MIT-RAIN-01:
+  Utilized rainwater = 1000 kL; dummy baseline intensity = 2 kWh/kL.
+  Project pumping/treatment = 500 kWh; same dummy EF = 0.5 kgCO2e/kWh.
+  Energy-only boundary; other processes explicitly excluded.
+  baseline_kWh = 1000 * 2 = 2000 kWh.
+  A_rainwater = (2000 - 500) * 0.5 /1000 = 0.75 tCO2e.
+
+Biogas / BSDD 17.4.3 / MIT-BIOGAS-01:
+  Used gas = 1000 standard m3; dummy LHV = 20 MJ/standard m3.
+  Dummy useful-heat efficiency = 0.50.
+  Displaced LPG: dummy LHV = 46 MJ/kg; baseline efficiency = 0.80.
+  Dummy displaced-fuel EF = 3 kgCO2e/kg.
+  Quantified synthetic matched project emissions = 0.10 tCO2e,
+    including required combustion/leakage and auxiliary-energy components.
+  Energy-only boundary; treatment benefit explicitly excluded.
+  useful_heat_MJ = 1000 * 20 * 0.50 = 10000 MJ.
+  displaced_LPG_kg = 10000 / (46 * 0.80) = 271.7391304348 kg.
+  baseline_energy = 271.7391304348 * 3 /1000 = 0.8152173913 tCO2e.
+  A_biogas = 0.8152173913 - 0.10 = 0.7152173913 tCO2e.
+  No assumed treatment gain or universal benefit per m3.
+
+Composting / BSDD 17.4.4 / MIT-COMPOST-01:
+  Actual feedstock = 10 t; same mass basis for both paths.
+  Dummy baseline disposal factor = 0.4 tCO2e/t.
+  Dummy actual compost factor = 0.1 tCO2e/t.
+  Other process terms explicitly outside this treatment-only fixture boundary.
+  baseline = 10 * 0.4 = 4 tCO2e.
+  project = 10 * 0.1 = 1 tCO2e.
+  A_composting = 4 - 1 = 3 tCO2e.
+  The 1 t actual treatment emission belongs in its own case's waste inventory.
+
+13.2 NEGATIVE / INCOMPLETE TEST CASES
+----------------------------------
+Variant A — First stock only:
+  - removal=NULL; balance=NULL; quality=BASELINE_ONLY. Never substitute zero.
+
+Variant B — Comparable decrease:
+  - Keep negative stock change and any supported atmospheric release separately.
+  - Transfer to deadwood/removed wood with unresolved fate -> release NULL and
+    unavailable balance; never automatically assign immediate atmospheric loss.
+  - Do not hide tree loss by clamping the full result to zero.
+
+Variant C — Gap or changed assessment basis:
+  - Multi-year gap, mask or model change -> NONCOMPARABLE or disclosed period change.
+  - Do not call it the current year's observed removal.
+
+Variant D — Missing factor or wrong unit:
+  - Block the covered line. Do not manufacture a complete total.
+
+Variant E — Pumping attribution:
+  - Included/excluded main-meter cases must contribute once only.
+
+Variant F — Overlapping activity:
+  - Same compost/digestion feedstock or monthly-plus-annual bill -> overlap error.
+
+Variant G — Inconclusive uncertainty:
+  - Interval spans zero -> INCONCLUSIVE. Do not show a definitive net label.
+
+Variant H — Unsupported tree/satellite input:
+  - Missing imagery or unsupported species -> NEEDS_DATA.
+  - Ground-only estimate is provisional; it is not satellite success.
+
+Variant I — Optional service failure:
+  - Provider/report failure leaves accepted inventory unchanged.
+  - Retry the failed service independently.
+
+================================================================================
+PART 14 — NEXT-LOGIN RESET AND CHECKPOINT RESTORE
+================================================================================
+
+14.1 SAME LOGIN SEMANTICS AS RESETTABLE FARMER ACCOUNTS
+-------------------------------------------------------
+  Log out -> normal Firebase signOut/local cleanup
+    ↓ Log in again -> shared phone/OTP verification (including instant verification)
+  One login coordinator -> fresh login_session_id for this verified attempt
+    ↓ POST /api/v1/demo/sessions -> restore registered checkpoint once
+  READY -> clear old account queues/cache -> GET /api/v1/auth/me
+    ↓ Normal domain/access routing -> real app at saved checkpoint
+
+  - New SIGN_IN verification creates a new session marker; retries reuse it.
+  - Same-UID REAUTHENTICATE for privacy/ownership preserves the current session and
+    NEVER resets data.
+  - Do not derive fresh login solely from UID/auth_time.
+  - Restored Firebase session/token refresh bypasses NEW reset creation and loads
+    current work.
+  - Repeated profile GET cannot wipe an in-progress demo.
+  - Root auth observer and LoginScreen share the reset coordinator; neither can
+    fetch profile/run wallet or sync effects before the handoff is READY.
+  - Existing process-wide _reset_done_this_session example is insufficient.
+  - Real shared reset integration must distinguish each new authenticated login.
+  - Existing farmer stage/persistence rules stay unchanged; do not emulate a reset
+    only by injecting Redux values or pretending the server was restored.
+
+14.2 SERVER RESET BOUNDARY
+---------------------------
+  - Require server ENABLE_INSTITUTION_DEMO_ACCOUNTS=true, development/test deployment and verified
+    Firebase UID in the controlled registry; authorize before any deletion.
+  - Restore only registered owned development checkpoint tenants.
+  - Never reset production tenants, unrelated accounts, global registries or
+    Firebase identity.
+  - Account 5 initially owns no tenant.
+  - Normal registration/create services enroll its new development draft/tenant in
+    the reset manifest transactionally after verifying its registry UID.
+  - This also covers later demo-created tenants/work; a request body cannot enroll
+    arbitrary existing resources as reset targets.
+  - Development records may contain real measured/provider-derived LIVE data; LIVE
+    origin does not mean production ownership.
+  - Check environment/tenant purpose, source consent and exact owned manifest
+    instead of rejecting all real data.
+  - A copied historical source stays unchanged; reset only its authorized private
+    development copy.
+  - Preserve source hashes/version/approval lineage.
+  - Non-demo members/live production references block reset with actionable error.
+  - Public checkpoint tenants do not admit unrelated real members.
+  - QA roles use explicitly enrolled test identities; reset removes temporary demo
+    memberships.
+  - Accepted/finalized development demo rows may be restored to their saved stage;
+    this is a demo-only reset exception, never a production history mutation.
+  - Cancel/obsolete old-generation institution jobs; provider task cancellation when
+    available.
+  - Late worker/provider callbacks cannot publish after reset.
+  - Restore exact scoped rows/evidence/export/advice references in dependency order.
+  - Real services produced the checkpoint; replay does not rerun every historical
+    GEE/LLM/report job or manufacture a replacement result on each login.
+
+14.3 CONCURRENCY, FILES AND DEVICE STATE
+----------------------------------------
+  - A per-UID in-process lock and login marker serialize local demo requests;
+    one verified Firebase auth_time identifies a sign-in, not token refresh.
+  - Assign monotonically increasing fixture_generation; persistent Farmer 4 is
+    acknowledged with reset_performed=false.
+  - State RESTORING -> READY; block business bootstrap/reads during restore.
+  - Stage DB/object copies/checksums, then atomically publish READY generation.
+  - A crash resumes that generation; cross-service restore is not one DB
+    transaction.
+  - Reset failure shows Retry; reuse the same session.
+  - Never open stale completed data and report that reset succeeded.
+  - Restore failure cannot damage source seed.
+  - Demo-owned requests/jobs carry current server-issued generation.
+  - Old device, pending upload or callback generation -> 409 DEMO_SESSION_RESET
+    before writes.
+  - After READY, purge old institution encrypted drafts/files/request ownership;
+    load from normal APIs.
+  - Logout retains ordinary user theme only as farmer does.
+  - Fresh login after adding work restores initial stage; same-session background
+    resume keeps it.
+  - Concurrent NEW logins serialize; latest generation wins and older session/device
+    gets reset notification/error, not automatic reset again.
+  - Farmer Amoy/Pinata side effects are external and cannot be erased by DB reset;
+    retain farmer limitations.
+  - Institution demos never mint/anchor.
+
+================================================================================
+PART 15 — SHARED CONFIGURATION AND REAL SERVICE PREPARATION
+================================================================================
+
+15.1 MODE AND SERVICE CONFIGURATION
+------------------------------------
+  - ENABLE_INSTITUTION_DEMO_ACCOUNTS controls institution demos; normal API URL, Firebase,
+    database/storage, workers, GEE, model registry and advisor config are reused.
+  - Keep farmer/institution controls independent; do not add a simulator selector.
+  - Institution demo mode changes checkpoint/reset handling only;
+    actual measurement, computation, export and provider services stay operational.
+  - Service credentials remain server-side.
+  - Backend capabilities, identity and membership enforce access independently of
+    mobile demo settings.
+  - Production disables reset endpoints/checkpoint registry and rejects unsafe demo
+    settings; no public OTP bypass or client flag grants production access.
+  - Source origin is preserved (LIVE measured/provider-derived; SYNTHETIC where
+    assistance/sample data applies).
+  - Every demonstration is labeled development use; never promote assisted/test
+    captures into production training/verification.
+
+15.2 PREPARE THE FIVE CHECKPOINTS
+---------------------------------
+  - Register verified test UIDs; first create account 5's minimal institution user.
+  - Prepare account 6 through real setup/upload/authority review; snapshot no campus.
+  - Prepare account 7 through real authorized campus/boundary/vegetation/plot jobs
+    and independent reviews; snapshot no survey/accounting work.
+  - Prepare account 9 using actual completed surveys/satellite comparisons,
+    activity/source records, approved-factor calculation, review/finalization,
+    export jobs for both 2024/2025 years; advisor remains optional.
+  - Save their exact actual outputs.
+  - Shared method/factor/model/corpus registrations are reviewed once and referenced
+    immutably; reset never globally publishes dummy reference-test parameters.
+  - Validate metadata/FKs, evidence bytes, private artifacts, periods/hashes and
+    actual model/source applicability before marking a checkpoint READY.
+  - Save immutable source checkpoint outside the reset target; versioned manifest
+    lists allowed rows/files/tenant ownership and their byte/content hashes.
+  - If source/provider/method prerequisites are unavailable, explain the missing
+    setup and keep the affected account NOT READY.
+  - Do not seed an invented result.
+
+15.3 REQUIRED INTEGRATION POINTS
+-------------------------------
+  - Backend demo adapter: shared registry, verified sessions and scoped restore.
+  - Mobile: independent institution flag reader, pre-bootstrap handoff, generation-aware cache/sync
+    cleanup and normal institution navigation.
+  - No mock API/client-result interceptors.
+  - Reuse AR/native bridge and transport; campus plot adapter does not read/write
+    farmer auditSlice, wallet or pending_upload state.
+  - Real core modules stay responsible for geometry, scientific validation,
+    accounting, reports and advisory.
+  - Demo code restores records, not algorithms.
+  - This document does not edit .env, application source or the deployed backend.
+
+================================================================================
+PART 16 — SETUP, VERIFICATION AND SESSION CONTRACTS
+================================================================================
+
+SETUP AND ACCEPTANCE CHECKLIST
+-------------------------------
+1. Implement institution features/contracts and institution demo handoff; configure
+   normal services and ENABLE_INSTITUTION_DEMO_ACCOUNTS consistently in approved development.
+2. Configure Firebase test accounts 5–9, resolve actual UIDs, map checkpoints and
+   prepare independent owned tenants. No additional accounts 10/11 in the public demo list.
+3. Validate each checkpoint using real service outputs; reviewed registration,
+   valid geometry/plots, source factors, reports/citations as stage requires.
+4. Verify farmer 1–4 checkpoints/OTP/wallet behavior; Farmer 4 remains persistent.
+5. For EACH institution account: login, add/edit work, log out, log in again;
+   assert exact original checkpoint restored, for resettable accounts 5-8; account 9 preserves history.
+6. During same login: repeated /auth/me, token refresh, background/cold resume
+   preserve work. Same reset-session retry/two workers restores exactly once.
+7. Wrong selector/UID/flag/environment fails before reset or side effects.
+8. Account 5 goes through real setup/review; account 6 adds real campus; account 7
+   runs actual capture/upload/satellite and accounting; missing data stays missing.
+9. Account 9 reads actual saved output; new PDF/advice requests use real services.
+   Compare values to its source manifests, not independent dummy math in 13.1.
+10. Missing provider/config/source cannot yield a fabricated success or seed.
+11. Test generation change during jobs/uploads/multiple devices; old mutations
+    fail and late callbacks cannot recreate removed work.
+12. Verify VIEWER/MANAGER/isolation/independent-review/last-owner/privacy cases
+    using controlled QA fixtures, without expanding the five public stage accounts.
+13. Release disables demo settings/resets; retain farmer regression evidence.
+    No deployed backend/Firebase/device test is claimed by this documentation edit.
+
+16.1 QA FIXTURES AND REQUIRED METADATA
+--------------------------------------
+  - MANAGER/VIEWER/second-tenant/reviewer/privacy tests are separately provisioned
+    by QA in the controlled test registry, not fixed public phone accounts 10/11.
+  - QA fixtures use actual auth, memberships and backend checks.
+  - They do not give owner accounts reviewer power; reviewer/registry author
+    identities differ.
+  - Keep QA fixture ownership/reset scope separate from stage checkpoints; a
+    standard demo login never wipes another tenant or non-demo user's data.
+  - Metadata: account/domain/tenant IDs, checkpoint version, fixture_generation,
+    revision/snapshot/hashes, model/method/factor/corpus versions, evidence/artifact
+    byte hashes, actual source origin and independently recorded review decisions.
+  - Independent formula cases 13.1 are arithmetic tests only.
+  - Actual account 9 totals, quality and advice are read from its genuine completed
+    service snapshot.
+
+  Case                        | Required behavior
+  ----------------------------|-----------------------------------------------
+  New login 5/6/7/8           | Restore mapped checkpoint every time
+  Retry same login/worker     | One reset generation; original acknowledgment
+  Resume/refresh/profile GET | Keep current same-session work
+  Complete account 9         | Persistent; retain saved history and new work
+  Real capture/services     | Normal AR/API/GEE/calculation/export/advisor paths
+  Provider/checkpoint absent | Actual error/NOT READY; no invented output
+  Older device/generation   | Block mutation and stale publication
+  Wrong flow/UID/flag        | Reject before reset; no role/domain change
+  VIEWER/MANAGER/other tenant| Normal permissions with independent QA fixtures
+  Review/correction/history | Frozen hashes; new correction ID; no self-finalize
+  Offline/CSV/byte validation| Existing BSDD contracts, including ordered sync
+  Production/real other user| No demo reset or checkpoint-access authorization
+
+16.2 SHARED DEMO SESSION API — DEVELOPMENT ONLY
+-----------------------------------------------
+POST /api/v1/demo/sessions
+  Auth: verified Firebase token; trusted ENABLE_INSTITUTION_DEMO_ACCOUNTS=true; approved test
+    deployment; UID in shared Farmer/Institution registry; correct domain.
+  Headers: Idempotency-Key = login_session_id; normal Firebase Authorization.
+  Request: login_session_id UUID; flow FARMER|INSTITUTION;
+    client_audit_demo_mode BOOLEAN (configuration assertion only);
+    checkpoint_key TEXT optional assertion (registry decides actual stage).
+  Response: 200 Success<DemoSession>; 202 Success<DemoSession> while restoring.
+  DemoSession: session_id UUID; status READY|RESTORING|FAILED;
+    account_number INTEGER; account_domain FARMER|INSTITUTION;
+    checkpoint_key TEXT; reset_performed BOOLEAN; fixture_generation INTEGER|null;
+    reset_policy NEXT_LOGIN|PERSISTENT; audit_demo_mode BOOLEAN;
+    poll_after_seconds INTEGER|null; safe_error Error|null.
+    reset_performed=false until READY; poll_after_seconds is non-null in RESTORING.
+    safe_error is non-null only in FAILED. Use standard BSDD 18 response envelopes.
+  Error: standard Error; 409 domain/session/config mismatch;
+    503 DEMO_MODE_DISABLED or DEMO_CHECKPOINT_NOT_READY in approved test context.
+    Production/unknown unauthorized reset caller -> 404; no body UID/tenant authority.
+
+GET /api/v1/demo/sessions/{session_id}
+  Auth: same guarded environment/current verified owner UID.
+  Request: No body. Response: Success<DemoSession> with current status.
+  Same POST on retry resumes failed recoverable staging, not a new generation.
+
+Bootstrap/generation rules:
+  - /auth/me follows READY; add optional demo_context only for registered test
+    users: {account_number,checkpoint_key,fixture_generation,reset_policy,
+    audit_demo_mode}. Resume/bootstrap checks that server flag against the client;
+    mismatch blocks demo routing. POST also compares client_audit_demo_mode to the
+    trusted server flag before resetting; the assertion never enables demo access.
+  - The entered public test number identifies a candidate for the new-login
+    handshake.
+  - Only the verified Firebase UID/registry authorizes it.
+  - Unregistered normal numbers use normal bootstrap; invalid demo configuration
+    never falls back to creating a live institution.
+  - Same session retries use the same key/body; changed body/key reuse ->
+    IDEMPOTENCY_CONFLICT.
+  - Wrong flow cannot reset first.
+  - Institution demo APIs send X-TerraTrust-Demo-Generation with server-issued
+    generation; backend validates it only after UID/domain/registry authorization.
+  - Omitted/stale generation for an accounts-5..9 tenant business read/write ->
+    409 DEMO_SESSION_RESET, checked before idempotency replay and again at commit.
+    Own /auth/me and session/status recovery reads fetch current generation.
+  - Global registry/non-demo production APIs do not use it as an authorization flag.
+  - Accounts 5–8 are NEXT_LOGIN; account 9 is PERSISTENT with reset_performed=false. Same
+    session replay returns original outcome.
+  - Farmer 4 and institution 9 are PERSISTENT.
+  - Concurrent later login wins; earlier response is marked superseded/current
+    generation mismatch via 409 DEMO_SESSION_RESET, without a new status enum.
+  - Old device refreshes state without triggering another reset.
+  - Institution demo responses include X-TerraTrust-Demo-Generation.
+  - Client drops in-flight replies from an old generation; /auth/me may fetch
+    current context on resume/recovery.
+  - Block business reads during RESTORING, not session polling.
+  - RESTORING blocks business bootstrap; only authorized session/status is available.
+  - Reset retains Firebase identity/domain and shared source registries; clears only
+    owned development work/local queues.
+  - Source manifests are never the wipe target.
+
+16.3 SIMPLE STARTING-STATE SUMMARY
+---------------------------------
+  Account | Already has                  | Starts without
+  --------|------------------------------|---------------------------------
+  5       | Verified institution login   | Profile, campus, audits, results
+  6       | Approved profile + OWNER     | Campus, tree/accounting audits
+  7       | Approved campus + plots/tags | Measurements, audits, results
+  8       | Audits, results, reports, AI | New current-period draft/work
+
+  - Accounts 5-8 reset on fresh login; account 9 is persistent under the institution flag.
+  - Staged records are loaded through actual app APIs; newly performed work uses the
+    real services.
+  - This table describes required checkpoints, not seeded data already provisioned
+    or verified in a deployed environment.
+
+================================================================================
+PART 17 — ALIGNMENT AND IMPLEMENTATION STATUS
+================================================================================
+
+- SRS 29–36: requirements; BSDD 15–22: server schemas/security/jobs.
+  - FDD 16–22: actual screen contracts; FFC 12–17: navigation/session transitions.
+  - Parts 11–16 here override the old six-account/simulated-institution proposal.
+  - Five institution accounts use real app modules and services; institution demo
+    handling resets only accounts 5-8 and preserves account 9.
+  - The historical farmer mock/demo code examples remain historical examples, not
+    the institution runtime implementation to copy.
+  - Numbers in 13.1 are formula-test constants, not real factors/results to seed.
+  - No Firebase registration, backend restoration, live job, account provisioning,
+    deployed reset verification is performed in this frontend checkout.
+  - Existing frontend integration is separate from verified runtime readiness; Part
+    18 supplies complete commissioning steps within this specification.
+
+================================================================================
+PART 18 — COMPLETE INSTITUTION DEMO COMMISSIONING
+================================================================================
+This part supplies the setup previously scattered across Android handoff notes.
+It defines required work; this documentation review provisions no account/service.
+
+18.1 FIREBASE AND PUBLIC BUILD SETUP
+------------------------------------
+  1. Use an approved nonproduction Firebase project already configured for this
+     Android application. Follow baseline phone-auth/signing prerequisites. Keep
+     the existing farmer test-number entries and their OTPs unchanged.
+  2. Firebase Console -> Authentication -> Sign-in method -> Phone -> Phone numbers
+     for testing. Add the five entries below, then save the Phone settings.
+
+       Account | Phone          | Test OTP
+       --------|----------------|---------
+       5       | +919000000005  | 555555
+       6       | +919000000006  | 666666
+       7       | +919000000007  | 777777
+       8       | +919000000008  | 888888
+       9       | +919000000009  | 999999
+
+     These are phone-provider test entries, not email/password Users -> Add user.
+  3. In an approved test build select Institution and complete normal Firebase
+     verification for each number. Firebase creates the identity at first sign-in;
+     copy its actual User UID into the server registry. Never fabricate a UID.
+     Before registry setup completes, backend provisioning may stay unavailable;
+     that must not prevent recording the verified Firebase UID.
+  4. Through controlled backend provisioning create minimal INSTITUTION user rows
+     for those UIDs and the independently authenticated scoped reviewers. Never
+     call farmer KYC/register-wallet or assign reviewer power to stage accounts.
+  5. Configure ENABLE_INSTITUTION_DEMO_ACCOUNTS=true on BOTH approved test server/build; normal
+     Firebase/API/GEE/storage/worker/provider settings are BSDD 1.11/21.6.
+     Public privacy/support/deletion URLs use the three exact BSDD 21.6 keys.
+     Use the independent institution flag; do not add an OTP bypass or mock selector.
+  6. Build Android with the native vault/hash/AR/FileProvider integration when
+     implementing. Rebuild for native/public-env changes. Verify disabled
+     institution services yield setup guidance, never farmer fallback.
+
+18.2 IMMUTABLE CHECKPOINT MANIFEST FORMAT
+-----------------------------------------
+  Format: UTF-8 JSON; schema_version=1.
+
+Schema location: backend/demo/institution/manifest.py (Pydantic, unknown fields
+rejected). All fields below are required; nullable fields still have explicit keys.
+Decimal/UUID/date/hash formats follow BSDD 18.6. Do not serialize database driver
+objects directly: encode NUMERIC as decimal strings, times as UTC strings and
+PostGIS geometry as normalized GeoJSON. Hash those same exported representations.
+
+CHECKPOINT MANIFEST: CheckpointManifest
+---------------------------------------
+
+  Field               | Type                    | Required / meaning
+  --------------------|-------------------------|-------------------------------
+  schema_version      | INTEGER                 | Literal 1
+  manifest_id         | UUID                    | Immutable source manifest identity
+  manifest_version    | INTEGER                 | >=1; a changed bundle requires a new version
+  checkpoint_key      | TEXT                    | Exact account mapping in Part 12
+  account_number      | INTEGER                 | 5..8
+  target_firebase_uid | TEXT                    | Actual verified Firebase UID, not a generated UUID
+  target_user_id      | UUID                    | Corresponding server users.id
+  deployment_id       | TEXT                    | Approved test deployment identity
+  deployment_env      | TEXT                    | development or test; no production/staging override
+  owned_tenant_ids    | UUID[]                  | Registry-verified dedicated targets; [] for account 5
+  created_at          | timestamp               | UTC export creation time
+  created_by          | UUID                    | Verified commissioning actor users.id
+  prerequisites       | CheckpointPrerequisites | Frozen reviewed source dependencies
+  user_checkpoint     | UserCheckpoint          | Institution onboarding fields only
+  tables              | CheckpointTable[]       | Dependency-ordered business rows
+  objects             | CheckpointObject[]      | Exact private byte dependencies
+  expected            | CheckpointExpected      | Post-restore assertions
+  provenance          | CheckpointProvenance    | Actual service/review/validation lineage
+  manifest_sha256     | SHA-256                 | SCJ1 of the complete manifest excluding this field
+
+PREREQUISITES: CheckpointPrerequisites
+--------------------------------------
+
+  Field              | Type    | Required / meaning
+  -------------------|---------|-------------------------------
+  method_ids         | UUID[]  | Published methods required by the captured rows
+  factor_ids         | UUID[]  | Exact applicable factors
+  model_ids          | UUID[]  | Exact reviewed model artifacts
+  quality_policy_ids | UUID[]  | Exact approved capture/sample policies
+  corpus_ids         | UUID[]  | Exact approved cited corpus versions
+  config_hash        | SHA-256 | Frozen effective nonsecret configuration manifest
+
+USER CHECKPOINT: UserCheckpoint
+-------------------------------
+
+  Field                       | Type              | Required / meaning
+  ----------------------------|-------------------|-------------------------------
+  onboarding_status           | TEXT              | REQUIRED, PENDING_REVIEW, REJECTED or COMPLETE
+  onboarding_completed_at     | timestamp or NULL | Captured completion time
+  registration_id             | UUID or NULL      | Own current registration snapshot
+  registration_institution_id | UUID or NULL      | Institution owning that registration
+
+Mapping: restore users.institution_onboarding_status and
+users.institution_onboarding_completed_at. registration_id and
+registration_institution_id are expected bootstrap pointers derived from restored
+registration/institution rows (BSDD 15.2), not extra users columns.
+Verify them after restoration. Identity/domain fields are never reset.
+
+TABLE BUNDLE: CheckpointTable
+-----------------------------
+
+  Field      | Type      | Required / meaning
+  -----------|-----------|-------------------------------
+  table      | TEXT      | Exact allowlisted physical table name in BSDD 16.0
+  rows       | object[]  | Every actual named physical column for that table
+  row_hashes | SHA-256[] | Same order/length as rows; SCJ1 of each encoded row
+
+Table rules:
+  - Unknown table/column, duplicate primary key, mismatched tenant or missing FK fails
+    validation. Never concatenate a manifest table/column name into unrestricted SQL.
+  - manifest.py owns a fixed mapping from physical table names to column/type lists
+    in BSDD 16.0 and restoration order in 18.4. Use parameterized row values.
+  - Sort tables by dependency rank then table name; sort rows by primary key.
+    Hash array order is significant. Restore never invents missing parent rows.
+
+OBJECT BUNDLE: CheckpointObject
+-------------------------------
+
+  Field             | Type    | Required / meaning
+  ------------------|---------|-------------------------------
+  bucket            | TEXT    | Approved private target bucket
+  object_key        | TEXT    | Captured logical target key; no signed query token
+  mime_type         | TEXT    | Verified actual allowed MIME type
+  size_bytes        | INTEGER | >=0; actual byte count within BSDD limits
+  sha256            | SHA-256 | Actual byte checksum
+  source_object_key | TEXT    | Immutable source bundle key outside target prefixes
+  parent_type       | TEXT    | Exact evidence/artifact parent discriminator in BSDD
+  parent_id         | UUID    | Target-owned authorized parent
+
+EXPECTED STATE: CheckpointExpected
+----------------------------------
+
+  Field                  | Type            | Required / meaning
+  -----------------------|-----------------|-------------------------------
+  landing_screen         | TEXT            | Exact FFC screen name for this checkpoint
+  permission             | TEXT or NULL    | OWNER for 6..8; NULL for account 5
+  tenant_count           | INTEGER         | Exact expected owned tenant count
+  campus_count           | INTEGER         | Exact expected campus count
+  survey_count           | INTEGER         | Exact expected survey count
+  tree_audit_count       | INTEGER         | Exact expected campus stock assessment count
+  audit_count            | INTEGER         | Exact expected annual audit count, including revisions
+  current_final_audit_id | UUID or NULL    | Exact current final business revision
+  result_hash            | SHA-256 or NULL | Exact released result, not recalculated on restore
+  export_ids             | UUID[]          | Captured successful exports
+  published_query_ids    | UUID[]          | Captured actual published final-context advice
+
+PROVENANCE: CheckpointProvenance
+--------------------------------
+
+  Field                        | Type    | Required / meaning
+  -----------------------------|---------|-------------------------------
+  prepared_via_normal_services | BOOLEAN | Literal true; no raw fake approval seeding
+  review_case_ids              | UUID[]  | Independent completed reviews
+  source_record_ids            | UUID[]  | Actual referenced measured/activity/source records
+  validation_record_id         | UUID    | Immutable commissioning verification record in source bundle
+
+  Manifest rules:
+  - Each table row uses BSDD 16.0 physical columns.
+  - Preserve target UUIDs, dates, actor lineage, business versions, data_origin,
+    input/result/byte hashes exactly.
+  - Manifest source is an immutable exported JSON/object bundle outside reset target
+    prefixes, even if originally captured from that development tenant.
+  - Do not leave duplicate source rows with the same PKs in active business tables.
+  - Objects reference exact captured evidence/report/map bytes; signed URLs are
+    never stored as permanent identity.
+  - Regenerate authorized URLs on request.
+  - Restored source rows keep their stable target IDs.
+  - No tenant-ID rewriting or rehashing an approved historical result as if it were
+    the same signed snapshot.
+  - Tables/objects allowlist may include only the registered target-owned records
+    and checked source references.
+  - Global registries, Firebase identities, unrelated users/tenants and the source
+    bundle are outside destructive restore scope.
+  - Only terminal successful historical jobs/cases needed for lineage are captured;
+    no pending outbox entries or provider tasks may replay on restore.
+  - Example activities may be reported demonstration data with honest provenance;
+    synthetic captures/constants cannot be represented as LIVE measured evidence.
+  - Account 5 expected counts all zero and empty owned_tenant_ids.
+  - Its later own REGISTRATION_DRAFT evidence and server-created development tenants
+    are enrolled transactionally by verified UID and removed on its next restore.
+  - Reset its own institution onboarding fields to REQUIRED/null; preserve
+    identity/domain.
+
+18.3 PREPARATION ORDER AND READINESS ASSERTIONS
+-----------------------------------------------
+  1. Start normal API, private storage, dispatcher/watchdog and separate workers.
+     Publish actual reviewed methods/factors/quality/models and advisor corpus;
+     grant independent reviewer scopes. Disabled/unconfigured provider stays absent.
+  2. Prepare each separate target using normal services, in order 5 -> 6 -> 7 -> 8 -> 9.
+     Capture exactly Part 13 content. Do not copy arithmetic test 13.1 as history.
+  3. Account 6: approved registration + ACTIVE OWNER; assert no campus/audit rows.
+  4. Account 7: accepted campus control/boundary/mask/plot set and stable tags;
+     assert no measurements/surveys/tree assessments/annual audit/result/advice.
+  5. Account 8: capture one genuine accepted baseline and survey, with annual
+     forms/audits pending. Account 9: obtain two accepted compatible stocks aligned
+     to the completed 2024 and 2025 calendar-year reporting periods. Record approved atmospheric
+     attribution/uncertainty or preserve honest NULLs/flags; no required surplus.
+     Enter actual covered activities and separate solar project assumptions,
+     calculate, independently approve/finalize, generate PDF/CSV/JSON and ask/publish
+     optional real grounded advice; advisor is not a checkpoint prerequisite. Store their exact output/byte hashes.
+  6. Export immutable bundle; validate row hashes/FKs/actor independence, source
+     policy/model applicability, required READY objects and actual citations.
+     Mark registry READY only after every required record/object assertion passes.
+  7. Missing history, source permissions, reports or provider/corpus output keeps
+     that checkpoint NOT_READY. Do not downgrade stage 8 to invented stock/advice.
+
+18.4 RESTORE TRANSACTION AND FAILURE RECOVERY
+---------------------------------------------
+  - Registry/session tables and API are BSDD 22.1 / Demo 16.2.
+  - Registry owns exact development target allowlist; never accept target IDs from a
+    reset body.
+  - Lock registry for UID and target tenants.
+  - Validate caller/domain/flags/env/ manifest/hash/source object availability
+    before any destructive publication.
+  - Allocate generation once per login_session_id.
+  - RESTORING blocks business reads and writes for that target; normal users and
+    other stage accounts continue.
+  - Mark old nonterminal jobs obsolete; stage verified object copies under the
+    allocated generation.
+  - Stage every object and validate MIME/size/hash BEFORE deleting a target row.
+    Failed staging leaves prior committed business rows intact and blocks entry.
+  - After staging, use one SQL transaction for target-row replacement and current
+    pointers. Insert registries only as checked references, never copied global rows.
+  - Insert tenant/registration/member parents; campus/control/geometry/plot parents;
+    trees/surveys/measurements/stock snapshots; annual revisions/lines/links/results;
+    evidence/artifacts/reports/advice; terminal lineage cases/events/jobs last.
+    Defer cyclic pointer constraints and validate them before commit.
+  - Point private byte locators at the verified generation prefix; preserve logical
+    evidence/artifact IDs, checksums and scientific hashes. Storage locator changes
+    never rehash or change an accepted numerical/review snapshot.
+  - Atomically publish checkpoint pointers and the READY generation after all DB
+    and object assertions. Objects may be staged outside SQL; READY is the single
+    visibility boundary, not a claim of a distributed storage transaction.
+  - Cyclic pointers use deferred constraints.
+  - Delete only owned session additions in reverse FK order under test-only restore
+    role.
+  - General member/admin APIs never bypass immutable-history protections.
+  - Reset cannot use ON DELETE CASCADE to reach global/other-tenant records.
+  - Source files are immutable; old generation target objects may be garbage-
+    collected after publication.
+  - Do not delete shared immutable source objects.
+  - Missing bytes/failed hash -> FAILED with safe error; no stale branch entry.
+  - Same POST/key resumes staging/generation after recoverable failure.
+  - No duplicate accepted provider work; restored successful history never reruns
+    LLM/GEE.
+  - Subsequent fresh login can supersede a failed generation only after releasing
+    its lock/marking it obsolete.
+  - Old device/job can never publish into current data.
+  - Server-owned fixture_generation on registry/jobs/outbox publication checks
+    fences old callbacks.
+  - Business requests derive target ownership from UID/parent; the generation header
+    alone confers no reset or tenant access.
+
+18.5 VERIFICATION RECORD — REQUIRED, NOT A CLAIM OF EXECUTION
+------------------------------------------------------------
+  For each account save {manifest_id,manifest_sha256,actual_firebase_uid,
+    deployment_id,login_session_id,session_id,fixture_generation,reset_performed,
+    observed_screen,counts,result_hash,artifact_byte_hashes,checks,verified_at,
+    verifier,limitations}. Store no OTP/token/secret provider payload in logs.
+  Required checks:
+    - Normal login -> expected screen/counts; add work -> sign out -> fresh login
+      restores EXACT original IDs/content/hashes and removes session additions.
+    - Same-session refresh/token refresh/reconnect/cold resume keeps additions.
+    - Lost reset response/repeated POST/two workers restores once; wrong selector,
+      flag mismatch/unregistered UID/production request cannot mutate checkpoints.
+    - Generation change during uploads/queued mutations/GEE/advice blocks old
+      writes/publication and clears old local context only after new READY.
+    - Account 5 exits without an active tenant; all-tenant logout guard preserves
+      unfinished drafts unless the user explicitly discards them.
+    - Farmer 1–4 retain their existing numbers/stages/reset/persistence contracts;
+      accounts 5–9 never reset farmer or other-tenant data.
+    - QA-only VIEWER/MANAGER/second tenant/reviewer identities prove R/W/V
+      isolation, immutable corrections, last-owner protection and independent
+      finalization.
+  SRS 36.4 remains the release register. Existing code presence or a documented
+  stage is insufficient evidence that these live checks passed.
+
+18.6 DEMO FILE LAYOUT AND COMMISSIONING COMMANDS
+------------------------------------------------
+Purpose: Make account setup and checkpoint capture reproducible in a fresh backend.
+These commands are implementation contracts; this documentation edit executes none.
+
+Source modules: BSDD 19.0 backend/demo/institution/.
+Deployment bundle layout (private storage, never committed with secrets):
+  institution-checkpoints/
+    <deployment-id>/
+      account-5/<manifest-version>/manifest.json
+      account-6/<manifest-version>/manifest.json
+      account-7/<manifest-version>/manifest.json
+      account-9/<manifest-version>/manifest.json
+      objects/<byte-sha256>                 Immutable source bytes
+      verification/<validation-record-id>.json
+  Reset targets use separate private prefixes:
+    institution-demo/<account-number>/<fixture-generation>/
+
+Files and responsibilities:
+  manifest.py      Models in 18.2, stable encoding/hash and fixed table allowlist.
+  checkpoint_cli.py Provision/capture/validate/register commands below.
+  registry.py      Trusted Firebase UID, target scope and source manifest binding.
+  sessions.py      Part 16.2 owner/idempotency/generation handshake.
+  restore.py       Part 18.4 staging/SQL publication/recovery and cleanup.
+
+Run commands from backend/ using the baseline Python environment. Credentials,
+deployment identity and mode come from BSDD 21.6; no CLI flag can enable demo mode.
+One command is shown across indented lines for readability; pass its flags together.
+
+  1. Provision the minimal identity after real Firebase phone verification:
+     python -m demo.institution.checkpoint_cli provision-user
+       --account 5 --firebase-uid <actual-uid> --dry-run
+     Repeat for 6,7,8, then use --apply instead of --dry-run.
+     Resolve user by Firebase UID; create only the BSDD 15.2 INSTITUTION user fields.
+     Existing matching domain is a no-op; wrong domain fails without conversion.
+     No stage OWNER/membership/reviewer permission is fabricated by provisioning.
+
+  2. Prepare real content through normal APIs/services as 18.3 requires.
+     Account 5 has no tenant; for 6..8 verify dedicated ownership before capture.
+     Provision independent operator grants through BSDD 19.3, never as stage users.
+
+  3. Capture immutable source:
+     python -m demo.institution.checkpoint_cli capture --account 9
+       --firebase-uid <actual-uid> --manifest-version 1
+       --output <private-bundle-directory>
+     Capture requires terminal historical jobs and exact Part 13 readiness.
+     Copy bytes to the immutable source bundle before recording hashes. No reset
+     runs here; an existing manifest/version cannot be overwritten.
+
+  4. Validate the bundle against the target deployment:
+     python -m demo.institution.checkpoint_cli validate --manifest <manifest.json>
+     Verify every 18.2 field/hash, FK, independent actor, source and expected state.
+     Write verification JSON under its UUID and report any unresolved dependency.
+
+  5. Register validated source (repeat for all five accounts):
+     python -m demo.institution.checkpoint_cli register --manifest <manifest.json>
+       --dry-run
+     Review UID/account/domain/targets/hash, then replace --dry-run with --apply.
+     Install the validated source under .institution-private/demo/account-N.json.
+     Reject overlapping account scopes, UID rebinding and unvalidated sources.
+     No demo control table is required after migration 016.
+
+  6. Verify restore through normal phone SIGN_IN and Part 16.2 session endpoints.
+     Do not add an unguarded restore URL. /auth/me resets only for a new verified
+     Firebase sign-in; repeated profile reads and refreshed tokens preserve work.
+     Save Part 18.5 acceptance records before treating the stage as operational.
+
+Command contract:
+  - Exit 0 only when its operation succeeds; nonzero on a guard/assertion failure.
+  - Require development/test + trusted ENABLE_INSTITUTION_DEMO_ACCOUNTS + administrative
+    deployment identity. Never accept production/staging or client-provided scope.
+  - Logs contain safe IDs, counts and checksums only; no OTP/token/private bytes.
+  - Version changes do not silently reset an active session. Bind the new validated
+    manifest to a subsequent fresh SIGN_IN under the registry lock.
+  - Account 5 may enroll only tenants its UID later creates via normal setup;
+    existing shared tenants cannot become destructive reset targets.
+
+18.7 PRODUCTION SEPARATION AND UPDATED CHECKPOINT VALIDATION
+------------------------------------------------------------
+Production boundary:
+  - ENABLE_INSTITUTION_DEMO_ACCOUNTS=false in the production server and Android release build.
+    Production rejects enabled reset configuration, test registry provisioning,
+    test Firebase identities and SYNTHETIC accepted output. No client flag overrides it.
+  - Development/test source bundles, registry/session tables and reset credentials
+    use scoped demo-owned rows/object prefixes in the existing Firebase/Supabase
+    projects. No separate database/login is required.
+  - Capture/register/restore commands cannot target staging/production or reinterpret
+    an ordinary user's tenant as a resettable account.
+
+Manifest rules added by the production contract audit:
+  - Each measurement row captures raw_input and its content_hash exactly. Derived
+    DBH is separate; hash raw inputs, not a GET resource or rounded display values.
+  - Source dependencies include method config.parameters and the corresponding
+    published child IDs/hashes. Missing scientific rows fail readiness.
+  - One working DRAFT/SUBMITTED/UNDER_REVIEW per captured family; account 9 contains
+    only the finalized history required by Part 13, never an unresolved review/job.
+  - review_cases.resource_snapshot retains frozen contributors and historical member
+    lineage. Actual independent reviewers are checked external prerequisites.
+  - Exclude idempotency_records, operator grants, server receipt keys and demo session
+    control rows from tables[]. Never capture encrypted invitation replay secrets
+    into a portable checkpoint. Normal audit events/jobs preserve accepted lineage.
+  - Retain operational receipt/tombstone state outside target restore. Its generation
+    scope prevents old keys from applying to a new fixture generation.
+  - Do not capture UNKNOWN external outcomes or SENDING operations as successful
+    history. Resolve them through the normal worker/operator contract first.
+  - Source bundle immutability prevents silent version edits; it does not bypass the
+    approved privacy/retention/deletion policy. Retire a deleted UID's registry and
+    source bundle when required; never recreate that identity on the next login.
+
+Verification additions:
+  - Concurrent old-generation GET/POST/retry and native writes cannot publish/cache
+    into a newly restored checkpoint. Old-generation response receipts stay scoped.
+  - Restored source-object hashes match the DB snapshot and raw measurement hashes.
+  - Source bundles/logs contain no raw invitation token or provider credential.
+  - Production build/server configuration proves reset absence, separately from
+    successful development demo restoration. No production reset is tested.
+
+================================================================================
+END OF DOCUMENT — v4.0
+================================================================================
+
+================================================================================
+SECTION 19: IMPLEMENTED CHECKPOINT COMMISSIONING ADDENDUM
+
+Implementation review date: 2026-10-21 (Asia/Kolkata).
+Scope: additive institution backend in this repository. Farmer business services,
+farmer task application, wallets, minting and demo accounts 1-4 are preserved.
+This addendum supersedes conflicting implementation/configuration details below;
+it does not replace the scientific evidence and release gates in SRS 35-36.
+No production database connection, migration, deployment, real provider request,
+or real checkpoint restore was executed for this implementation review.
+The ordered operator handoff is INSTITUTION_MANUAL_WORK.md in the repository root.
+
+- Accounts 5-9 require dedicated development/test Firebase users with actual
+  verified UIDs and exact registered test phone numbers. No mock cloud pipeline,
+  placeholder source UID, fabricated approval or precomputed fake result is seeded.
+- Use demo.institution.checkpoint_cli provision-user/capture/validate/register.
+  Provision/register are dry-run or explicit --apply. Capture actual normal service
+  and independent review history; missing stage/source requirements fail closed.
+- Fresh account 5 must actually have no tenant, membership or registration history
+  at capture. Prepared accounts have dedicated owner-only targets; do not share
+  those institutions with unrelated active users before a destructive reset.
+- Exclude users/global registries/grants/receipts/local key files/control state and the
+  internal institution_provider_operations cache from portable source tables.
+  PostgreSQL-generated period_range is excluded: exact period_start/period_end
+  are captured and the database recomputes the range on insertion.
+- DemoSession response fields are session_id, status, account_number,
+  account_domain, checkpoint_key, reset_performed, fixture_generation, reset_policy,
+  audit_demo_mode, poll_after_seconds and safe_error. Bootstrap demo_context is the
+  smaller account_number/checkpoint_key/fixture_generation/reset_policy/audit_demo_mode.
+- Session storage additionally records verified Firebase auth_time. A token refresh
+  of the same sign-in cannot create a new reset; retries reuse login_session_id and
+  its identical Idempotency-Key. A newer verified sign-in may supersede an older
+  restoring generation. Production has no institution session/reset route.
+- Restore uses the same DATABASE_URL/login as ordinary institution work. Phase
+  014 replaces the old role-based exception with a current session/identity/tenant
+  guard. Never disable triggers globally or create a separate demo database.
+- Stage and verify private source bytes before publishing one atomic generation.
+  Compare restored field hashes and target table counts before READY; only object
+  locators and historical-job fixture generation may change from the source rows.
+  Failed staging/SQL/constraint/hash checks keep the session unavailable.
+- Structural CLI validation is not a claim that live restore concurrency, cloud
+  services or mobile acceptance passed. Collect the separate Part18.5 record.
+- Source bundles and generated test bytes remain private and policy-bound. Never
+  capture a raw invitation token or provider credential. Retire deleted identities'
+  checkpoint registries/source bundles rather than recreating those identities.
+- See INSTITUTION_MANUAL_WORK.md section7 for the complete ordered operator work.
+
+19.1 ADDITIONAL REVIEW CLARIFICATIONS — 21 OCTOBER 2026
+Apply BSDD 23.7 commissioning, temporal support and native Gemini configuration
+contracts to new test captures. Existing farmer demo accounts 1-4 remain unchanged.
+Capture accounts 5-9 only after actual required service/review history exists;
+account 9 requires actual completed 2024/2025 history; advisor is optional. Follow section 7 of
+INSTITUTION_MANUAL_WORK.md; no production restore or capture was performed.
+
+FIVE INSTITUTION DEMOS AND MINIMAL DEPLOYMENT INPUTS — 21 OCTOBER 2026
+demo.md is the authoritative replacement for older four-account wording:
+  5 INSTITUTION_FRESH / +919000000005 / 555555 / NEXT_LOGIN
+  6 INSTITUTION_APPROVED / +919000000006 / 666666 / NEXT_LOGIN
+  7 CAMPUS_READY / +919000000007 / 777777 / NEXT_LOGIN
+  8 BIOMASS_COMPLETE_FORMS_PENDING / +919000000008 / 888888 / NEXT_LOGIN
+  9 ACCOUNTING_COMPLETE_TWO_YEARS / +919000000009 / 999999 / PERSISTENT
+Numbers 1-5 in demo.md are institution-local labels; server numbers 5-9 avoid
+colliding with unchanged farmer accounts 1-4. No fake identities/results seeded.
+Normal /auth/me starts the same durable handoff once per verified auth_time;
+token refresh/resume does not reset. While restoring, DEMO_SESSION_NOT_READY
+includes session_id to poll; explicit /demo/sessions remains supported.
+Persistent account 9 returns READY/reset_performed=false without restore dispatch
+or generation advancement; preserve all subsequent 2026 work. Its initial capture
+requires actual completed 2024/2025 history, accepted compatible stocks, supported
+2025 atmospheric attribution, independent reviews and PDF/CSV/JSON for both years.
+Advisor uses normal optional live functionality and is not a capture prerequisite.
+Account 8 is exactly one accepted baseline/survey with annual forms/audits pending.
+Phase 012 extends the registry and marks old completed account-8 sources NOT_READY;
+recapture at the new stage. Phase 013 closes public grants/enables RLS only for
+the explicit institution table allowlist, preserving farmer policies/defaults.
+Restore locks identity -> registry -> tenant, cleans scoped outbox/receipts and
+temporary registration authorization, and cannot restore persistent accounts.
+Fixed protocol/provider/size/retrieval/chunk/concurrency/deadline constants now live
+in app/institution_config.py; old dotenv knobs cannot override them. This replaces
+older instructions to configure those values in .env. Deployment-specific secrets,
+resource paths and real reviewed registry/policy IDs remain environment inputs.
+INSTITUTION_MANUAL_WORK.md maps every remaining variable to its actual source.
+INSTITUTION_MANUAL_WORK.md gives direct existing-Supabase SQL Editor steps.
+scripts.institution.supabase_setup generates offline checksummed migration and
+migration SQL only; it never contacts Supabase and needs no extra login. Never rerun schema.sql on
+an existing farmer database. No database/cloud/deployment action was performed.
+
+SAME DATABASE AND USB LOCAL TESTING CLARIFICATION — 21 OCTOBER 2026
+Ordinary users and demo accounts use the SAME existing Supabase database, tables,
+buckets and real providers. A local/development backend may connect to that existing
+database; do not create a second project, restore database URL, login or password.
+Phase 014 replaces historical role-based trigger exceptions with a transaction-
+local demo_restore_session guard: current RESTORING session, registered Firebase
+institution identity/phone, account 5-8 NEXT_LOGIN, matching generation/latest
+session and exact owned tenant or personal-upload scope. Method/global scientific
+sources and farmer rows never enter that exception. Account 9 stays persistent.
+The restore worker uses the ordinary DATABASE_URL and worker engine. Prior 001-013
+SQL remains checksummed; apply the new forward phase rather than editing ledgers.
+Retired env inputs: INSTITUTION_DEMO_DATABASE_URL, DEPLOYMENT_ENV,
+INSTITUTION_DEMO_DEPLOYMENT_ID, INSTITUTION_COMMISSIONING_UID and BIOMASS_MODEL_BACKEND.
+Use existing ENVIRONMENT; derive deployment identity from Firebase/Supabase project
+identity; pass --actor-firebase-uid to checkpoint CLI; use approved model engine.
+Registered legacy checkpoint source identities remain valid; never rebind a persistent account.
+The sibling mobile client still requires the supplied five-account integration
+patch before testing account 9. It accepts PERSISTENT/reset_performed=false without
+purging the current device account. Frontend files are outside this writable backend
+workspace, so the patch is reviewable in frontend-integration/ and applied manually.
+INSTITUTION_MANUAL_WORK.md gives actual React Native CLI, ADB reverse 8000/8081, local API,
+Linux worker and same-database validation steps. No services or database were changed.
+================================================================================
+
+
+===============================================================================
+2026-10-22 BACKEND CONFIGURATION AND MANUAL SQL CLARIFICATION
+===============================================================================
+- ENABLE_FARMER_DEMO_ACCOUNTS controls only existing farmer accounts 001-004.
+- ENABLE_INSTITUTION_DEMO_ACCOUNTS controls only institution accounts 005-009.
+  Any development combination is valid; both flags must be false in production.
+- Legacy backend ENABLE_DEMO_ACCOUNTS falls back to the farmer setting only;
+  explicit ENABLE_FARMER_DEMO_ACCOUNTS wins. Old backend AUDIT_DEMO_MODE is ignored.
+- API wire keys audit_demo_mode/client_audit_demo_mode retain their existing names;
+  their institution value comes only from ENABLE_INSTITUTION_DEMO_ACCOUNTS.
+- Institution 005-008 reset once per new verified sign-in; 009 remains persistent.
+  All use real services and the ordinary DATABASE_URL, login and tables.
+- The SQL bundle creates institution objects and extends shared public.users:
+  account_domain defaults to FARMER; onboarding/deleted-identity fields are added;
+  domain becomes immutable. Identity CHECK retains non-null phone/Firebase UID for
+  farmers and allows unlinking only deleted institution identities. Farmer IDs,
+  roles/wallets and business tables are preserved. Schema changes acquire locks.
+- Bundle preflight rejects incompatible users columns/types and unexpected table
+  overlap with institution access rules. Checksummed phases 001-014 are unchanged.
+  Apply the entire refreshed institution_migrations.sql manually after backup and
+  restored-copy testing; never rerun schema.sql on the existing production project.
+- Native Windows local command: python scripts/run_local.py; solo workers are a
+  local testing option, not a supported Windows production deployment. Use ADB
+  reverse for ports 8000/8081. Exact steps: INSTITUTION_MANUAL_WORK.md.
+- All automated edits are confined to this backend repository. Mobile integration
+  changes are supplied as a reviewable backend artifact for manual application.
+- No live database/provider/device operation or migration was performed.
+
+
+===============================================================================
+2026-10-22 INSTITUTION ENVIRONMENT SIMPLIFICATION (LATEST USER CLARIFICATION)
+===============================================================================
+- The biomass estimation implementation is unchanged by this revision. Reuse of
+  implementation does not mean using farmer results as institution results.
+- Fixed private storage names are institution-evidence and institution-reports;
+  create them once using generated institution_storage.sql. No bucket env inputs.
+- Upload completion validates actual size, checksum, MIME/extension and parsed
+  file content before immutable promotion. No external file-scanning service is
+  required. Existing format/active-PDF-content restrictions remain.
+- Provider, personal-deletion and public-retrieval behaviour is owned by code in
+  app/institution_rules.py and services/advisory/ingestion_rules.py. No external
+  PROVIDER/RETENTION/RETRIEVAL policy commissioning or UUID inputs are required.
+  Existing historical policy rows/columns are preserved for old accepted plans.
+- New personal-deletion requests store the complete code-rule snapshot and hash;
+  old requests keep their exact accepted rules. No invented legal retention term
+  or provider backup-expiry guarantee is introduced.
+- Optional CAMPUS_SAMPLE_QUALITY_POLICY and SATELLITE_FEATURE_SCHEMA environment
+  pins are removed; the selected method/model already provides those exact values.
+  This removes duplicate configuration; numerical estimation logic is unchanged.
+- New institution assessments train through services.fusion_engine.run_fusion,
+  exactly as farmer assessments do, using their own accepted survey and campus.
+  Model, method and corpus environment UUID pins are removed. Internal IDs and
+  configuration checksums are assigned automatically; operators do not enter them.
+- Reranking weights/version derive from actual ingested text; no reranker env pin
+  or separate retrieval-policy record is required. Public licensed source and
+  corpus activation checks remain. Gemini receives bounded public/aggregate data.
+- DATABASE_SSL_CA_FILE is an optional trust-store override, omitted from the env
+  template. Existing trusted connections need no extra file; TLS stays verified.
+- Both domains use the farmer fusion function's existing NISAR attempt/fallback
+  and shared asset/type/HH/HV configuration. The duplicate NISAR_ENABLED setting
+  is retired. Existing farmer defaults and active .env are unchanged.
+- All edits are confined to backend. No production SQL/provider operation occurred.
+
+
+================================================================================
+22 OCTOBER 2026 AMENDMENT: SHARED BIOMASS AND SIMPLE DATABASE CONFIGURATION
+================================================================================
+This amendment governs new institution calculations and supersedes earlier
+pretrained-model, environment UUID-pin and cloud receipt-key setup requirements.
+Historical accepted jobs/results and optional legacy registry APIs are retained.
+
+1. New institution tree audits call services.fusion_engine.run_fusion with their
+   own accepted species/DBH/height/GPS observations, eligible geometry and dates.
+   The shared GEE pipeline chooses its existing NISAR/Sentinel/GEDI fallbacks,
+   computes Chave training targets, trains smileGradientTreeBoost per run
+   (100 trees, shrinkage 0.05, sampling rate 0.7; at least 9 usable samples), and
+   integrates the same 10 m prediction grid. No farmer result/credit is reused.
+   Tree AGB_kg=0.0673*(rho*DBH_cm^2*height_m)^0.976; training t/ha=(kg/1000)/0.01.
+   Carbon conversion uses the existing farmer constants 0.47 and 3.667. Farmer
+   date defaults and behavior remain unchanged; institution uses accepted dates.
+   Unquantified uncertainty/coverage stays unknown; standing stock is not annual
+   removal. Institution baselines/attribution remain institution-owned.
+2. BIOMASS_MODEL_VERSION, ACTIVE_ACCOUNTING_METHOD_VERSION, ACTIVE_CORPUS_VERSION,
+   INSTITUTION_RECEIPT_KMS_KEY_ID and duplicate NISAR_ENABLED are retired/ignored.
+   API preparation assigns the implementation ID; no trained model upload is
+   needed for new institution jobs. Legacy artifact jobs keep their frozen path.
+3. Forward phase 015 adds institution_calculation_settings (CURRENT config),
+   institution_formula_values (editable numeric coefficient/unit/applicability),
+   and institution_knowledge_sources (private public-guidance PDF locations).
+   These tables are backend-only/RLS protected. Operators edit actual values in
+   Supabase; code formulas remain allowlisted Python. No source PDF, approval
+   ceremony, UUID entry or manual hash is required for administrator-maintained
+   calculation constants. Scientific/site inputs remain explicit; missing values
+   fail clearly and are never guessed. IDs/checksums/history are automatic.
+   Fresh settings start empty; use the generated template and supply actual GPS,
+   dimension, sampling, mask and stratum inputs. Prior real published settings
+   are imported. New selections snapshot current values; accepted jobs, existing
+   drafts and finalized results retain their selected/frozen configuration.
+4. Public searchable licensed PDFs are uploaded under knowledge/ in the fixed
+   private institution-evidence bucket. List enabled/public_licensed source rows,
+   then run scripts.institution.sync_knowledge with a KNOWLEDGE_REVIEW operator.
+   One durable job validates/copies bytes, extracts all configured sources,
+   generates Gemini embeddings, and automatically activates the complete corpus
+   only on successful fenced publication. Parser/source changes block activation.
+   Latest compatible active corpus selection is automatic; edits require reindex.
+   No tenant/private PDF is an eligible free-tier guidance source. No independent
+   review or scientific validation is asserted for administrator-listed sources.
+5. Invitation receipts use project-local AES-256-GCM through cryptography.AESGCM;
+   random 12-byte nonces and AAD bind scope, request hash and expiry. Create one
+   32-byte key using scripts.institution.create_receipt_key; preserve the private
+   .institution-private/receipt.key across deployments and API instances. Key
+   creation refuses overwrite; missing/wrong keys or tampered/expired ciphertext
+   fail closed. No cloud KMS call or custom cipher exists. Older cloud-encrypted
+   receipts require authorized invitation reissue after this change.
+6. StockReconciliation is exactly the six BSDD fields: opening_quantity,
+   purchased_quantity, closing_quantity, other_in_quantity, other_out_quantity,
+   evidence_ids. Unrelated activity fields and recursive self-reference were
+   removed from the compiled dictionary.
+7. Manual steps: INSTITUTION_MANUAL_WORK.md; actual env sources:
+   INSTITUTION_MANUAL_WORK.md; editable configuration:
+   INSTITUTION_MANUAL_WORK.md; algorithm explanation:
+   INSTITUTION_MANUAL_WORK.md. No live database/provider action or frontend
+   modification is performed by preparing these backend files.
+
+FILE-BASED INSTITUTION DEMO CORRECTION — 22 OCTOBER 2026
+This amendment supersedes earlier requirements for dedicated demo control tables,
+mandatory session polling and generation headers. Institution checkpoints are
+private server files (.institution-private/demo/account-N.json), analogous to
+farmer code checkpoints. Every new business operation uses normal institution
+tables, authorization, providers and calculations in the existing database.
+Normal /auth/me restores accounts 5-8 once per verified Firebase auth_time;
+refresh/resume preserve work and account 9 never resets. Like farmer middleware,
+the local API process holds sign-in markers in memory; an ordinary DB transaction
+and identity row lock protect each restore. Use one local demo API process.
+Session endpoints/header remain compatible and optional; stale sign-ins/jobs are
+still rejected. Source files are server-managed and contain real captured states.
+Forward migration 016 replaces demo_restore_session authorization with a trusted
+transaction-local demo_restore_uid guard restricted to exact institution phones
+005-008 and their exclusively owned institutions/personal uploads. It drops only
+the two historical control tables. Export registered sources before running it;
+keep prior applied migration files/checksums. Farmer implementation is unchanged.
+Follow INSTITUTION_MANUAL_WORK.md section 0; no live SQL was executed by this review.

@@ -1,0 +1,3899 @@
+{
+  "users": {
+    "account_domain": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "DEFAULT FARMER CHECK FARMER, INSTITUTION"
+    },
+    "institution_onboarding_status": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "CHECK REQUIRED, PENDING_REVIEW, REJECTED, COMPLETE"
+    },
+    "institution_onboarding_completed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institutions": {
+    "profile": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema ProfileData"
+    },
+    "consolidation_approach": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "DEFAULT OPERATIONAL_CONTROL"
+    },
+    "verification_status": {
+      "type": "TEXT (InstitutionStatus)",
+      "nullable": false,
+      "rule": "DEFAULT PENDING"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "current_registration_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> institution_registrations.id"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "archived_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_users": {
+    "user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "permission": {
+      "type": "TEXT (Permission)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (MembershipStatus)",
+      "nullable": false,
+      "rule": "DEFAULT PENDING"
+    },
+    "added_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "joined_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "revoked_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_invitations": {
+    "target_phone_e164": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "permission": {
+      "type": "TEXT (Permission)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "token_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "UNIQUE"
+    },
+    "status": {
+      "type": "TEXT (InvitationStatus)",
+      "nullable": false,
+      "rule": "DEFAULT PENDING"
+    },
+    "expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "accepted_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "accepted_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> institution_invitations.id"
+    }
+  },
+  "institution_registration_authorizations": {
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "(NULL until consumed)"
+    },
+    "target_user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "-> users.id"
+    },
+    "granted_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "consumed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "revoked_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reason": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_registrations": {
+    "logical_registration_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "CHECK >0"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (RegistrationStatus)",
+      "nullable": false,
+      "rule": "DEFAULT DRAFT"
+    },
+    "profile_snapshot": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema ProfileData"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "frozen_input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "submitted_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "submitted_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campuses": {
+    "name": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "address": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema ProfileData.address"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "control_status": {
+      "type": "TEXT (CampusControl)",
+      "nullable": false,
+      "rule": "DEFAULT PENDING"
+    },
+    "control_evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "control_input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "control_approved_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "control_review_case_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "current_boundary_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "current_mask_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "current_plot_set_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "archived_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campus_boundaries": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "geometry": {
+      "type": "geometry(MultiPolygon,4326)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "geometry_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "area_ha": {
+      "type": "NUMERIC(24,12)",
+      "nullable": false,
+      "rule": "CHECK >0"
+    },
+    "effective_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "effective_end": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "source": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "review_status": {
+      "type": "TEXT (GeometryReview)",
+      "nullable": false,
+      "rule": "DEFAULT PENDING_REVIEW"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "correction_of_boundary_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campus_vegetation_masks": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "boundary_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "method_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "observation_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "observation_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "eligible_geometry": {
+      "type": "geometry(MultiPolygon,4326)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "eligible_area_ha": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "map_artifact_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "parameters": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "coverage": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "processing_status": {
+      "type": "TEXT (ProcessingStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "review_status": {
+      "type": "TEXT (GeometryReview)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "correction_of_mask_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campus_plot_sets": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "boundary_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "mask_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "quality_policy_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "design": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "review_status": {
+      "type": "TEXT (GeometryReview)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "generation_job_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "correction_of_plot_set_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campus_sampling_plots": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "plot_set_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "boundary_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "mask_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "quality_policy_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "geometry": {
+      "type": "geometry(MultiPolygon,4326)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "measured_area_ha": {
+      "type": "NUMERIC(24,12)",
+      "nullable": false,
+      "rule": "CHECK >0"
+    },
+    "stratum": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "inclusion_rule": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "active_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "active_end": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_status": {
+      "type": "TEXT (GeometryReview)",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "campus_trees": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "stable_tag": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "location": {
+      "type": "geometry(Point,4326)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "species_code": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "condition": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "planting_date": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "metadata": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "latest_measurement_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campus_tree_events": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "tree_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "event_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Schema TreeEventInput.type"
+    },
+    "event_date": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "previous_values": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "new_values": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "metadata": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reason": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "actor_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "campus_tree_surveys": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "logical_survey_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "boundary_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "mask_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "plot_set_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "quality_policy_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "survey_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "survey_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (SurveyStatus)",
+      "nullable": false,
+      "rule": "DEFAULT DRAFT"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "frozen_input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "submitted_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "submitted_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "sync_validation": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "frozen_snapshot": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campus_tree_measurements": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "survey_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "tree_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "plot_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "local_uuid": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 1"
+    },
+    "measured_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "location": {
+      "type": "geometry(Point,4326)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "gps_accuracy_m": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "dbh_cm": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "height_m": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "height_source": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "species_code": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "species_selection": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "species_confidence": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "ar_tier": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "allometry_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "wood_density_source_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "measurement_height_m": {
+      "type": "NUMERIC(24,12)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "protocol_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "measurement_form": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "circumference_cm": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "stems": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "capture_quality": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema CaptureQuality"
+    },
+    "content_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "MCJ1 of raw write item"
+    },
+    "raw_input": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "Exact raw item; mandatory on every new capture/write (21.7)"
+    },
+    "derived_dbh_cm": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "Reviewed server derivation, never overwrites raw DBH"
+    },
+    "validation_status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "CHECK VALID, NEEDS_DATA"
+    },
+    "validation_issues": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "copied_from_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> campus_tree_measurements.id"
+    },
+    "deleted_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "campus_tree_audits": {
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "survey_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "boundary_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "mask_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "model_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "method_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "feature_schema_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "assessment_date": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "observation_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "observation_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "baseline_audit_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "correction_of_tree_audit_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "processing_status": {
+      "type": "TEXT (ProcessingStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "review_status": {
+      "type": "TEXT (TreeReview)",
+      "nullable": false,
+      "rule": "DEFAULT PENDING"
+    },
+    "job_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "agb_t": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "stock_co2_t": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "comparison_start": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "comparison_end": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "comparability_status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "attribution_policy_version": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "attribution_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "attribution_sources": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "event_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "attribution_parameter_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "coverage": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "quality_flags": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "uncertainty": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "provenance": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "map_artifact_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "error": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_audit_periods": {
+    "period_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "period_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "timezone": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "label": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "period_range": {
+      "type": "DATERANGE",
+      "nullable": false,
+      "rule": "GENERATED AS daterange(period_start,period_end+1,'[)') STORED"
+    },
+    "current_final_audit_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> institution_audits.id"
+    },
+    "active_draft_audit_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> institution_audits.id"
+    }
+  },
+  "institution_audits": {
+    "logical_audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "-> institution_audit_periods.id"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "period_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "period_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "timezone": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "label": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "campus_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "coverage": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema Coverage"
+    },
+    "denominators": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "boundary_snapshot": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "method_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "business_status": {
+      "type": "TEXT (AuditStatus)",
+      "nullable": false,
+      "rule": "DEFAULT DRAFT"
+    },
+    "processing_status": {
+      "type": "TEXT (ProcessingStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "frozen_snapshot": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    },
+    "frozen_input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "preview_snapshot_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_snapshot_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "current_result_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "submitted_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "finalized_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "submitted_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reviewed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "finalized_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "latest_review_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_emission_inputs": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "campus_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "category": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "subcategory": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_id": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "scope": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "quantity": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "unit": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "activity_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "activity_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_type": {
+      "type": "TEXT (SourceType)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "estimate_notes": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "included_in_input_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "allocation_ratio": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "factor_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "details": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "flags": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "copied_from_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_mitigation_inputs": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "campus_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "action": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "activity_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "activity_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "method_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_type": {
+      "type": "TEXT (SourceType)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "estimate_notes": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "baseline": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "project": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "attributes": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "overlap_refs": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "flags": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "copied_from_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_audit_tree_links": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "campus_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "campus_tree_audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "period_start": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "period_end": {
+      "type": "DATE",
+      "nullable": false,
+      "rule": "—"
+    },
+    "comparability_status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "attribution_snapshot": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_calculation_snapshots": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_input_revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "processing_job_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "frozen_input": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema ResultResource"
+    },
+    "created_as_preview": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "—"
+    },
+    "quality": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "missing_data": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_calculation_lines": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "snapshot_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "formula_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "method_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "normalized_quantity": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "normalized_unit": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "factor_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "factor_snapshots": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "baseline_terms": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    },
+    "project_terms": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    },
+    "contribution_amount": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "result_unit": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "scope": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "included_contribution": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "—"
+    },
+    "linked_parent_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "assumptions": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "flags": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_audit_results": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "UNIQUE"
+    },
+    "snapshot_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "UNIQUE"
+    },
+    "result_revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema ResultResource"
+    }
+  },
+  "institution_audit_evidence": {
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "owner_user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "parent_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Schema UploadCreate.parent_type"
+    },
+    "parent_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "file_name": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "mime_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "private_bucket": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "object_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "expected_sha256": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "byte_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "size_bytes": {
+      "type": "BIGINT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "actual_size_bytes": {
+      "type": "BIGINT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "state": {
+      "type": "TEXT (EvidenceState)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "scan_job_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "rejection_reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "copied_from_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "publication_state": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "DEFAULT PRIVATE"
+    },
+    "manifest_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "cid": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "bytes_deleted_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "Actual policy-approved byte purge time"
+    },
+    "purge_policy_version": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "Required policy reference when bytes are purged"
+    }
+  },
+  "institution_evidence_links": {
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "(NULL only for checked own/global parent)"
+    },
+    "evidence_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "parent_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "parent_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "linked_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "copied_from_link_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_import_batches": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_input_revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "file_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "normalized_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "column_mapping": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "schema_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 1"
+    },
+    "operation": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "DEFAULT APPEND_NEW"
+    },
+    "status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "CHECK PREVIEWED, COMMITTED, EXPIRED"
+    },
+    "expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "valid_count": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "error_count": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "duplicate_count": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "committed_input_revision": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "—"
+    },
+    "committed_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "committed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_import_rows": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "batch_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "line_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "row_number": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "normalized_line": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Schema EmissionLine"
+    },
+    "errors": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "warnings": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_exports": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "snapshot_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "format": {
+      "type": "TEXT (ExportFormat)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "job_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (ProcessingStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "artifact_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "draft_watermark": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "—"
+    },
+    "include_advice": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "—"
+    },
+    "advice_query_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "advice_hashes": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "institution_artifacts": {
+    "parent_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "CHECK REPORT, TREE_AUDIT, MASK, IMPORT_TEMPLATE, PLOT_MAP"
+    },
+    "parent_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "producer_job_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "snapshot_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "private_bucket": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "object_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "byte_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "size_bytes": {
+      "type": "BIGINT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "mime_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "CHECK PENDING, READY, REJECTED"
+    },
+    "draft": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "—"
+    },
+    "bytes_deleted_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "Actual policy-approved byte purge time"
+    },
+    "purge_policy_version": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "Required policy reference when bytes are purged"
+    }
+  },
+  "emission_factors": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "schema_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 1"
+    },
+    "title": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "publisher": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_version": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "license": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_url": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "source_page": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed page reference"
+    },
+    "source_section": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed section reference"
+    },
+    "source_evidence_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "published_date": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_from": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_to": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "geography_codes": {
+      "type": "TEXT[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "applicability_notes": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "(FACTOR/METHOD/MODEL variant in 18.9)"
+    },
+    "status": {
+      "type": "TEXT (RegistryStatus)",
+      "nullable": false,
+      "rule": "DEFAULT DRAFT"
+    },
+    "artifact_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "author_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reviewer_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "validated_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> same registry table"
+    }
+  },
+  "carbon_methodologies": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "schema_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 1"
+    },
+    "title": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "publisher": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_version": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "license": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_url": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "source_page": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed page reference"
+    },
+    "source_section": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed section reference"
+    },
+    "source_evidence_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "published_date": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_from": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_to": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "geography_codes": {
+      "type": "TEXT[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "applicability_notes": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "(FACTOR/METHOD/MODEL variant in 18.9)"
+    },
+    "status": {
+      "type": "TEXT (RegistryStatus)",
+      "nullable": false,
+      "rule": "DEFAULT DRAFT"
+    },
+    "artifact_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "author_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reviewer_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "validated_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> same registry table"
+    }
+  },
+  "model_registry": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "schema_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 1"
+    },
+    "title": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "publisher": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_version": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "license": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_url": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "source_page": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed page reference"
+    },
+    "source_section": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed section reference"
+    },
+    "source_evidence_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "published_date": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_from": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_to": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "geography_codes": {
+      "type": "TEXT[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "applicability_notes": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "(FACTOR/METHOD/MODEL variant in 18.9)"
+    },
+    "status": {
+      "type": "TEXT (RegistryStatus)",
+      "nullable": false,
+      "rule": "DEFAULT DRAFT"
+    },
+    "artifact_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "author_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reviewer_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "validated_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> same registry table"
+    }
+  },
+  "method_parameters": {
+    "methodology_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "-> carbon_methodologies.id"
+    },
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "kind": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "value": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "unit": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "formula_key": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "required_inputs": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_metadata": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "applicability": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "uncertainty": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "method_quality_policies": {
+    "methodology_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "artifact_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "knowledge_documents": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "schema_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 1"
+    },
+    "title": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "publisher": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_version": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "license": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_url": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "source_page": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed page reference"
+    },
+    "source_section": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Exact reviewed section reference"
+    },
+    "source_evidence_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "published_date": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_from": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_to": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "—"
+    },
+    "geography_codes": {
+      "type": "TEXT[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "applicability_notes": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "(KnowledgeConfig in 18.9)"
+    },
+    "status": {
+      "type": "TEXT (RegistryStatus)",
+      "nullable": false,
+      "rule": "DEFAULT DRAFT"
+    },
+    "artifact_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "author_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reviewer_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "validated_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "supersedes_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> same registry table"
+    },
+    "checksum": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "extraction_quality": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    },
+    "superseded_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "-> knowledge_documents.id"
+    }
+  },
+  "knowledge_chunks": {
+    "document_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "document_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "chunk_index": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "text": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "page_start": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "—"
+    },
+    "page_end": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "—"
+    },
+    "section": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "metadata": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "text_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "lexical_search_vector": {
+      "type": "TSVECTOR",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "knowledge_corpus_versions": {
+    "manifest": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "manifest_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "ingestion_config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "embedding_config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "retrieval_config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "pipeline_version": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "published_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (RegistryStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "author_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reviewer_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "knowledge_embeddings": {
+    "chunk_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "corpus_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "embedding_model": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "embedding_version": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "dimension": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "embedding": {
+      "type": "vector",
+      "nullable": false,
+      "rule": "Dimension CHECK and per-version index below"
+    }
+  },
+  "advisory_queries": {
+    "user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "snapshot_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "question": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "constraints": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "context_snapshot": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "context_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "versions": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "answer": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    },
+    "answer_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "job_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (QueryStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "publication_state": {
+      "type": "TEXT (PublicationState)",
+      "nullable": false,
+      "rule": "DEFAULT PRIVATE"
+    },
+    "published_by": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "published_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "timings": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "usage": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "cost": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "warnings": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "advisory_retrievals": {
+    "query_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "chunk_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "corpus_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "chunk_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "rank": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "semantic_score": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "lexical_score": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "fusion_score": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reranker_score": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "filter_decisions": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "advisory_recommendations": {
+    "query_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "action_id": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "structured_action": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "priority_class": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "priority": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "ranking_version": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "rank_components": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    },
+    "tie_break": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "citation_refs": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "scenario_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "validation_flags": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    }
+  },
+  "advisory_scenarios": {
+    "audit_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "snapshot_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "query_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "created_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "formula_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "assumptions": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "factor_snapshots": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "overlap_flags": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "method_version": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "hypothetical": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "DEFAULT true CHECK hypothetical=true"
+    }
+  },
+  "advisory_feedback": {
+    "query_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "useful": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "operator_grants": {
+    "user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "capability": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "case_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "valid_from": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "valid_until": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "granted_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revoked_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "review_cases": {
+    "resource_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "resource_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "resource_input_revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "result_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "resource_snapshot": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "CHECK OPEN, CLAIMED, CLOSED"
+    },
+    "assigned_reviewer": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "claim_expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "decision": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "field_issues": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "evidence_ids": {
+      "type": "UUID[]",
+      "nullable": false,
+      "rule": "—"
+    },
+    "approved_snapshot_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "processing_jobs": {
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "domain": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "asset_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "resource_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "requested_by": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "job_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "source_input_revision": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "input_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (ProcessingStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "stage": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "progress": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "—"
+    },
+    "attempt": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 0"
+    },
+    "max_attempts": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "frozen_input": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "stage_outputs": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "provider_task_ids": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "output_ref": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "lease_owner": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "lease_expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "heartbeat_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "deadline_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "started_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "finished_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "retryable": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "DEFAULT false"
+    },
+    "error": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "—"
+    },
+    "fixture_generation": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "job_outbox": {
+    "job_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "UNIQUE"
+    },
+    "payload_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "queue_name": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "CHECK PENDING, DISPATCHED"
+    },
+    "attempts": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 0"
+    },
+    "next_attempt_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "dispatched_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "audit_events": {
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "domain": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "actor_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "action": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "entity_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "entity_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "old_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "new_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "details": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "event_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "DEFAULT now()"
+    }
+  },
+  "idempotency_records": {
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "http_method": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "normalized_route": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "idempotency_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "request_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "intended_revision": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "—"
+    },
+    "http_status": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "accepted_resource_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "response": {
+      "type": "JSONB",
+      "nullable": true,
+      "rule": "Typed nonsecret receipt; NULL after compaction"
+    },
+    "receipt_state": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "FULL or TOMBSTONE; DEFAULT FULL"
+    },
+    "secret_ciphertext": {
+      "type": "BYTEA",
+      "nullable": true,
+      "rule": "Envelope-encrypted one-time invitation token only"
+    },
+    "encryption_key_id": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Server-managed KMS key version, never mobile key"
+    },
+    "secret_expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "<=expires_at and invitation expiry"
+    },
+    "fixture_generation": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "NULL outside resettable institution demos"
+    },
+    "expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": false,
+      "rule": "—"
+    },
+    "accepted_revision": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "Original Success.revision, retained in tombstone"
+    },
+    "recovery_kind": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "RESOURCE_GET, DELETE_ACK, ACK_ONLY or SECRET_REISSUE"
+    }
+  },
+  "institution_notifications": {
+    "institution_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "recipient_user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "event_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "resource_type": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "resource_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "revision": {
+      "type": "INTEGER",
+      "nullable": true,
+      "rule": "—"
+    },
+    "safe_summary": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "read_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "expires_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_deletion_requests": {
+    "user_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "per 18.9"
+    },
+    "reason": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "—"
+    },
+    "resolution": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "request_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "policy_version": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "plan_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": true,
+      "rule": "—"
+    },
+    "verified_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "completed_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    },
+    "operator_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "job_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_deployment_policies": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "—"
+    },
+    "version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "—"
+    },
+    "kind": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "CHECK RETENTION, PROVIDER, RETRIEVAL, RANKING"
+    },
+    "schema_version": {
+      "type": "INTEGER",
+      "nullable": false,
+      "rule": "DEFAULT 1"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "—"
+    },
+    "artifact_hash": {
+      "type": "TEXT (SHA-256)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "author_id": {
+      "type": "UUID",
+      "nullable": false,
+      "rule": "—"
+    },
+    "reviewer_id": {
+      "type": "UUID",
+      "nullable": true,
+      "rule": "—"
+    },
+    "status": {
+      "type": "TEXT (RegistryStatus)",
+      "nullable": false,
+      "rule": "—"
+    },
+    "approved_at": {
+      "type": "TIMESTAMPTZ",
+      "nullable": true,
+      "rule": "—"
+    }
+  },
+  "institution_calculation_settings": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    }
+  },
+  "institution_formula_values": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "value": {
+      "type": "NUMERIC(24,12)",
+      "nullable": true,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "config": {
+      "type": "JSONB",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "source_label": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "geography_codes": {
+      "type": "TEXT[]",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "valid_from": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "valid_to": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "enabled": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    }
+  },
+  "institution_knowledge_sources": {
+    "logical_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "title": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "publisher": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "object_key": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "license": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "source_url": {
+      "type": "TEXT",
+      "nullable": true,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "geography_codes": {
+      "type": "TEXT[]",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "topic_codes": {
+      "type": "TEXT[]",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "language": {
+      "type": "TEXT",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "valid_from": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "valid_to": {
+      "type": "DATE",
+      "nullable": true,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "enabled": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    },
+    "public_licensed": {
+      "type": "BOOLEAN",
+      "nullable": false,
+      "rule": "Phase 015: administrator-maintained configuration"
+    }
+  }
+}

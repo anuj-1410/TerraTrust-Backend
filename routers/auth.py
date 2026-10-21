@@ -6,7 +6,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from web3 import Web3
 
 from app.database import supabase_client
@@ -86,10 +86,11 @@ def _build_auth_me_response(current_user: Dict[str, Any]) -> AuthMeResponse:
     )
 
 
-@router.get("/me", response_model=AuthMeResponse, status_code=status.HTTP_200_OK)
-def get_me(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Return the authenticated farmer profile state for mobile bootstrap."""
-    return _build_auth_me_response(current_user)
+@router.get("/me", status_code=status.HTTP_200_OK)
+async def get_me(authorization: str | None = Header(None), x_terratrust_flow: str | None = Header(None)):
+    """Bootstrap stored account domain; legacy farmer payload remains compatible."""
+    from services.institution.auth_service import bootstrap
+    return await bootstrap(authorization, x_terratrust_flow)
 
 
 @router.post("/kyc", response_model=KYCResponse, status_code=status.HTTP_200_OK)

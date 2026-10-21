@@ -30,7 +30,7 @@ source venv/bin/activate
 ## 2. Install Python dependencies
 
 ```bash
-pip install -r requirements.txt
+uv sync --frozen
 ```
 
 Install the Chromium browser used by the Layer 2 Playwright boundary scraper:
@@ -41,7 +41,7 @@ playwright install chromium
 
 ## 3. Configure environment variables
 
-Create `.env` from `.env.example` and fill every required variable.
+For a new checkout only, create `.env` from `.env.example`. On an existing deployment, preserve `.env` and merge new keys. Institution value sources: [INSTITUTION_MANUAL_WORK.md](INSTITUTION_MANUAL_WORK.md).
 
 Windows PowerShell:
 
@@ -128,7 +128,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 ## 6. Create the documented backend schema
 
-Run the checked-in `schema.sql` file in the Supabase SQL Editor. This file is the canonical backend schema and is kept aligned with the runtime models and database helpers.
+For a brand-new empty farmer database only, run `schema.sql`.
+
+For your existing Supabase project, follow [INSTITUTION_MANUAL_WORK.md](INSTITUTION_MANUAL_WORK.md), section 2. Generate and run the checksummed institution SQL bundle; do not rerun `schema.sql`.
 
 Windows PowerShell:
 
@@ -185,7 +187,7 @@ honcho -f Procfile.render start
 Python tests:
 
 ```bash
-python -m pytest tests -q
+python scripts/institution/run_offline_tests.py
 ```
 
 Contract tests:
@@ -216,3 +218,5 @@ Open the API docs at http://localhost:8000/docs and confirm these endpoints are 
 - `GET /api/v1/credits/balance`
 - `GET /health`
 - `GET /api/v1/status`
+
+Institution setup, optional demos and USB phone testing: [single manual](INSTITUTION_MANUAL_WORK.md). Supabase and Firebase are already configured; preserve the existing schema and credentials.

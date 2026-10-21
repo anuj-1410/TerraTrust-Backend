@@ -26,9 +26,7 @@ async_engine: Optional[AsyncEngine] = None
 if settings.DATABASE_URL:
     import ssl
 
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    ssl_context = ssl.create_default_context(cafile=settings.DATABASE_SSL_CA_FILE or None)
 
     async_engine = create_async_engine(
         settings.DATABASE_URL,

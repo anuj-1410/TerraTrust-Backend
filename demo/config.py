@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import os
 
-ENABLE_DEMO_ACCOUNTS = os.getenv("ENABLE_DEMO_ACCOUNTS", "false").lower() == "true"
+ENABLE_FARMER_DEMO_ACCOUNTS = os.getenv("ENABLE_FARMER_DEMO_ACCOUNTS", os.getenv("ENABLE_DEMO_ACCOUNTS", "false")).lower() == "true"
+# Internal legacy symbol retained for existing farmer imports/tests.
+ENABLE_DEMO_ACCOUNTS = ENABLE_FARMER_DEMO_ACCOUNTS
 DEMO_UID_PLACEHOLDER = "PASTE_UID_HERE"
 
 # -------------------------------------------------------------------------

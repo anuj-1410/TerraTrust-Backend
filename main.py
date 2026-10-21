@@ -35,6 +35,10 @@ ALLOWED_CORS_HEADERS = [
     "Accept",
     "Origin",
     "X-Requested-With",
+    "X-TerraTrust-Flow",
+    "X-TerraTrust-Demo-Generation",
+    "Idempotency-Key",
+    "If-Match",
 ]
 
 
@@ -89,7 +93,11 @@ async def lifespan(_app: FastAPI):
     if startup_errors:
         raise RuntimeError("; ".join(startup_errors))
 
-    yield
+    try:
+        yield
+    finally:
+        from app.institution_database import close as close_institution_database
+        await close_institution_database()
 
 # ---------------------------------------------------------------------------
 # FastAPI application
@@ -112,6 +120,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=ALLOWED_CORS_METHODS,
     allow_headers=ALLOWED_CORS_HEADERS,
+    expose_headers=["ETag", "Retry-After", "X-TerraTrust-Demo-Generation"],
 )
 
 # ---------------------------------------------------------------------------
@@ -122,9 +131,13 @@ app.include_router(land.router, prefix="/api/v1/land", tags=["Land"])
 app.include_router(audit.router, prefix="/api/v1/audit", tags=["Audit"])
 app.include_router(credits.router, prefix="/api/v1/credits", tags=["Credits"])
 
+# Additive module registration performs no migration, provider call or startup
+# database write. Default-disabled institution routes fail before accessing SQL.
+from app.institution_api import install as install_institution_api
+install_institution_api(app)
+
 # -- Demo account support (development only) ---------------------------
-import os as _os
-if _os.getenv("ENABLE_DEMO_ACCOUNTS", "false").lower() == "true":
+if settings.ENABLE_FARMER_DEMO_ACCOUNTS:
     from demo.middleware import DemoResetMiddleware
     from demo.router import router as _demo_router
 

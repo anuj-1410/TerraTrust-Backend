@@ -231,18 +231,10 @@ yarn android
 
 ```bash
 cd backend
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Fill in: SUPABASE_URL, SUPABASE_KEY, FIREBASE_CREDENTIALS_PATH,
-#           ADMIN_WALLET_PRIVATE_KEY, CONTRACT_ADDRESS, PINATA_JWT
-
-# Run migrations (Supabase SQL Editor)
-# Enable PostGIS: CREATE EXTENSION IF NOT EXISTS postgis;
-
-# Start FastAPI + Celery via Honcho
-honcho start
+uv sync --frozen
+# New checkout only: create .env from .env.example and fill actual values.
+# Existing deployment: preserve .env and the production database.
+uv run python scripts/run_local.py
 ```
 
 Backend runs at `http://localhost:8000` with auto-generated Swagger docs at `/docs`.
@@ -374,7 +366,7 @@ cd blockchain && npx hardhat test
 
 ## 🔮 Roadmap
 
-- [x] **June 2026** — Enable calibrated NISAR production fusion via `NISAR_PRODUCTION_READY=true` + `NISAR_GEE_ASSET_ID`
+- [x] **June 2026** — Enable calibrated NISAR production fusion via the configured `NISAR_GEE_ASSET_ID` and existing availability fallback
 - [ ] **Q3 2026** — Submit for Verra VM0047 methodology certification
 - [ ] **Q3 2026** — Multi-state LGD integration (KA, AP, TG, TN, UP)
 - [ ] **Q4 2026** — iOS port (ARKit bridge + alternative map renderer)
@@ -409,3 +401,23 @@ This project was developed as part of the B.Tech curriculum at RCOEM Nagpur for 
 **TerraTrust-AR · RCOEM Nagpur · AICS Department · 2025–2026**
 
 </div>
+
+## Institution backend
+
+Use [the single setup guide](INSTITUTION_MANUAL_WORK.md) for configuration, calculation values, operators, optional Gemini/demos and USB phone testing. Supabase and Firebase are already configured; do not rerun the original farmer schema.
+
+Institution and farmer flows use the same database with separate institution queues. Institution biomass uses the shared tree implementation with its own observations. Demo accounts 5-8 reset on login; account 9 persists. The farmer and institution demo flags are independent.
+
+Institution checkpoints are private backend files, with in-process sign-in markers, like farmer demo middleware. Normal `/auth/me` handles resets; forward migration 016 removes the old demo control tables. Existing installations should first export registered checkpoints using section 0 of the setup guide.
+
+Start locally from backend PowerShell:
+
+```powershell
+.venv-review\Scripts\python.exe scripts/run_local.py
+```
+
+Run offline farmer and institution regressions:
+
+```powershell
+.venv-review\Scripts\python.exe scripts/institution/run_offline_tests.py
+```

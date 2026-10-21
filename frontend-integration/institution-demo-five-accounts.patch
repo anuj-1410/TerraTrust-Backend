@@ -1,0 +1,117 @@
+--- a/src/features/institution/services/demoSession.ts
++++ b/src/features/institution/services/demoSession.ts
+@@ -2,10 +2,12 @@
+ import type { LoginIntent } from '../../../services/loginCoordinator';
+ import { getLoginIntent } from '../../../services/loginCoordinator';
+ import { getCurrentFirebaseUser } from '../../../services/firebase';
+-import { IS_AUDIT_DEMO_MODE } from '../../ar-audit/utils/demoMode';
++import Config from 'react-native-config';
++import { parseBooleanEnv } from '../../ar-audit/utils/demoMode';
+ import { decodeSuccess, uuid } from '../contracts/schemas';
+ import { purgeInstitutionAccount } from '../storage/vault';
+ import type { ApiError } from '../contracts/api';
++const INSTITUTION_DEMOS_ENABLED = parseBooleanEnv(Config.ENABLE_INSTITUTION_DEMO_ACCOUNTS);
+ interface DemoSession {
+   session_id: string;
+   status: 'READY' | 'RESTORING' | 'FAILED';
+@@ -25,8 +27,8 @@
+     !user ||
+     !intent ||
+     intent.purpose !== 'SIGN_IN' ||
+-    !/^\+91900000000[5-8]$/.test(user.phoneNumber ?? '') ||
+-    !IS_AUDIT_DEMO_MODE
++    !/^\+91900000000[5-9]$/.test(user.phoneNumber ?? '') ||
++    !INSTITUTION_DEMOS_ENABLED
+   )
+     return;
+   if (intent.flow !== 'INSTITUTION')
+@@ -43,7 +45,7 @@
+   const body = {
+     login_session_id: intent.attemptId,
+     flow: intent.flow,
+-    client_audit_demo_mode: IS_AUDIT_DEMO_MODE,
++    client_audit_demo_mode: INSTITUTION_DEMOS_ENABLED,
+   };
+   let current = decodeSuccess<DemoSession>(
+     (
+@@ -57,10 +59,10 @@
+     uuid(current.session_id);
+     if (
+       current.account_domain !== 'INSTITUTION' ||
+-      current.audit_demo_mode !== IS_AUDIT_DEMO_MODE ||
++      current.audit_demo_mode !== INSTITUTION_DEMOS_ENABLED ||
+       !Number.isInteger(current.account_number) ||
+       current.account_number < 5 ||
+-      current.account_number > 8
++      current.account_number > 9
+     )
+       throw new Error('Demo configuration does not match this sign-in.');
+     if (current.status === 'FAILED')
+@@ -68,10 +70,16 @@
+         current.safe_error?.message ??
+           'This real checkpoint is not ready. Ask the development operator to finish checkpoint preparation.',
+       );
++    const expectedPolicy = current.account_number === 9 ? 'PERSISTENT' : 'NEXT_LOGIN';
++    if (current.reset_policy !== expectedPolicy ||
++        current.account_number !== Number(user.phoneNumber?.slice(-1)))
++      throw new Error('Demo checkpoint policy does not match this account.');
+     if (current.status === 'READY') {
+-      if (current.fixture_generation === null || !current.reset_performed)
++      if (!Number.isInteger(current.fixture_generation) ||
++          (current.fixture_generation ?? 0) < 1 ||
++          current.reset_performed !== (expectedPolicy === 'NEXT_LOGIN'))
+         throw new Error('The institution checkpoint restore is not ready.');
+-      await purgeInstitutionAccount(user.uid);
++      if (current.reset_performed) await purgeInstitutionAccount(user.uid);
+       owns();
+       return current;
+     }
+--- a/src/features/ar-audit/utils/demoMode.ts
++++ b/src/features/ar-audit/utils/demoMode.ts
+@@ -26,7 +26,9 @@
+   return ENABLED_BOOLEAN_VALUES.has(value.trim().toLowerCase());
+ }
+ 
+-export const IS_AUDIT_DEMO_MODE = parseBooleanEnv(Config.AUDIT_DEMO_MODE);
++export const IS_AUDIT_DEMO_MODE = parseBooleanEnv(
++  Config.ENABLE_FARMER_DEMO_ACCOUNTS ?? Config.AUDIT_DEMO_MODE,
++);
+ export const IS_AUDIT_SPECIES_DETECTION_DISABLED = parseBooleanEnv(
+   Config.AUDIT_SKIP_SPECIES_DETECTION,
+ );
+--- a/src/types/env.d.ts
++++ b/src/types/env.d.ts
+@@ -4,7 +4,9 @@
+     GOOGLE_MAPS_API_KEY: string;
+     ALCHEMY_POLYGON_AMOY_URL: string;
+     CONTRACT_ADDRESS: string;
+-    AUDIT_DEMO_MODE?: string;
++    ENABLE_FARMER_DEMO_ACCOUNTS?: string;
++    ENABLE_INSTITUTION_DEMO_ACCOUNTS?: string;
++    AUDIT_DEMO_MODE?: string; // Legacy farmer-only fallback.
+     AUDIT_SKIP_SPECIES_DETECTION?: string;
+     FIREBASE_AUTH_FORCE_RECAPTCHA?: string;
+     FIREBASE_TEST_PHONE_NUMBER?: string;
+--- a/.env.example
++++ b/.env.example
+@@ -8,11 +8,14 @@
+ # Required by src/services/blockchain.ts for direct on-chain dashboard balance reads
+ ALCHEMY_POLYGON_AMOY_URL=
+ CONTRACT_ADDRESS=
+-# Set to true only for frontend testing to bypass audit zone and land-location checks.
+-AUDIT_DEMO_MODE=false
++# Farmer-only existing capture assistance; keep false for real GPS testing.
++ENABLE_FARMER_DEMO_ACCOUNTS=false
++# Institution-only demo session handoff for accounts 005-009.
++ENABLE_INSTITUTION_DEMO_ACCOUNTS=false
++# Legacy AUDIT_DEMO_MODE is a farmer-only fallback; use the explicit flags above.
+ # Set to true only for temporary testing to skip tree species detection and go straight to diameter/height measurement.
+ AUDIT_SKIP_SPECIES_DETECTION=false
+-# Public URLs must use the same hosts as /auth/me.institution_links.
+-INSTITUTION_PRIVACY_POLICY_URL=
+-INSTITUTION_SUPPORT_URL=
+-INSTITUTION_ACCOUNT_DELETION_URL=
++# Public URLs must use the same hosts as /auth/me.institution_links.
++INSTITUTION_PRIVACY_POLICY_URL=
++INSTITUTION_SUPPORT_URL=
++INSTITUTION_ACCOUNT_DELETION_URL=
