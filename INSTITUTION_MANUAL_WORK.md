@@ -2,6 +2,18 @@
 
 Supabase and Firebase are already configured. **Do not rerun `schema.sql` or edit applied migrations.** Keep your existing database, Firebase, GEE, NISAR and Redis credentials. Farmer and institution accounts use the same database.
 
+## Render: fix database certificate verification
+
+1. Supabase > your existing project > **Database Settings > SSL Configuration > Download Certificate**. Download the **server root certificate**. Keep SSL enforcement unchanged.
+2. Open the downloaded certificate in a text editor; copy its entire PEM contents, including `BEGIN CERTIFICATE` and `END CERTIFICATE`.
+3. Render > backend service > **Environment > Secret Files > Add Secret File**: filename `supabase-ca.crt`; paste the certificate contents.
+4. Under **Environment Variables**, set `DATABASE_SSL_CA_FILE=/etc/secrets/supabase-ca.crt`.
+5. Add the same file/value to any separately deployed institution workers that connect to this database. Keep the existing `DATABASE_URL` and credentials.
+6. Deploy the updated backend code and save/deploy the Render environment changes. Keep start command `uv run honcho -f Procfile.render start`.
+7. Confirm logs show **Direct PostgreSQL/PostGIS connection verified** and **Application startup complete**, then open `https://YOUR_SERVICE.onrender.com/health`.
+
+The provided logs show a TLS trust failure during API startup, not a Node build or port configuration failure. No SQL or database schema change is needed. Official steps: [Supabase certificate verification](https://supabase.com/docs/guides/database/connecting-to-postgres), [Render secret files](https://render.com/docs/configure-environment-variables#secret-files).
+
 ## 0. Correct the previous demo-table setup
 
 Migration files record schema history; their count is not a count of demo tables. Keep applied files/checksums unchanged. Migration 016 removes the only two demo control tables and creates no tables. No further demo migration is needed for the in-memory reset implementation.
@@ -191,4 +203,4 @@ adb reverse tcp:8081 tcp:8081
 9. Test farmer login/land/audit/wallet; institution registration/review, campus/tree sampling, biomass calculation, annual audit, export/share; demo resets and account-9 persistence.
 10. Stop the local API/workers with **Ctrl+C**. Before production, set `ENVIRONMENT=production`, both demo flags `false`, install the preserved key/font on deployment instances, and enable only features that passed live testing.
 
-Latest offline regression: **67 farmer + 210 institution tests passed (277 total)**. Live database, provider and phone acceptance must be checked in your configured environment.
+Latest offline regression: **72 farmer/shared + 210 institution tests passed (282 total)**, including real in-memory TLS trust/hostname checks. Live database, provider and phone acceptance must be checked in your configured environment.

@@ -4,7 +4,6 @@ import hashlib
 import json
 from pathlib import Path
 import re
-import ssl
 from urllib.parse import urlsplit
 
 
@@ -34,8 +33,9 @@ def check(config, *, advisor=False):
             errors["INSTITUTION_REPORT_FONT_PATH"] = "FONT_UNREADABLE"
     if config.DATABASE_SSL_CA_FILE:
         try:
-            ssl.create_default_context(cafile=config.DATABASE_SSL_CA_FILE)
-        except (OSError, ValueError):
+            from app.database_ssl import database_ssl_context
+            database_ssl_context(config.DATABASE_SSL_CA_FILE)
+        except (OSError, ValueError, RuntimeError):
             errors["DATABASE_SSL_CA_FILE"] = "TRUSTED_CA_PEM_REQUIRED"
     if advisor:
         for name in ("LLM_PROVIDER", "EMBEDDING_PROVIDER"):

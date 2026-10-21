@@ -1,6 +1,7 @@
 """TerraTrust-AR FastAPI application entry point."""
 
 import logging
+import ssl
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -15,6 +16,7 @@ load_dotenv()
 
 from app.config import settings
 from app.database import verify_database_setup
+from app.database_ssl import DATABASE_TLS_SETUP_MESSAGE
 from app.firebase_auth import get_firebase_app
 from app.gee import ensure_gee_initialized
 from routers import auth, land, audit, credits
@@ -72,6 +74,9 @@ async def lifespan(_app: FastAPI):
     try:
         await verify_database_setup()
         logger.info("Direct PostgreSQL/PostGIS connection verified.")
+    except ssl.SSLCertVerificationError:
+        logger.exception(DATABASE_TLS_SETUP_MESSAGE)
+        startup_errors.append(DATABASE_TLS_SETUP_MESSAGE)
     except Exception as exc:
         logger.exception("Failed to verify direct PostgreSQL/PostGIS connection.")
         startup_errors.append(f"Database/PostGIS startup verification failed: {exc}")

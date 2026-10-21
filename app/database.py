@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from supabase import Client, create_client
 
 from app.config import settings
+from app.database_ssl import database_ssl_context
 
 logger = logging.getLogger("terratrust.database")
 
@@ -24,9 +25,7 @@ supabase_client: Client = create_client(
 async_engine: Optional[AsyncEngine] = None
 
 if settings.DATABASE_URL:
-    import ssl
-
-    ssl_context = ssl.create_default_context(cafile=settings.DATABASE_SSL_CA_FILE or None)
+    ssl_context = database_ssl_context(settings.DATABASE_SSL_CA_FILE)
 
     async_engine = create_async_engine(
         settings.DATABASE_URL,

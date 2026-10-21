@@ -8,7 +8,6 @@ import argparse
 import asyncio
 import hashlib
 import re
-import ssl
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -105,6 +104,7 @@ async def run(apply):
     import asyncpg
 
     from app.config import settings
+    from app.database_ssl import database_ssl_context
 
     if not settings.DATABASE_URL:
         raise ValueError(
@@ -113,7 +113,7 @@ async def run(apply):
     url = settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
     conn = await asyncpg.connect(
         url,
-        ssl=ssl.create_default_context(cafile=settings.DATABASE_SSL_CA_FILE or None),
+        ssl=database_ssl_context(settings.DATABASE_SSL_CA_FILE),
         server_settings={"search_path": "public,extensions"},
     )
     try:

@@ -63,6 +63,7 @@ Important variables:
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_KEY` | Supabase service role key |
 | `DATABASE_URL` | Direct PostgreSQL connection string used for PostGIS geometry queries |
+| `DATABASE_SSL_CA_FILE` | Supabase server root certificate path when its chain is not trusted; on Render use `/etc/secrets/supabase-ca.crt` after uploading the certificate as a Secret File |
 | `FIREBASE_CREDENTIALS_PATH` | Path to the Firebase Admin service account JSON file |
 | `GEE_PROJECT_ID` | Google Cloud project ID enabled for Earth Engine |
 | `GEE_CREDENTIALS_PATH` | Path to the Earth Engine service account JSON file |
@@ -101,6 +102,8 @@ For local development you can keep them anywhere under `backend/`, for example:
 - `backend/secrets/cloud-vision-service-account.json`
 
 For Render, upload each JSON through Secret Files and set the env vars to the mounted file paths that Render provides.
+
+For Render database `CERTIFICATE_VERIFY_FAILED` errors, follow the certificate steps in [the manual](INSTITUTION_MANUAL_WORK.md#render-fix-database-certificate-verification).
 
 Get `DATABASE_URL` from Supabase:
 

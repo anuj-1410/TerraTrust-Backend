@@ -1,7 +1,6 @@
 """Durable outbox dispatch, fenced leases, bounded retries and honest failures."""
 import asyncio
 import logging
-import ssl
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
@@ -10,6 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from app.config import settings
+from app.database_ssl import database_ssl_context
 from app.institution_access import tenant_access, operator_access
 from app.institution_errors import InstitutionError, fail
 from models.institution.common import digest, normalize
@@ -25,7 +25,7 @@ def engine():
     if not settings.INSTITUTION_SCHEMA_ENABLED or not settings.DATABASE_URL:
         fail(503, "INSTITUTION_FLOW_DISABLED", "Institution schema is not commissioned.")
     # Worker loops are short-lived; never reuse an asyncpg pool across loops.
-    return create_async_engine(settings.DATABASE_URL, poolclass=NullPool, echo=False, connect_args={"ssl": ssl.create_default_context(cafile=settings.DATABASE_SSL_CA_FILE or None), "command_timeout": 120, "server_settings": {"search_path": "public,extensions"}})
+    return create_async_engine(settings.DATABASE_URL, poolclass=NullPool, echo=False, connect_args={"ssl": database_ssl_context(settings.DATABASE_SSL_CA_FILE), "command_timeout": 120, "server_settings": {"search_path": "public,extensions"}})
 
 
 async def guarded(repo, job, *, lock=False):
