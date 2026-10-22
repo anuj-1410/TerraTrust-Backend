@@ -1,6 +1,7 @@
 """Additive configuration. No network, database, or provider calls on import."""
 
 from typing import ClassVar
+from urllib.parse import urlsplit
 from pydantic import BaseModel, Field, model_validator
 
 
@@ -166,16 +167,40 @@ class InstitutionSettings(BaseModel):
         return self
 
     def institution_missing_config(self, advisor=False):
-        names = [
+        public_pages = [
             "INSTITUTION_PRIVACY_POLICY_URL",
             "INSTITUTION_SUPPORT_URL",
             "INSTITUTION_ACCOUNT_DELETION_URL",
         ]
+        names = []
+        for name in public_pages:
+            value = getattr(self, name)
+            # Public pages are optional in every environment. If configured,
+            # validate them before exposing links to clients.
+            if not value:
+                continue
+            try:
+                url = urlsplit(value)
+                valid = (
+                    url.scheme == "https"
+                    and bool(url.hostname)
+                    and not url.username
+                    and not url.password
+                    and url.port in {None, 443}
+                )
+            except ValueError:
+                valid = False
+            if not valid:
+                names.append(name)
         if advisor:
             names += [
-                "GEMINI_API_KEY",
-                "LLM_MODEL",
-                "EMBEDDING_MODEL",
-                "EMBEDDING_DIMENSION",
+                name
+                for name in (
+                    "GEMINI_API_KEY",
+                    "LLM_MODEL",
+                    "EMBEDDING_MODEL",
+                    "EMBEDDING_DIMENSION",
+                )
+                if not getattr(self, name)
             ]
-        return [name for name in names if not getattr(self, name)]
+        return names

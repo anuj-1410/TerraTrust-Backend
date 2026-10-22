@@ -1,4 +1,4 @@
-"""Admission checks for actual service-produced demo.md stage history."""
+"""Check the stage structure of captured or labelled sample checkpoints."""
 
 
 def validate_stage(account, tables):

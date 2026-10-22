@@ -10,6 +10,8 @@ from urllib.parse import urlsplit
 def check(config, *, advisor=False):
     errors = {name: "REQUIRED" for name in config.institution_missing_config(advisor=advisor)}
     for name in ("INSTITUTION_PRIVACY_POLICY_URL", "INSTITUTION_SUPPORT_URL", "INSTITUTION_ACCOUNT_DELETION_URL"):
+        if not getattr(config, name):
+            continue
         try:
             url = urlsplit(getattr(config, name))
             valid = url.scheme == "https" and bool(url.hostname) and not url.username and not url.password and url.port in {None, 443}

@@ -14,7 +14,7 @@ from services.shared.evidence_service import read_bytes, write_bytes
 from models.institution.common import digest, normalize
 
 
-async def restore_to_checkpoint(repo, source, generation):
+async def restore_to_checkpoint(repo, source, generation, *, allow_initial_seed=False):
     """Caller holds the verified identity lock and one database transaction."""
     require_demo()
     if source.account_number == 9:
@@ -29,12 +29,22 @@ async def restore_to_checkpoint(repo, source, generation):
         {"uid": source.target_user_id},
     )
     owned = [str(row["id"]) for row in tenants]
-    if not set(source.owned_tenant_ids) <= set(owned):
+    missing = set(source.owned_tenant_ids) - set(owned)
+    if missing and not allow_initial_seed:
         fail(
             409,
             "CHECKPOINT_SCOPE_CHANGED",
             "A checkpoint institution is missing or no longer owned by this identity.",
         )
+    if allow_initial_seed:
+        for iid in missing:
+            if await repo.get("institutions", iid, required=False):
+                fail(
+                    409,
+                    "CHECKPOINT_SCOPE_CHANGED",
+                    "A sample institution identifier belongs to another owner.",
+                )
+        owned.extend(sorted(missing))
     for iid in owned:
         other = await repo.rows(
             "SELECT user_id FROM institution_users WHERE institution_id=:iid AND user_id<>:uid",
@@ -69,7 +79,13 @@ async def restore_to_checkpoint(repo, source, generation):
             settings.REPORT_STORAGE_BUCKET,
         }:
             fail(409, "CHECKPOINT_NOT_READY", "Source bytes use an unsupported bucket.")
-        data = await read_bytes(obj.bucket, obj.source_object_key)
+        from demo.institution.sample_data import SampleObject
+
+        data = (
+            obj.data
+            if isinstance(obj, SampleObject)
+            else await read_bytes(obj.bucket, obj.source_object_key)
+        )
         if (
             len(data) != obj.size_bytes
             or hashlib.sha256(data).hexdigest() != obj.sha256

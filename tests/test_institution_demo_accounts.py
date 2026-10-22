@@ -156,6 +156,77 @@ def test_persistent_account_never_calls_restore_or_advances_generation(store):
     assert not any("DELETE" in sql or "UPDATE users" in sql for sql in repo.sql)
 
 
+@pytest.mark.parametrize("account", [5, 6, 7, 8, 9])
+def test_builtin_login_selects_fresh_reset_sample_reset_or_persistent_seed(store, monkeypatch, account):
+    from demo.institution import sample_data, restore
+    from demo.institution.registry import FreshCheckpoint
+
+    state = store(account)
+    source = FreshCheckpoint(state.user["firebase_uid"]) if account == 5 else sample_data.SampleCheckpoint(account, state.user["firebase_uid"])
+    monkeypatch.setattr(sessions, "account_for", lambda *args: source)
+    built, reset, seeded = [], [], []
+    def build(number, uid, user_id):
+        built.append(number)
+        return sample_data.SampleCheckpoint(number, uid, user_id)
+    async def prepare(*args):
+        pass
+    async def seed(*args):
+        seeded.append(account)
+    async def replay(repo, saved, generation, **kwargs):
+        reset.append((saved.target_user_id, kwargs))
+    async def find(*args):
+        return [{"id": "persistent-data"}] if seeded else []
+    # The fixture's connection object is also its repository.
+    engine = sys.modules["app.institution_database"]._require_async_engine
+    monkeypatch.setattr(engine, "find", find, raising=False)
+    monkeypatch.setattr(sample_data, "build_sample", build)
+    monkeypatch.setattr(sample_data, "prepare_sample", prepare)
+    monkeypatch.setattr(sample_data, "ensure_sample_globals", prepare)
+    monkeypatch.setattr(sample_data, "seed_persistent_once", seed)
+    monkeypatch.setattr(restore, "restore_to_checkpoint", replay)
+    for when in (100, 200):
+        assert run(sessions.ensure_login({"uid": state.user["firebase_uid"], "phone_number": phone_for(account), "auth_time": when}))["status"] == "READY"
+    if account == 5:
+        assert built == [] and len(reset) == 2
+    elif account == 9:
+        assert built == [9] and seeded == [9] and reset == []
+    else:
+        assert built == [account, account]
+        assert reset == [(state.user["id"], {"allow_initial_seed": True})] * 2
+
+
+@pytest.mark.parametrize("deleted", [False, True])
+def test_builtin_fresh_login_creates_missing_identity_but_never_revives_deleted_user(store, monkeypatch, deleted):
+    from demo.institution.registry import FreshCheckpoint
+
+    state = store(5)
+    monkeypatch.setattr(settings, "ENABLE_INSTITUTION_FLOW", True)
+    monkeypatch.setattr(sessions, "account_for", lambda *args: FreshCheckpoint(state.user["firebase_uid"]))
+    connection = sys.modules["app.institution_database"]._require_async_engine
+    original_execute = connection.execute
+    created = []
+    async def execute(self, sql, params=None):
+        await original_execute(self, sql, params)
+        if str(sql).startswith("INSERT INTO users"):
+            created.append(params)
+    async def one(self, sql, params=None, **kwargs):
+        if "institution_deleted_uid_hash" in sql:
+            return {"id": "deleted"} if deleted else None
+        if "firebase_uid=:uid" in sql:
+            return state.user if created else None
+        return None
+    monkeypatch.setattr(connection, "execute", execute)
+    monkeypatch.setattr(connection, "one", one)
+    claims = {"uid": state.user["firebase_uid"], "phone_number": phone_for(5), "auth_time": 100}
+    if deleted:
+        with pytest.raises(InstitutionError) as error:
+            run(sessions.ensure_login(claims))
+        assert error.value.code == "ACCOUNT_DELETED" and not created and not state.restored
+    else:
+        assert run(sessions.ensure_login(claims))["reset_performed"] is True
+        assert len(created) == 1 and state.restored == [100]
+
+
 def test_concurrent_and_repeated_explicit_handoffs_restore_once(store):
     repo = store(8)
     claims = {"uid": "offline-demo", "phone_number": phone_for(8), "auth_time": 100}
@@ -571,8 +642,9 @@ def test_registered_legacy_manifest_survives_retired_deployment_knobs(
     registry.save_checkpoint(registry.manifest(stored))
     saved = registry.account_for(data["target_firebase_uid"], phone_for(5))
     assert saved.manifest_sha256 == data["manifest_sha256"]
-    assert registry.account_for("another-user", phone_for(5)) is None
-    assert registry.account_for(data["target_firebase_uid"], phone_for(6)) is None
+    with pytest.raises(InstitutionError, match="different Firebase identity"):
+        registry.account_for("another-user", phone_for(5))
+    assert registry.account_for(data["target_firebase_uid"], phone_for(6)).account_number == 6
     before = (registry.DIRECTORY / "account-5.json").read_bytes()
     other = {**data, "target_firebase_uid": "another-user"}
     other["manifest_sha256"] = digest(

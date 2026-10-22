@@ -1,7 +1,9 @@
 """Farmer-style demo resets: private checkpoints, in-process login markers, normal DB transactions."""
 
 import asyncio
+import hashlib
 import json
+from dataclasses import replace
 from uuid import NAMESPACE_URL, uuid5, uuid4
 
 from fastapi import APIRouter, Request
@@ -10,7 +12,8 @@ from fastapi.responses import JSONResponse
 from app.config import settings
 from app.institution_access import identity, recent_auth
 from app.institution_errors import fail
-from demo.institution.registry import require_demo, account_for
+from demo.institution.registry import require_demo, account_for, FreshCheckpoint
+from demo.institution.sample_data import SampleCheckpoint
 from demo.institution.blueprints import phone_for, reset_policy
 from models.institution.common import normalize, uuid_text
 from repositories.institution.base import Repository
@@ -132,11 +135,70 @@ async def ensure_login(claims):
         value = resource(source, auth_time)
         await session_state(claims["uid"], {**value, "status": "RESTORING"})
         async with _require_async_engine().begin() as conn:
+            from sqlalchemy import text
+
+            await conn.execute(
+                text("SELECT pg_advisory_xact_lock(hashtextextended(:uid,0))"),
+                {"uid": "tt:identity:" + claims["uid"]},
+            )
             repo = Repository(conn)
             user = await repo.one(
                 "SELECT * FROM users WHERE firebase_uid=:uid FOR UPDATE",
                 {"uid": claims["uid"]},
+                required=False,
             )
+            builtin = isinstance(source, (FreshCheckpoint, SampleCheckpoint))
+            if user is None and builtin:
+                deleted = await repo.one(
+                    "SELECT id FROM users WHERE institution_deleted_uid_hash=:hash",
+                    {"hash": hashlib.sha256(claims["uid"].encode()).hexdigest()},
+                    required=False,
+                )
+                if deleted:
+                    fail(
+                        410, "ACCOUNT_DELETED", "This institution identity was deleted."
+                    )
+                if not settings.ENABLE_INSTITUTION_FLOW:
+                    fail(
+                        503,
+                        "INSTITUTION_FLOW_DISABLED",
+                        "New institution identities are disabled.",
+                    )
+                conflict = await repo.one(
+                    "SELECT id FROM users WHERE phone_number=:phone",
+                    {"phone": claims["phone_number"]},
+                    required=False,
+                )
+                if conflict:
+                    fail(
+                        409,
+                        "IDENTITY_CONFLICT",
+                        "This phone identity is already linked to another user.",
+                    )
+                await conn.execute(
+                    text(
+                        "INSERT INTO users(id,firebase_uid,phone_number,role,account_domain,institution_onboarding_status,kyc_completed) VALUES(:id,:uid,:phone,'INSTITUTION_ADMIN','INSTITUTION','REQUIRED',false)"
+                    ),
+                    {
+                        "id": str(uuid4()),
+                        "uid": claims["uid"],
+                        "phone": claims["phone_number"],
+                    },
+                )
+                user = await repo.one(
+                    "SELECT * FROM users WHERE firebase_uid=:uid FOR UPDATE",
+                    {"uid": claims["uid"]},
+                )
+            if user is None:
+                fail(
+                    503,
+                    "DEMO_CHECKPOINT_NOT_READY",
+                    "The checkpoint's institution user has not been provisioned.",
+                )
+            if isinstance(source, FreshCheckpoint):
+                source = replace(source, target_user_id=str(user["id"]))
+            elif isinstance(source, SampleCheckpoint):
+                source.target_user_id = str(user["id"])
             if (
                 user["account_domain"] != "INSTITUTION"
                 or str(user["id"]) != source.target_user_id
@@ -147,7 +209,42 @@ async def ensure_login(claims):
                     "ACCOUNT_DOMAIN_MISMATCH",
                     "The verified checkpoint identity/domain differs.",
                 )
-            if source.account_number != 9:
+            if isinstance(source, SampleCheckpoint):
+                # Existing persistent history is never replaced or re-rendered.
+                existing = (
+                    await repo.find("institutions", {"created_by": user["id"]})
+                    if source.account_number == 9
+                    else []
+                )
+                if not existing:
+                    from demo.institution.sample_data import (
+                        build_sample,
+                        prepare_sample,
+                        ensure_sample_globals,
+                        seed_persistent_once,
+                    )
+
+                    source = await asyncio.to_thread(
+                        build_sample,
+                        source.account_number,
+                        claims["uid"],
+                        str(user["id"]),
+                    )
+                    await prepare_sample(repo, source)
+                    await ensure_sample_globals(repo, source)
+                    if source.account_number == 9:
+                        await seed_persistent_once(repo, source)
+                if source.account_number != 9:
+                    from demo.institution.restore import restore_to_checkpoint
+
+                    await restore_to_checkpoint(
+                        repo,
+                        source,
+                        value["fixture_generation"],
+                        allow_initial_seed=True,
+                    )
+                    value["reset_performed"] = True
+            elif source.account_number != 9:
                 from demo.institution.restore import restore_to_checkpoint
 
                 await restore_to_checkpoint(repo, source, value["fixture_generation"])

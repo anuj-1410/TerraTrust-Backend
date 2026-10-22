@@ -1,4 +1,4 @@
-"""Institution stages from demo.md; farmer accounts 1–4 are unchanged."""
+"""Documented institution demo stages; farmer accounts 1–4 are unchanged."""
 
 BLUEPRINTS = {
     5: {

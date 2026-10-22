@@ -16,6 +16,8 @@ The provided logs show a TLS trust failure during API startup, not a Node build 
 
 ## 0. Correct the previous demo-table setup
 
+If migration **16** is already installed and both old demo tables are absent, skip this section.
+
 Migration files record schema history; their count is not a count of demo tables. Keep applied files/checksums unchanged. Migration 016 removes the only two demo control tables and creates no tables. No further demo migration is needed for the in-memory reset implementation.
 
 1. Stop the local API and institution workers. Keep your normal database backup.
@@ -28,10 +30,10 @@ $env:ENABLE_INSTITUTION_DEMO_ACCOUNTS = "true"
 .venv-review\Scripts\python.exe -m demo.institution.checkpoint_cli export-legacy --actor-firebase-uid OPERATOR_UID
 ```
 
-3. Replace `OPERATOR_UID` with your registration-operations operator's Firebase UID. Expected: `EXPORTED N private local checkpoints; database unchanged.` If it reports zero, no checkpoints had been registered; prepare them using section 6. Stop on any export error.
+3. Replace `OPERATOR_UID` with your registration-operations operator's Firebase UID. Expected: `EXPORTED N private local checkpoints; database unchanged.` Zero is valid: section 6 automatically creates the default samples. Stop on any export error.
 4. Open [.institution-private/supabase/institution_demo_cleanup.sql](.institution-private/supabase/institution_demo_cleanup.sql). Copy **all** its SQL into **Supabase > SQL Editor > New query > Run**. This applies forward migration **016** and removes only `demo_login_sessions` and `demo_checkpoint_registry`; it retains business data, Firebase accounts and earlier migration checksums.
 5. Confirm both table names are absent in Table Editor and migration version **16** appears in `institution_schema_migrations`.
-6. Back up `.institution-private/demo/` with the invitation key. Install the same checkpoint files on every API instance. Restart the updated backend using one API process for local demo testing, like the farmer demo middleware. Demo login markers are cleared when that process restarts. Both demo flags remain `false` in production.
+6. Back up `.institution-private/demo/` if you exported custom checkpoints. Restart the updated backend with one API process for demo testing. Built-in samples require no checkpoint files. Both demo flags remain `false` in production.
 
 ## 1. Prepare the backend
 
@@ -60,9 +62,9 @@ uv sync --frozen --python $ttPython
 | `ENABLE_INSTITUTION_ADVISOR` | `false` unless you complete section 5 |
 | `ENABLE_INSTITUTION_DEMO_ACCOUNTS` | `true` only for local demo testing; `false` in production |
 | `ENABLE_FARMER_DEMO_ACCOUNTS` | Independent farmer-demo switch; `false` in production |
-| `INSTITUTION_PRIVACY_POLICY_URL` | Your published HTTPS privacy page |
-| `INSTITUTION_SUPPORT_URL` | Your published HTTPS support page |
-| `INSTITUTION_ACCOUNT_DELETION_URL` | Your published HTTPS account-deletion page |
+| `INSTITUTION_PRIVACY_POLICY_URL` | Optional in all environments; leave blank or enter your HTTPS privacy page |
+| `INSTITUTION_SUPPORT_URL` | Optional in all environments; leave blank or enter your HTTPS support page |
+| `INSTITUTION_ACCOUNT_DELETION_URL` | Optional in all environments; leave blank or enter your HTTPS deletion page |
 | `INSTITUTION_REPORT_FONT_PATH` | Path to your licensed Unicode `.ttf` font; install on export workers too |
 | `INSTITUTION_REPORT_FONT_SHA256` | Font checksum from the command below |
 
@@ -154,8 +156,7 @@ WHERE logical_key = 'TT_STARTER_STATIONARY_DIESEL_GENERATOR';
 
 ## 6. Optional institution demos
 
-1. Set `ENVIRONMENT=development` and `ENABLE_INSTITUTION_DEMO_ACCOUNTS=true`.
-2. Confirm Firebase phone-test accounts:
+1. Firebase > **Authentication > Sign-in method > Phone > Phone numbers for testing**: add these numbers and codes:
 
 | Account | Phone | OTP | Starting state | Next login |
 |---|---|---|---|---|
@@ -165,23 +166,23 @@ WHERE logical_key = 'TT_STARTER_STATIONARY_DIESEL_GENERATOR';
 | 8 | +919000000008 | 888888 | Biomass baseline accepted | Reset |
 | 9 | +919000000009 | 999999 | Completed 2024/2025 history | Persistent |
 
-3. Provision each account; inspect `--dry-run`, then repeat with `--apply`:
+2. On the backend you actually use (**Render > Environment** for the deployed app), set:
 
-```powershell
-& $ttPython -m demo.institution.checkpoint_cli provision-user --account 5 --firebase-uid ACTUAL_UID --actor-firebase-uid OPERATOR_UID --dry-run
+```dotenv
+ENVIRONMENT=development
+INSTITUTION_SCHEMA_ENABLED=true
+ENABLE_INSTITUTION_FLOW=true
+ENABLE_INSTITUTION_DEMO_ACCOUNTS=true
 ```
 
-4. Build each real starting state through normal workflows using [demo.md](demo.md).
-5. Capture and validate each completed starting state; replace the account/UID/path for each account:
-
-```powershell
-& $ttPython -m demo.institution.checkpoint_cli capture --account 9 --firebase-uid ACTUAL_UID --actor-firebase-uid OPERATOR_UID --manifest-version 1 --output .institution-private/account-9-v1
-& $ttPython -m demo.institution.checkpoint_cli validate --manifest .institution-private/account-9-v1/manifest.json --actor-firebase-uid OPERATOR_UID
-& $ttPython -m demo.institution.checkpoint_cli register --manifest .institution-private/account-9-v1/manifest.json --actor-firebase-uid OPERATOR_UID --dry-run
-```
-
-6. Register with `--apply` after checking the preview. This installs `.institution-private/demo/account-N.json`, without demo database tables. Accounts 5–8 reset during normal `/auth/me` on new sign-in; account 9 persists. Refresh/resume preserves the current session; the API process stores only the sign-in marker.
-7. Clear old device queues after a reset. The existing demo-session endpoints/header remain compatible, but an extra handoff/header is not required to trigger the reset. The backend-only mobile patch/checker remain in `frontend-integration/`; apply manually only if still needed, checking for conflicts first.
+3. Leave the three public URL values blank if you have no pages. They are optional in production too.
+4. Confirm migration **016** is installed (section 0), both institution storage buckets exist, and the report font is configured (section 1).
+5. Deploy this backend version. Use **one API process** for demo testing. Local `.env` changes do not update Render.
+6. Sign out of the mobile app, select institution, and sign in with each test number. Users and sample stages are created automatically in your existing business tables. **No seed SQL, demo tables, manual UUIDs or checkpoint capture is required.**
+7. Accounts **5–8** reset on a new Firebase login. Token refresh preserves the session. Account **9** receives its 2024/2025 sample history once and preserves subsequent changes; existing institution history is never replaced.
+8. Sample stock/approval history is labelled **SYNTHETIC**. Annual totals and PDF/CSV/JSON files use the real accounting/report functions. New actions use normal services, permissions and providers; sample stock is not a satellite measurement or independent certification.
+9. If you previously installed a captured checkpoint, its `.institution-private/demo/account-N.json` overrides the built-in sample. Preserve it for custom/real captured states; Render can mount the same filename under `/etc/secrets/`.
+10. Before using the deployment for production, set `ENVIRONMENT=production` and both demo flags to `false`.
 
 ## 7. Test on your phone using USB
 
@@ -203,4 +204,4 @@ adb reverse tcp:8081 tcp:8081
 9. Test farmer login/land/audit/wallet; institution registration/review, campus/tree sampling, biomass calculation, annual audit, export/share; demo resets and account-9 persistence.
 10. Stop the local API/workers with **Ctrl+C**. Before production, set `ENVIRONMENT=production`, both demo flags `false`, install the preserved key/font on deployment instances, and enable only features that passed live testing.
 
-Latest offline regression: **72 farmer/shared + 210 institution tests passed (282 total)**, including real in-memory TLS trust/hostname checks. Live database, provider and phone acceptance must be checked in your configured environment.
+Latest offline regression: **72 farmer/shared + 233 institution tests passed (305 total)**. No live database changes were made by these checks.

@@ -13177,15 +13177,31 @@ INSTITUTION_MANUAL_WORK.md. No production SQL was executed in this review.
 FILE-BASED INSTITUTION DEMO CORRECTION — 22 OCTOBER 2026
 This amendment supersedes earlier requirements for dedicated demo control tables,
 mandatory session polling and generation headers. Institution checkpoints are
-private server files (.institution-private/demo/account-N.json), analogous to
-farmer code checkpoints. Every new business operation uses normal institution
+built-in server sample fixtures (demo/institution/sample_data.py), analogous to
+farmer code checkpoints. Optional captured files (.institution-private/demo/account-N.json
+or Render /etc/secrets/account-N.json) override those fixtures. Every new business
+operation uses normal institution
 tables, authorization, providers and calculations in the existing database.
 Normal /auth/me restores accounts 5-8 once per verified Firebase auth_time;
 refresh/resume preserve work and account 9 never resets. Like farmer middleware,
 the local API process holds sign-in markers in memory; an ordinary DB transaction
 and identity row lock protect each restore. Use one local demo API process.
 Session endpoints/header remain compatible and optional; stale sign-ins/jobs are
-still rejected. Source files are server-managed and contain real captured states.
+still rejected. Built-in account 5 is empty; 6 has an approved sample institution;
+7 adds campus/mask/plots/trees; 8 adds an illustrative accepted biomass baseline;
+9 seeds 2024/2025 finalized sample history and real PDF/CSV/JSON bytes once, then
+preserves existing work. Only verified Firebase institution test phones 005-009
+receive these fixtures. All sample business/global source rows are SYNTHETIC;
+historical stock/approvals are illustrative, not actual satellite observations
+or independent certification. Annual arithmetic/export rendering uses the normal
+services. No provider adapter or biomass engine is replaced. No manual seed SQL,
+UUID environment values, capture step or additional schema migration is required.
+Existing captured checkpoints remain valid and account 9 can never be reset.
+Normal users see only LIVE sources in public catalogs.
+INSTITUTION_PRIVACY_POLICY_URL, INSTITUTION_SUPPORT_URL and
+INSTITUTION_ACCOUNT_DELETION_URL are optional in production and development;
+blank values do not disable registration. Supplied URLs must be valid HTTPS.
+This supersedes older mandatory-public-page and capture-only setup requirements.
 Forward migration 016 replaces demo_restore_session authorization with a trusted
 transaction-local demo_restore_uid guard restricted to exact institution phones
 005-008 and their exclusively owned institutions/personal uploads. It drops only
