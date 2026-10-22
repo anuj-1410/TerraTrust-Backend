@@ -1,9 +1,8 @@
 """Shared content, evidence and public projection helpers."""
-from datetime import datetime, timezone
 from uuid import uuid4
 
 from app.institution_errors import fail
-from models.institution.common import digest, normalize
+from models.institution.common import normalize
 from models.institution.contracts import MODELS, inherited_fields
 from repositories.institution.base import meta
 
@@ -21,6 +20,13 @@ def public(name, row, **overrides):
             result[key] = []
         else:
             result[key] = None
+    if name == "TreeResource" and result.get("data_origin") == "SYNTHETIC":
+        # The first installed sample used an internal marker in typed metadata.
+        # Project that marker without mutating persisted trees or capture hashes.
+        metadata = dict(result.get("metadata") or {})
+        if metadata.pop("sample", False):
+            metadata.setdefault("notes", "Synthetic demonstration sample.")
+        result["metadata"] = metadata
     return result
 
 

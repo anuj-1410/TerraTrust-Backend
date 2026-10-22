@@ -1,0 +1,489 @@
+--- a/src/features/institution/contracts/schemas.ts
++++ b/src/features/institution/contracts/schemas.ts
+@@ -50,6 +50,22 @@
+     ...spec.fields,
+   ].filter((f, i, a) => a.findIndex(x => x.name === f.name) === i);
+ }
++function unionOptions(type: string): string[] {
++  let depth = 0;
++  let start = 0;
++  const options: string[] = [];
++  for (let index = 0; index < type.length; index += 1) {
++    if (type[index] === '<') depth += 1;
++    else if (type[index] === '>') depth -= 1;
++    else if (depth === 0 && type.slice(index, index + 4) === ' or ') {
++      options.push(type.slice(start, index));
++      start = index + 4;
++      index += 3;
++    }
++  }
++  options.push(type.slice(start));
++  return options;
++}
+ function checkType(
+   type: string,
+   value: unknown,
+@@ -58,6 +74,10 @@
+   depth: number,
+ ): void {
+   if (depth > 30) throw new Error('Response is too deeply nested.');
++  if (type === 'DraftRegistryConfig' || type === 'RegistryConfig') {
++    if (!isRecord(value)) throw new Error(`Invalid registry config ${path}`);
++    return;
++  }
+   if (type === 'InstitutionDiscovery') {
+     validateModel(type, value, strict, false, depth + 1);
+     return;
+@@ -96,8 +116,9 @@
+     } else throw new Error(`Invalid geometry ${path}`);
+     return;
+   }
+-  if (type.includes(' or ')) {
+-    for (const option of type.split(' or ')) {
++  const options = unionOptions(type);
++  if (options.length > 1) {
++    for (const option of options) {
+       try {
+         checkType(option, value, path, strict, depth + 1);
+         return;
+--- a/src/features/institution/contracts/wireCatalog.json
++++ b/src/features/institution/contracts/wireCatalog.json
+@@ -7009,5 +7009,438 @@
+         "description": "BSDD 18.4/18.7/18.11 named transport field."
+       }
+     ]
++  },
++  "QualitySampling": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "design",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "STRATIFIED_REVISITABLE"
++      },
++      {
++        "name": "seed",
++        "type": "INTEGER",
++        "presence": "required",
++        "description": "Saved deterministic candidate-selection seed"
++      },
++      {
++        "name": "strata_rule",
++        "type": "JSON Schema",
++        "presence": "required",
++        "description": "Typed supported strata and membership conditions"
++      },
++      {
++        "name": "plot_area_ha",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">0; source-backed nominal area"
++      },
++      {
++        "name": "min_spacing_m",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">=0; approved minimum spacing"
++      },
++      {
++        "name": "edge_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "REQUIRE_FULL_PLOT or APPROVED_CLIP_WEIGHTED"
++      },
++      {
++        "name": "required_plots_by_stratum",
++        "type": "map<TEXT,INTEGER>",
++        "presence": "required",
++        "description": "Explicit stratum names and positive required counts"
++      },
++      {
++        "name": "inclusion_weight_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Implemented reviewed weighting key"
++      }
++    ]
++  },
++  "SourceMetadata": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "title",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Source title"
++      },
++      {
++        "name": "publisher",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Publishing organization"
++      },
++      {
++        "name": "source_version",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Exact source version"
++      },
++      {
++        "name": "source_url",
++        "type": "HTTPS URL or NULL",
++        "presence": "required",
++        "description": "Original approved URL"
++      },
++      {
++        "name": "page",
++        "type": "TEXT or NULL",
++        "presence": "required",
++        "description": "Relevant page"
++      },
++      {
++        "name": "section",
++        "type": "TEXT or NULL",
++        "presence": "required",
++        "description": "Relevant section"
++      },
++      {
++        "name": "published_date",
++        "type": "DATE or NULL",
++        "presence": "required",
++        "description": "Source publication date"
++      },
++      {
++        "name": "retrieved_at",
++        "type": "timestamp",
++        "presence": "required",
++        "description": "Byte retrieval time"
++      },
++      {
++        "name": "evidence_id",
++        "type": "UUID or NULL",
++        "presence": "required",
++        "description": "READY source bytes for published documents; NULL for administrator-maintained database configuration"
++      },
++      {
++        "name": "checksum",
++        "type": "SHA-256",
++        "presence": "required",
++        "description": "Server-calculated source checksum; configuration checksum for database values"
++      },
++      {
++        "name": "license",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Reviewed reuse conditions"
++      },
++      {
++        "name": "applicability_notes",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Applicable geography/date/method limits"
++      }
++    ]
++  },
++  "CampusQualityPolicy": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "measurement_protocol_version",
++        "type": "UUID",
++        "presence": "required",
++        "description": "Exact approved measurement protocol content ID"
++      },
++      {
++        "name": "eligibility",
++        "type": "QualityEligibility",
++        "presence": "required",
++        "description": "Supported pools/species/allometry"
++      },
++      {
++        "name": "sampling",
++        "type": "QualitySampling",
++        "presence": "required",
++        "description": "Reviewed reproducible stratum/plot design"
++      },
++      {
++        "name": "dimensions",
++        "type": "QualityDimensions",
++        "presence": "required",
++        "description": "Exact valid DBH/height/protocol ranges"
++      },
++      {
++        "name": "gps",
++        "type": "QualityGps",
++        "presence": "required",
++        "description": "Sourced accuracy/geometry tolerances"
++      },
++      {
++        "name": "evidence",
++        "type": "QualityEvidence",
++        "presence": "required",
++        "description": "Required evidence and overrides"
++      },
++      {
++        "name": "species",
++        "type": "QualitySpecies",
++        "presence": "required",
++        "description": "Confidence/unknown handling"
++      },
++      {
++        "name": "capture_flags",
++        "type": "TEXT[]",
++        "presence": "required",
++        "description": "Allowed flags including required honest missing-input flags"
++      },
++      {
++        "name": "temporal",
++        "type": "QualityTemporal",
++        "presence": "required",
++        "description": "Observation/season/revisit compatibility"
++      },
++      {
++        "name": "validation",
++        "type": "QualityValidation",
++        "presence": "required",
++        "description": "Actual support/holdout/validation conditions"
++      },
++      {
++        "name": "uncertainty",
++        "type": "QualityUncertainty",
++        "presence": "required",
++        "description": "Reviewed stock measurement uncertainty"
++      },
++      {
++        "name": "source_metadata",
++        "type": "SourceMetadata",
++        "presence": "required",
++        "description": "Exact reviewed source bytes"
++      }
++    ]
++  },
++  "QualityEligibility": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "pools",
++        "type": "TEXT[]",
++        "presence": "required",
++        "description": "Explicit supported pools"
++      },
++      {
++        "name": "species_codes",
++        "type": "TEXT[]",
++        "presence": "required",
++        "description": "Supported species/catalog groups"
++      },
++      {
++        "name": "allometry_ids",
++        "type": "UUID[]",
++        "presence": "required",
++        "description": "Exact reviewed applicable equations"
++      }
++    ]
++  },
++  "QualityDimensions": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "dbh_min_cm",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">0; minimum supported DBH"
++      },
++      {
++        "name": "dbh_max_cm",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">=dbh_min_cm"
++      },
++      {
++        "name": "height_min_m",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">0; minimum supported height"
++      },
++      {
++        "name": "height_max_m",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">=height_min_m"
++      },
++      {
++        "name": "reference_height_m",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">0; protocol reference height"
++      },
++      {
++        "name": "multistem_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Implemented reviewed rule key, or UNSUPPORTED"
++      },
++      {
++        "name": "irregular_stem_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Implemented reviewed rule key, or REQUIRE_EXPERT_REVIEW"
++      }
++    ]
++  },
++  "QualityGps": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "max_accuracy_m",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">0; actual accepted GPS uncertainty limit"
++      },
++      {
++        "name": "boundary_tolerance_m",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">=0; approved campus-edge tolerance"
++      },
++      {
++        "name": "plot_tolerance_m",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">=0; approved plot-edge tolerance"
++      }
++    ]
++  },
++  "QualityEvidence": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "required_types",
++        "type": "TEXT[]",
++        "presence": "required",
++        "description": "Explicit evidence type codes"
++      },
++      {
++        "name": "minimum_photos",
++        "type": "INTEGER",
++        "presence": "required",
++        "description": ">=0; actual reviewed requirement"
++      },
++      {
++        "name": "override_policy",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "DISALLOW or INDEPENDENT_REVIEW_WITH_EVIDENCE"
++      }
++    ]
++  },
++  "QualitySpecies": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "selection_policy",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Implemented reviewed classifier/manual/expert eligibility key"
++      },
++      {
++        "name": "minimum_classifier_confidence",
++        "type": "Decimal or NULL",
++        "presence": "required",
++        "description": "[0,1] if reviewed threshold exists; NULL is unknown"
++      },
++      {
++        "name": "missing_species_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "REQUIRE_CORRECTION or EXPLICIT_REVIEWED_EXCLUSION"
++      }
++    ]
++  },
++  "QualityTemporal": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "max_window_days",
++        "type": "INTEGER",
++        "presence": "required",
++        "description": ">=0; supported observation period"
++      },
++      {
++        "name": "seasonal_tolerance_days",
++        "type": "INTEGER",
++        "presence": "required",
++        "description": ">=0; reviewed comparable-season tolerance"
++      },
++      {
++        "name": "revisit_matching_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Implemented stable-tag/plot matching key"
++      }
++    ]
++  },
++  "QualityValidation": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "minimum_eligible_area_ha",
++        "type": "Decimal",
++        "presence": "required",
++        "description": ">0; supported inference area"
++      },
++      {
++        "name": "minimum_coverage_ratio",
++        "type": "Decimal",
++        "presence": "required",
++        "description": "(0,1]; approved eligible support"
++      },
++      {
++        "name": "spatial_holdout_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Reviewed independent validation rule"
++      },
++      {
++        "name": "maximum_bias_rule",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Implemented sourced acceptance rule; no claimed universal accuracy"
++      },
++      {
++        "name": "validation_artifact_id",
++        "type": "UUID or NULL",
++        "presence": "required",
++        "description": "Actual validation evidence when available; NULL means no quantified independent validation is asserted"
++      }
++    ]
++  },
++  "QualityUncertainty": {
++    "extends": null,
++    "fields": [
++      {
++        "name": "method_version",
++        "type": "UUID",
++        "presence": "required",
++        "description": "Exact reviewed method content ID"
++      },
++      {
++        "name": "procedure",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Implemented approved procedure key or UNKNOWN"
++      },
++      {
++        "name": "dependence_assumptions",
++        "type": "TEXT",
++        "presence": "required",
++        "description": "Explicit sampling/correlation assumptions"
++      },
++      {
++        "name": "validation_artifact_id",
++        "type": "UUID or NULL",
++        "presence": "required",
++        "description": "Required if a confidence procedure is claimed"
++      }
++    ]
+   }
+ }

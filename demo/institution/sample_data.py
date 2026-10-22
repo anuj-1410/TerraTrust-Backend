@@ -469,7 +469,7 @@ def build_sample(account, firebase_uid, user_id):
                 species_code="Neem",
                 condition="LIVE",
                 created_by=user_id,
-                metadata={"sample": True},
+                metadata={"notes": NOTICE},
             )
             trees.append(
                 (tree, str(random.randint(15, 35)), str(random.randint(5, 12)))
@@ -477,7 +477,7 @@ def build_sample(account, firebase_uid, user_id):
         stocks = []
         for year in () if account == 7 else (2025,) if account == 8 else (2024, 2025):
             survey_id, stock_id = uid(f"survey-{year}"), uid(f"stock-{year}")
-            add(
+            survey = add(
                 "campus_tree_surveys",
                 f"survey-{year}",
                 campus_id=cid,
@@ -512,7 +512,16 @@ def build_sample(account, firebase_uid, user_id):
                     "allometry_id": method_config["quality_policy"]["eligibility"][
                         "allometry_ids"
                     ][0],
-                    "wood_density_source_id": None,
+                    "wood_density_source_id": next(
+                        parameter["id"]
+                        for parameter in method_config["parameters"]
+                        if parameter["kind"] == "WOOD_DENSITY"
+                        and parameter["applicability"]
+                        .get("properties", {})
+                        .get("species_code", {})
+                        .get("const")
+                        == "Neem"
+                    ),
                     "measurement_height_m": "1.3",
                     "protocol_version": method_config["quality_policy"][
                         "measurement_protocol_version"
@@ -550,6 +559,31 @@ def build_sample(account, firebase_uid, user_id):
                         if key != "client_content_hash"
                     },
                 )
+            survey["frozen_snapshot"] = {
+                "survey": deepcopy(survey),
+                "trees": deepcopy(data["campus_trees"]),
+                "measurements": deepcopy(
+                    [
+                        value
+                        for value in data["campus_tree_measurements"]
+                        if value["survey_id"] == survey_id
+                    ]
+                ),
+                "parameters": {
+                    value["id"]: deepcopy(value)
+                    for table, value in sample.globals
+                    if table == "method_parameters"
+                },
+                "policy": deepcopy(
+                    next(
+                        value
+                        for table, value in sample.globals
+                        if table == "method_quality_policies"
+                    )
+                ),
+                "evidence": {},
+                "campus": deepcopy(data["campuses"][0]),
+            }
             job(f"stock-job-{year}", "campus_fusion", stock_id)
             agb = Decimal(30) + (
                 Decimal(3) if year == 2025 and account == 9 else Decimal(0)
@@ -582,6 +616,8 @@ def build_sample(account, firebase_uid, user_id):
                 stock_co2_t=str(co2),
                 baseline_audit_id=stocks[0]["id"] if stocks else None,
                 comparability_status="COMPARABLE" if stocks else "BASELINE_ONLY",
+                comparison_start=f"{year}-01-01" if stocks else None,
+                comparison_end=f"{year}-12-31" if stocks else None,
                 signed_change_tCO2=str(change) if change is not None else None,
                 removal_tCO2=str(max(change, Decimal(0)))
                 if change is not None
@@ -651,7 +687,17 @@ def build_sample(account, firebase_uid, user_id):
                 input_hash=digest(audit_id),
                 campus_ids=[cid],
                 coverage=coverage,
-                denominators={"student_count": 600},
+                denominators={
+                    "students": 600,
+                    "staff": 75,
+                    "floor_area_m2": "12000",
+                    "source_evidence_ids": [],
+                    "as_of": f"{year}-12-31",
+                },
+                boundary_snapshot={
+                    "institution": deepcopy(data["institutions"][0]),
+                    "campuses": deepcopy(data["campuses"]),
+                },
                 reviewed_snapshot_id=snapshot_id,
                 current_result_id=uid(f"result-{year}"),
                 latest_review_reason=NOTICE,
@@ -793,6 +839,12 @@ def build_sample(account, firebase_uid, user_id):
                     "attributed_removal_tCO2": stock["removal_tCO2"],
                     "attributed_release_tCO2": stock["release_tCO2"],
                     "notice": NOTICE,
+                    "assessment": deepcopy(stock),
+                    "campus": deepcopy(data["campuses"][0]),
+                    "boundary": deepcopy(data["campus_boundaries"][0]),
+                    "mask": deepcopy(data["campus_vegetation_masks"][0]),
+                    "plots": deepcopy(data["campus_sampling_plots"]),
+                    "survey": deepcopy(survey["frozen_snapshot"]),
                 },
                 created_by=user_id,
             )
@@ -806,6 +858,7 @@ def build_sample(account, firebase_uid, user_id):
                 "factors": factors,
                 "parameters": {},
                 "method": {"id": mid, "config": method_config},
+                "evidence_manifest": {},
                 "input_hash": audit["input_hash"],
             }
             result, errors = calculate_inventory(frozen, snapshot_id=snapshot_id)
@@ -884,7 +937,7 @@ def build_sample(account, firebase_uid, user_id):
                 add(
                     "institution_artifacts",
                     f"artifact-{year}-{kind}",
-                    parent_type="EXPORT",
+                    parent_type="REPORT",
                     parent_id=export_id,
                     producer_job_id=uid(f"export-job-{year}-{kind}"),
                     snapshot_id=snapshot_id,
@@ -909,7 +962,7 @@ def build_sample(account, firebase_uid, user_id):
                     draft_watermark=False,
                     include_advice=False,
                     advice_query_ids=[],
-                    advice_hashes={},
+                    advice_hashes=[],
                     created_by=user_id,
                 )
     sample.tables = [
@@ -954,6 +1007,7 @@ async def prepare_sample(repo, sample):
     """Measure sample geometry with the same PostGIS path used by the app."""
     from services.shared.sampling_service import measure
 
+    measured = {}
     for bundle in sample.tables:
         for value in bundle.rows:
             field = {
@@ -969,7 +1023,55 @@ async def prepare_sample(repo, sample):
                 )
                 _, area = await measure(repo, value[geo_key])
                 value[field] = numeric(Decimal(str(area)))
+                measured[value["id"]] = {field: value[field]}
+
+    def refresh(node):
+        if isinstance(node, dict):
+            if isinstance(node.get("id"), str) and node["id"] in measured:
+                node.update(measured[node["id"]])
+            for value in node.values():
+                refresh(value)
+        elif isinstance(node, list):
+            for value in node:
+                refresh(value)
+
+    for bundle in sample.tables:
+        refresh(bundle.rows)
+    if sample.objects:
+        # Reports and frozen metadata must contain the same measured areas as
+        # the stored campus records. Render CPU work outside the event loop.
+        import asyncio
+
+        await asyncio.to_thread(refresh_sample_reports, sample)
+    for bundle in sample.tables:
         bundle.row_hashes = [digest(value) for value in bundle.rows]
+
+
+def refresh_sample_reports(sample):
+    from services.institution.report_service import render
+
+    tables = {bundle.table: bundle.rows for bundle in sample.tables}
+    objects = {obj.object_key: obj for obj in sample.objects}
+    snapshots = {
+        value["id"]: value for value in tables["institution_calculation_snapshots"]
+    }
+    artifacts = {value["id"]: value for value in tables["institution_artifacts"]}
+    for export in tables["institution_exports"]:
+        snapshot = snapshots[export["snapshot_id"]]
+        manifest = {
+            "frozen_input": snapshot["frozen_input"],
+            "result": snapshot["result"],
+            "draft_watermark": False,
+            "data_origin": "SYNTHETIC",
+            "demo": True,
+            "warnings": [NOTICE],
+        }
+        artifact = artifacts[export["artifact_id"]]
+        obj = objects[artifact["object_key"]]
+        obj.data, obj.mime_type = render(manifest, export["format"])
+        artifact.update(
+            byte_hash=obj.sha256, size_bytes=obj.size_bytes, mime_type=obj.mime_type
+        )
 
 
 async def seed_persistent_once(repo, sample):

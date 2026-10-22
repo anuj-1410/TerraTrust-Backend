@@ -2817,3 +2817,27 @@ transaction-local demo_restore_uid guard restricted to exact institution phones
 the two historical control tables. Export registered sources before running it;
 keep prior applied migration files/checksums. Farmer implementation is unchanged.
 Follow INSTITUTION_MANUAL_WORK.md section 0; no live SQL was executed by this review.
+
+RESPONSE CONTRACT CORRECTION — 22 OCTOBER 2026
+- Denominators use students, staff, floor_area_m2, source_evidence_ids, as_of.
+  Missing values remain NULL; initial sample student_count/staff_count aliases
+  are projected on reads without rewriting finalized history or hashes.
+- Attributed removal/release belong in institution_audit_tree_links.attribution_snapshot
+  JSONB; freeze/content projections expose the calculation fields. No new columns.
+  Denominator supporting evidence is included in frozen evidence manifests.
+- Sample tree metadata uses notes. Earlier SYNTHETIC sample markers are projected
+  into notes on read. New sample history includes complete frozen campus/survey
+  metadata; PostGIS areas and generated report bytes remain consistent.
+- New real and demo operations select LIVE catalogs; sample-only sources remain
+  historical references, with no simulated provider or approval bypass.
+- Mobile map value unions require splitting only at top-level generic depth.
+  The mobile catalog must include the SourceMetadata and quality-policy models
+  referenced by its result and assessment contracts. Empty advice_hashes is an
+  array; legacy empty objects are projected only for exports without advice.
+  Report artifacts use REPORT; legacy SYNTHETIC EXPORT artifacts still require
+  the same tenant authorization before downloads. No live schema change.
+  DraftRegistryConfig/RegistryConfig are object aliases. The backend preserves
+  documented response shapes. Backend-only preparation supplies the reviewed
+  frontend-integration/institution-contract-validator.patch; applying/rebuilding
+  that mobile patch is required to fix the two mobile Invalid union errors.
+- No frontend source or live database was changed. See INSTITUTION_MANUAL_WORK.md.

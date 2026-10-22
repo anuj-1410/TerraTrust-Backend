@@ -15,6 +15,7 @@ from services.institution.base import draft, evidence, link_evidence, public, ca
 from services.institution.factor_service import approved, resolve_factor, compile_schema
 from services.institution.accounting_service import validate_lines, calculate_inventory, CATEGORIES
 from services.institution.job_service import enqueue, accepted
+from services.institution.audit_projection import denominators, tree_link
 
 INPUT_KEYS = {"institution_emission_inputs": set(MODELS["EmissionLine"].model_fields), "institution_mitigation_inputs": set(MODELS["MitigationLine"].model_fields)}
 
@@ -27,6 +28,7 @@ async def content(ctx, audit):
     emissions = await ctx.repo.find("institution_emission_inputs", {"audit_id": audit["id"]})
     mitigations = await ctx.repo.find("institution_mitigation_inputs", {"audit_id": audit["id"]})
     links = await ctx.repo.find("institution_audit_tree_links", {"audit_id": audit["id"]})
+    links = [tree_link(row) for row in links]
     emissions.sort(key=lambda row: str(row["id"]))
     mitigations.sort(key=lambda row: str(row["id"]))
     links.sort(key=lambda row: str(row["campus_id"]))
@@ -47,7 +49,7 @@ async def refresh_hash(ctx, audit):
 
 async def create(ctx, body):
     require_flow()
-    method = await approved(ctx.repo, "carbon_methodologies", body["method_version"])
+    await approved(ctx.repo, "carbon_methodologies", body["method_version"])
     if set(row["category"] for row in body["coverage"]["categories"]) != set(CATEGORIES) or len(body["coverage"]["categories"]) != len(CATEGORIES):
         fail(422, "INVALID_COVERAGE", "Declare each expected category exactly once.")
     if body["coverage"]["consolidation_approach"] != "OPERATIONAL_CONTROL":
@@ -103,7 +105,7 @@ async def freeze(ctx, audit):
                     else:
                         fail(422, "SOURCE_BYTES_REQUIRED", "This factor has neither source bytes nor administrator-maintained configuration.")
                     factors[str(row["id"])] = normalize(row)
-                elif key == "evidence_ids" and value:
+                elif key in {"evidence_ids", "source_evidence_ids"} and value:
                     manifest = await evidence(ctx.repo, list(map(str, value)), "AUDIT", audit["id"], ctx.iid)
                     evidence_manifest.update({item["id"]: item for item in manifest})
                 else:
@@ -117,7 +119,7 @@ async def freeze(ctx, audit):
     tree_links = []
     for link in links:
         tree = await ctx.repo.get("campus_tree_audits", link["campus_tree_audit_id"])
-        tree_links.append({**normalize(link), "assessment": normalize(tree)})
+        tree_links.append({**normalize(tree_link(link)), "assessment": normalize(tree)})
     frozen = {"audit": normalize(audit), "emissions": normalize(emissions), "mitigations": normalize(mitigations), "tree_links": tree_links, "factors": factors, "parameters": parameters, "method": normalize(method), "project_methods": project_methods, "evidence_manifest": evidence_manifest, "input_hash": audit["input_hash"]}
     return frozen
 
@@ -152,7 +154,7 @@ async def resource(ctx, audit):
         check = {"input_revision": audit["input_revision"], "errors": [], "warnings": [], "can_submit": False, "coverage": audit["coverage"]}
     else:
         check = await validation(ctx, audit)
-    return public("AuditResource", audit, validation=check, copied_id_mappings=[], review_case_id=cases[0]["id"] if cases else None, calculation_job_id=jobs[0]["id"] if jobs else None)
+    return public("AuditResource", audit, denominators=denominators(audit.get("denominators")), validation=check, copied_id_mappings=[], review_case_id=cases[0]["id"] if cases else None, calculation_job_id=jobs[0]["id"] if jobs else None)
 
 
 async def write_lines(ctx, body, *, mitigation=False, append=False, patch_id=None, delete_id=None):
@@ -296,7 +298,7 @@ async def calculate(ctx, body, *, submit=False):
     await ctx.repo.update("institution_audits", audit["id"], {"processing_status": job["status"]})
     ctx.revision = audit["input_revision"]
     if submit:
-        case = await case_for(ctx.repo, ctx.actor, "institution_audits", audit, "INSTITUTION_AUDIT", {**await resource(ctx, audit), "frozen_input": frozen})
+        await case_for(ctx.repo, ctx.actor, "institution_audits", audit, "INSTITUTION_AUDIT", {**await resource(ctx, audit), "frozen_input": frozen})
         return await resource(ctx, await ctx.repo.get("institution_audits", audit["id"]))
     return accepted(job)
 
@@ -393,7 +395,7 @@ async def tree_links(ctx, body):
         boundary = await ctx.repo.get("campus_boundaries", tree["boundary_id"])
         mask = await ctx.repo.get("campus_vegetation_masks", tree["mask_id"])
         plots = await ctx.repo.find("campus_sampling_plots", {"plot_set_id": survey["plot_set_id"]})
-        validated.append({"institution_id": ctx.iid, "audit_id": audit["id"], "campus_id": cid, "campus_tree_audit_id": tree["id"], "period_start": item["period_start"], "period_end": item["period_end"], "comparability_status": status, "reason": item["reason"], "attributed_removal_tCO2": tree["removal_tCO2"] if comparable else None, "attributed_release_tCO2": tree["release_tCO2"] if comparable else None, "attribution_snapshot": {"assessment": normalize(tree), "campus": normalize(campus), "boundary": normalize(boundary), "mask": normalize(mask), "plots": normalize(plots), "survey": survey["frozen_snapshot"]}, "created_by": ctx.actor["id"]})
+        validated.append({"institution_id": ctx.iid, "audit_id": audit["id"], "campus_id": cid, "campus_tree_audit_id": tree["id"], "period_start": item["period_start"], "period_end": item["period_end"], "comparability_status": status, "reason": item["reason"], "attribution_snapshot": {"attributed_removal_tCO2": normalize(tree["removal_tCO2"]) if comparable else None, "attributed_release_tCO2": normalize(tree["release_tCO2"]) if comparable else None, "assessment": normalize(tree), "campus": normalize(campus), "boundary": normalize(boundary), "mask": normalize(mask), "plots": normalize(plots), "survey": survey["frozen_snapshot"]}, "created_by": ctx.actor["id"]})
     await ctx.repo.conn.execute(text("DELETE FROM institution_audit_tree_links WHERE audit_id=:id"), {"id": audit["id"]})
     for row in validated:
         await ctx.repo.insert("institution_audit_tree_links", row)

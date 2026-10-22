@@ -4,6 +4,7 @@ from decimal import Decimal, localcontext
 
 from app.institution_errors import fail
 from models.institution.common import normalize
+from services.institution.audit_projection import denominators as project_denominators
 
 
 def metric_value(result, metric):
@@ -16,7 +17,7 @@ def comparison_context(frozen, metric):
     audit = frozen["audit"]
     context = {"campus_ids": sorted(map(str, audit["campus_ids"])), "operational_control": sorted((str(row["id"]), row.get("control_input_hash")) for row in audit.get("boundary_snapshot", {}).get("campuses", []))}
     if metric in {"tree_stock", "removal", "release", "inventory_balance"}:
-        context["tree_support"] = sorted((str(link["campus_id"]), str(link["attribution_snapshot"]["boundary"]["id"]), str(link["attribution_snapshot"]["mask"]["id"])) for link in frozen["tree_links"])
+        context["tree_support"] = sorted((str(link["campus_id"]), str(link.get("attribution_snapshot", {}).get("boundary", {}).get("id") or link["assessment"].get("boundary_id")), str(link.get("attribution_snapshot", {}).get("mask", {}).get("id") or link["assessment"].get("mask_id"))) for link in frozen["tree_links"])
     return context
 
 
@@ -173,7 +174,7 @@ async def analytics(ctx):
             if sliced is not None:
                 flags = [flag for flag in flags if flag not in {"CAMPUS_SUBSET_NOT_A_SEPARATE_REVIEWED_INVENTORY", "SCOPE_CATEGORY_INTERSECTION_NOT_SEPARATELY_QUANTIFIED"}]
                 flags.append("EXPLICIT_FROZEN_SOURCE_SUBTOTAL")
-        denominators = audit["denominators"]
+        denominators = project_denominators(audit["denominators"])
         value = metric_value(result, "actual_total")
         intensities = {}
         for key, field in (("students", "students"), ("staff", "staff"), ("floor_area", "floor_area_m2")):

@@ -80,7 +80,7 @@ async def catalog_access(ctx):
 async def public_factors(ctx, _):
     from services.institution.runtime_configuration import current_method
     await current_method(ctx.repo, ctx.actor, required=False)
-    rows = await ctx.repo.find("emission_factors", {"status": "APPROVED", **({"data_origin": "LIVE"} if not ctx.generation else {})})
+    rows = await ctx.repo.find("emission_factors", {"status": "APPROVED", "data_origin": "LIVE"})
     params = ctx.request.query_params
     method = await ctx.repo.get("carbon_methodologies", params["method_version"]) if params.get("method_version") else None
     allowed = {str(fid) for mapping in method["config"]["factor_mappings"] for fid in mapping["allowed_factor_ids"]} if method else None
@@ -101,7 +101,7 @@ async def public_methods(ctx, _):
         policies = await ctx.repo.find("method_quality_policies", {"methodology_id": row["id"]})
         output["quality_policy_versions"] = [{"id": str(p["id"]), "artifact_hash": p["artifact_hash"]} for p in policies]
         return output
-    rows = await ctx.repo.find("carbon_methodologies", {"status": "APPROVED", **({"data_origin": "LIVE"} if not ctx.generation else {})})
+    rows = await ctx.repo.find("carbon_methodologies", {"status": "APPROVED", "data_origin": "LIVE"})
     rows.sort(key=lambda row: str(row["id"]) != str(current["id"]))
     if params.get("category"):
         rows = [row for row in rows if params["category"] in row["config"]["coverage_categories"]]

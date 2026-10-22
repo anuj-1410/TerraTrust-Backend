@@ -17,6 +17,10 @@ from services.shared.evidence_service import download
 
 async def export_resource(ctx, row):
     artifact = await ctx.repo.get("institution_artifacts", row["artifact_id"]) if row["artifact_id"] else None
+    # Earlier sample exports used the SQL JSONB default object for an empty list.
+    # Preserve exact advice hashes for every export that actually includes advice.
+    if row["advice_hashes"] == {} and not row["include_advice"] and not row["advice_query_ids"]:
+        row = {**row, "advice_hashes": []}
     return public("ExportResource", row, artifact_id=str(row["artifact_id"]) if row["artifact_id"] else None, download_artifact_id=str(row["artifact_id"]) if row["artifact_id"] else None, byte_hash=artifact["byte_hash"] if artifact else None, size_bytes=artifact["size_bytes"] if artifact else None, bytes_available=artifact is not None and artifact["status"] == "READY" and not artifact["bytes_deleted_at"], bytes_deleted_at=artifact["bytes_deleted_at"] if artifact else None, template_version=report_service.TEMPLATE_VERSION)
 
 
@@ -38,7 +42,10 @@ async def create_export(ctx, body):
     row = await ctx.repo.insert("institution_exports", {"id": export_id, "institution_id": ctx.iid, "audit_id": audit["id"], "snapshot_id": snapshot["id"], "result_hash": result["result_hash"], "format": body["format"], "job_id": jid, "status": "QUEUED", "draft_watermark": draft, "include_advice": bool(body.get("include_advice")), "advice_query_ids": [a["query_id"] for a in advice], "advice_hashes": [a["answer_hash"] for a in advice], "created_by": ctx.actor["id"]})
     manifest = {"schema_version": 1, "template_version": report_service.TEMPLATE_VERSION, "result": result, "frozen_input": snapshot["frozen_input"], "draft_watermark": draft, "data_origin": audit["data_origin"], "demo": ctx.generation is not None, "advice": advice, "review": {"reviewed_by": normalize(audit["reviewed_by"]), "finalized_by": normalize(audit["finalized_by"]), "reviewed_at": normalize(audit["reviewed_at"]), "finalized_at": normalize(audit["finalized_at"])}}
     manifest["warnings"] = []
-    for eid in snapshot["frozen_input"]["evidence_manifest"]:
+    evidence_manifest = snapshot["frozen_input"].get("evidence_manifest")
+    if evidence_manifest is None and snapshot["data_origin"] != "SYNTHETIC":
+        fail(409, "SNAPSHOT_SOURCE_MANIFEST_UNAVAILABLE", "The frozen source manifest is unavailable for this snapshot.")
+    for eid in evidence_manifest or {}:
         item = await ctx.repo.get("institution_audit_evidence",eid)
         if item["bytes_deleted_at"]:
             manifest["warnings"].append("SOURCE_BYTES_UNAVAILABLE: "+str(eid))
@@ -61,7 +68,7 @@ async def list_exports(ctx, _):
 async def member_artifact_access(ctx):
     row = await ctx.repo.get("institution_artifacts", ctx.request.path_params["artifact_id"])
     parent = row["parent_type"]
-    if parent == "REPORT":
+    if parent == "REPORT" or parent == "EXPORT" and row["data_origin"] == "SYNTHETIC":
         export = await ctx.access("institution_exports", row["parent_id"])
         audit = await ctx.repo.get("institution_audits", export["audit_id"])
         if ctx.member["permission"] == "VIEWER" and (row["draft"] or audit["business_status"] not in {"FINALIZED", "SUPERSEDED"} or str(audit["reviewed_snapshot_id"]) != str(export["snapshot_id"])):

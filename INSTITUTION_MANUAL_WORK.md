@@ -2,6 +2,24 @@
 
 Supabase and Firebase are already configured. **Do not rerun `schema.sql` or edit applied migrations.** Keep your existing database, Firebase, GEE, NISAR and Redis credentials. Farmer and institution accounts use the same database.
 
+## Fix the reported screens
+
+1. Deploy this updated backend to Render.
+2. Render > **Environment**: set `INSTITUTION_SCHEMA_ENABLED=true` and `ENABLE_INSTITUTION_FLOW=true`. Leave the three public URLs blank if unused.
+3. For demo testing, also set `ENVIRONMENT=development` and `ENABLE_INSTITUTION_DEMO_ACCOUNTS=true`. For production real accounts, use `ENVIRONMENT=production` and both demo flags `false`.
+4. Apply the prepared mobile-validator patch yourself. From **backend PowerShell**:
+
+```powershell
+git -C ..\TerraTrustAR apply --check ..\backend\frontend-integration\institution-contract-validator.patch
+git -C ..\TerraTrustAR apply ..\backend\frontend-integration\institution-contract-validator.patch
+```
+
+5. If the check fails, stop and review conflicts; do not force it. The patch fixes both `Invalid union` errors and adds missing source/quality contract definitions used by results and campus configuration. Frontend files were not edited by the backend changes.
+6. Rebuild/reinstall the Android app using section 7, then sign out and sign in again.
+7. Confirm account 5 opens institution setup; accounts 6–8 open their assigned stages; account 9 loads audits, dashboard and advisor audit selection.
+8. Existing account-9 denominator/tree-metadata/export errors are corrected when reading. Its history is preserved. **No SQL or database reset is required.** Gemini responses still require the advisor setup in section 5.
+9. If **REQUIRED / read-only** remains, check the environment on the actual API host used by the app. Local `.env` changes do not update Render. A fresh account needs registration enabled; existing approved accounts need an active membership.
+
 ## Render: fix database certificate verification
 
 1. Supabase > your existing project > **Database Settings > SSL Configuration > Download Certificate**. Download the **server root certificate**. Keep SSL enforcement unchanged.
@@ -204,4 +222,4 @@ adb reverse tcp:8081 tcp:8081
 9. Test farmer login/land/audit/wallet; institution registration/review, campus/tree sampling, biomass calculation, annual audit, export/share; demo resets and account-9 persistence.
 10. Stop the local API/workers with **Ctrl+C**. Before production, set `ENVIRONMENT=production`, both demo flags `false`, install the preserved key/font on deployment instances, and enable only features that passed live testing.
 
-Latest offline regression: **72 farmer/shared + 233 institution tests passed (305 total)**. No live database changes were made by these checks.
+Latest offline regression: **72 farmer/shared + 254 institution tests passed (326 total)**. Cross-project checks validate 76 service responses with the actual mobile decoder and the prepared patch. Live provider calls and phone acceptance still require testing after deployment. No live database changes were made by these checks.
